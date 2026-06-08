@@ -1,0 +1,377 @@
+% CECS 378 Demo — Exam 1
+% Illustrative exam for the lectern worked example.
+%
+% Questions are written fresh for demo purposes and do NOT reproduce any
+% live exam bank.  Topics: symmetric/asymmetric crypto, hashing,
+% buffer overflows, access control.
+%
+% Build:
+%   reg-exam-build exam.build.yaml        (pack mode: A/B + roster)
+%   reg-exam-build exam1.tex              (legacy single-form mode)
+
+\documentclass[11pt]{article}
+\usepackage[margin=0.9in,top=0.7in,bottom=0.85in,headheight=14pt,headsep=14pt]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+% --- Print-optimized font stack ---
+\usepackage{charter}
+\usepackage[scaled=0.92]{helvet}
+\usepackage[scaled=0.95,varl]{inconsolata}
+\renewcommand{\familydefault}{\rmdefault}
+\linespread{1.06}
+\frenchspacing
+
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage[hyphens]{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{pifont}
+\usepackage{xcolor}
+\definecolor{keyred}{HTML}{B71C1C}
+\definecolor{keygreen}{HTML}{1B5E20}
+\definecolor{keygrey}{HTML}{616161}
+
+% MC choice color: correct (green-bold) vs distractor (grey), gated by \ifanswers
+\newcommand{\correctchoice}[1]{\ifanswers\textcolor{keygreen}{\textbf{#1}}\else #1\fi}
+\newcommand{\wrongchoice}[1]{\ifanswers\textcolor{keygrey}{#1}\else #1\fi}
+
+% --- Build-time stamp ---
+\newcount\stamphour
+\newcount\stampminute
+\stamphour=\time
+\divide\stamphour by 60
+\stampminute=\time
+\count255=\stamphour
+\multiply\count255 by 60
+\advance\stampminute by -\count255
+\newcommand{\padtwo}[1]{\ifnum#1<10 0\fi\the#1}
+\newcommand{\buildtime}{\the\year-\padtwo{\month}-\padtwo{\day}~\padtwo{\stamphour}:\padtwo{\stampminute}}
+
+% --- Answer-key toggle ---
+\newif\ifanswers
+\answersfalse
+\makeatletter
+\@ifundefined{answersmode}{}{\answerstrue}
+\makeatother
+
+% --- Exam serial ---
+\providecommand{\examserial}{XXXXXXXX}
+
+% --- Per-student macros (A.2 doctrine) ---
+\makeatletter
+\@ifundefined{studentname}{\def\studentname{}}{}
+\@ifundefined{studentid}{\def\studentid{}}{}
+\@ifundefined{studentserial}{\def\studentserial{}}{}
+\makeatother
+
+% \fieldline{width}{value}
+\newcommand{\fieldline}[2]{%
+  \rlap{\hspace{0.5em}\raisebox{2.2pt}{#2}}\rule[-3pt]{#1}{0.8pt}%
+}
+
+% \identityinstruction — pre-filled vs blank
+\makeatletter
+\newcommand{\identityinstruction}{%
+  \ifx\studentname\@empty
+    {\sffamily\bfseries\small\ding{43}~~PRINT CLEARLY. UNNAMED EXAMS CANNOT BE RETURNED OR GRADED.}%
+  \else
+    {\sffamily\bfseries\small\ding{43}~~VERIFY YOUR NAME AND STUDENT ID BELOW ARE CORRECT, THEN ADD TODAY'S DATE.}%
+  \fi%
+}
+\makeatother
+
+% --- Running header ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textit{\small CECS 378 \textperiodcentered\ Computer Security \textperiodcentered\ Su26}}
+\fancyhead[R]{\textit{\small Exam 1}}
+\fancyfoot[L]{\textit{\footnotesize Generated \buildtime}}
+\fancyfoot[C]{\textit{\small p.~\thepage}}
+\makeatletter
+\fancyfoot[R]{\textit{\footnotesize Serial \texttt{\examserial}%
+  \ifx\studentserial\@empty\else
+    \ \textperiodcentered\ ID \texttt{\studentserial}%
+  \fi}}
+\makeatother
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Letterpress double rule ---
+\newcommand{\doublerule}{%
+  \noindent\rule{\linewidth}{1.0pt}\par\vspace{1.5pt}%
+  \noindent\rule{\linewidth}{0.3pt}\par}
+
+% --- Drafting-style metadata strip ---
+\newcommand{\metastrip}[4]{%
+  \par\noindent\rule{\linewidth}{0.3pt}\par\vspace{2pt}%
+  \noindent\begin{minipage}{\linewidth}%
+  \begin{tabbing}%
+  \hspace{6em}\=\hspace{16em}\=\hspace{6em}\=\kill%
+  \textsc{course}~~\>#1\>\textsc{term}~~\>#2\\[1pt]%
+  \textsc{exam}~~\>#3\>\textsc{points}~~\>#4%
+  \end{tabbing}%
+  \end{minipage}\par\vspace{-4pt}%
+  \noindent\rule{\linewidth}{0.3pt}\par}
+
+% --- Section heading ---
+\newcommand{\examsection}[1]{%
+  \par\vspace{1.4em}%
+  \noindent\rule{\linewidth}{0.3pt}\par\vspace{2pt}%
+  \noindent{\textsc{\large #1}}%
+  \par\vspace{0.4em}}
+
+% --- Writelines helper ---
+\newcounter{writelinesi}
+\newcommand{\writelines}[1]{%
+  \par\vspace{4pt}%
+  \setcounter{writelinesi}{0}%
+  \loop\ifnum\value{writelinesi}<#1
+    \par\noindent\rule{\linewidth}{0.4pt}\vspace{1.4em}%
+    \stepcounter{writelinesi}%
+  \repeat
+  \par\vspace{4pt}}
+
+% --- List metrics ---
+\setlist[enumerate,1]{leftmargin=2.4em, itemsep=0.45em, topsep=0.45em, parsep=0pt, label=\textbf{\arabic*.}}
+\setlist[enumerate,2]{leftmargin=1.8em, itemsep=0pt, topsep=0.1em, parsep=0pt, label=(\alph*)}
+
+% --- Code block style ---
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  numbers=none,
+  tabsize=3,
+  aboveskip=4mm,
+  belowskip=4mm,
+  frame=tb,
+  framerule=0.4pt,
+  framesep=6pt,
+  xleftmargin=12pt,
+  xrightmargin=12pt,
+}
+
+% --- Even-page padding ---
+\AtEndDocument{%
+  \clearpage%
+  \ifodd\value{page}\else%
+    \thispagestyle{plain}%
+    \null\vfill%
+    \begin{center}\textit{\small This page intentionally left blank.}\end{center}%
+    \vfill\null%
+  \fi%
+}
+
+\setlength{\emergencystretch}{2em}
+\sloppy
+
+% Key banner
+\ifanswers\fancyhead[R]{\textit{\small Exam 1 --- \textcolor{keyred}{\textbf{KEY}}}}\fi
+
+\date{}
+
+\begin{document}
+
+\metastrip{CECS 378}{Su26}{Exam 1}{50}
+\par\vspace{0.4em}
+\begin{center}{\Large\itshape Exam 1 --- Introduction to Computer Security}\end{center}
+\par\vspace{-0.2em}
+\doublerule
+\par\vspace{0.9em}
+
+\par\vspace{6pt}
+\noindent\identityinstruction
+\par\vspace{12pt}
+
+\noindent{\sffamily\bfseries\large NAME:}~\fieldline{13.5cm}{\large\studentname}
+\par\vspace{14pt}
+\noindent{\sffamily\bfseries\large STUDENT ID\#:}~\fieldline{5.5cm}{\large\ttfamily\studentid}\hfill{\sffamily\bfseries\large DATE:}~\rule[-3pt]{4cm}{0.8pt}
+\par\vspace{6pt}
+
+\ifanswers\par\vspace{0.4em}\noindent\colorbox{keyred}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\centering\color{white}\sffamily\bfseries\large $\star$~~ANSWER KEY~~---~~NOT FOR DISTRIBUTION~~$\star$}}\par\vspace{0.4em}\fi
+
+\par\vspace{0.6em}
+\noindent\ding{43}~\textbf{Directions.}~\textit{Write on the exam paper. You may use one 3''$\times$5'' card of notes (both sides, handwritten only). \textbf{No electronic devices of any kind are allowed on your desk during the exam.}}
+\par\vspace{0.4em}
+
+% ============================================================
+%  SECTION 1: MULTIPLE CHOICE  (5 questions × 4 pts = 20 pts)
+% ============================================================
+\examsection{Section 1 \textnormal{\small --- Multiple Choice (4 pts each, 20 pts total)}}
+\begin{enumerate}
+
+% --- Q1: Symmetric vs. asymmetric ---
+\item \textit{(4 pts)}~Which of the following best describes a \textbf{symmetric-key cipher}?
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{The sender encrypts with a public key; the receiver decrypts with a private key.}
+    \item \correctchoice{The same secret key is used for both encryption and decryption.}
+    \item \wrongchoice{No key is required; security relies entirely on algorithm secrecy.}
+    \item \wrongchoice{A digital signature is produced as a side effect of encryption.}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (b).}}
+    Symmetric ciphers (e.g., AES) use a single shared secret for both directions.
+    (a) describes asymmetric encryption; (c) is ``security through obscurity,'' which is
+    not the symmetric model; (d) conflates encryption with signing.\par\smallskip\fi
+
+% --- Q2: Hash property ---
+\item \textit{(4 pts)}~A cryptographic hash function is said to be \textbf{collision resistant} if:
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{Given a hash value, it is computationally infeasible to find any input that produces it.}
+    \item \wrongchoice{The hash output is exactly the same length as the input.}
+    \item \correctchoice{It is computationally infeasible to find two distinct inputs that produce the same hash output.}
+    \item \wrongchoice{The hash function runs in constant time regardless of input length.}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (c).}}
+    Collision resistance means no adversary can efficiently find $x \ne y$ s.t.\ $H(x)=H(y)$.
+    (a) is preimage resistance (a different property); (b) is false — hashes compress
+    variable-length input to fixed-length output; (d) is unrelated to security.\par\smallskip\fi
+
+% --- Q3: RSA / asymmetric ---
+\item \textit{(4 pts)}~In RSA, a message is encrypted for a recipient by using:
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{The sender's private key.}
+    \item \wrongchoice{A shared session key negotiated via Diffie-Hellman.}
+    \item \wrongchoice{The recipient's private key.}
+    \item \correctchoice{The recipient's public key.}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (d).}}
+    RSA encryption uses the \emph{recipient's public key}; only the recipient's
+    matching private key can decrypt. (a) describes signing, not encryption.\par\smallskip\fi
+
+% --- Q4: Buffer overflow ---
+\item \textit{(4 pts)}~A classic \textbf{stack buffer overflow} typically overwrites which
+  memory region to redirect control flow?
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{The heap allocation header.}
+    \item \wrongchoice{The process's environment variables.}
+    \item \correctchoice{The saved return address on the stack frame.}
+    \item \wrongchoice{The kernel's system-call dispatch table.}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (c).}}
+    By writing past the end of a stack-allocated buffer, an attacker can overwrite the
+    saved return address (and optionally the saved frame pointer) to redirect execution
+    to attacker-controlled code or a gadget chain.\par\smallskip\fi
+
+% --- Q5: Access control ---
+\item \textit{(4 pts)}~The \textbf{principle of least privilege} states that:
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{A subject should be granted the maximum privileges needed for any possible future task.}
+    \item \wrongchoice{All users must share a single privileged account to simplify auditing.}
+    \item \wrongchoice{Privileges are determined by a mandatory label assigned at object creation time.}
+    \item \correctchoice{A subject should be granted only the minimum privileges necessary to perform its current task.}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (d).}}
+    Least privilege limits the damage a compromised process or user can cause.
+    (a) violates the principle; (b) is the opposite of good practice;
+    (c) describes mandatory access control labels, not least privilege.\par\smallskip\fi
+
+\end{enumerate}
+
+% ============================================================
+%  SECTION 2: SHORT ANSWER  (3 questions × 10 pts = 30 pts)
+% ============================================================
+\examsection{Section 2 \textnormal{\small --- Short Answer (10 pts each, 30 pts total)}}
+\begin{enumerate}[resume]
+
+% --- Q6: Symmetric vs. asymmetric performance ---
+\item \textit{(10 pts)}~Briefly explain \textbf{why symmetric ciphers are generally used to
+  encrypt bulk data} in practice, while asymmetric ciphers are typically used only for
+  key exchange or digital signatures.  What fundamental trade-off motivates this hybrid
+  design?
+
+  \ifanswers
+    \par\smallskip\textit{Key answer:}
+    Symmetric ciphers (AES, ChaCha20) operate on fixed-size blocks or streams using
+    simple arithmetic operations and are therefore orders of magnitude faster than
+    asymmetric algorithms.  Asymmetric ciphers (RSA, ECDH) rely on hard mathematical
+    problems (integer factorization, discrete logarithm) whose computations are slow —
+    encrypting megabytes of data with RSA directly is impractical.  The hybrid design
+    uses the asymmetric algorithm only once (to securely exchange a symmetric session
+    key), then uses the fast symmetric cipher for all subsequent bulk data.  This gives
+    both the key-distribution benefit of public-key cryptography and the performance of
+    symmetric encryption.
+
+    \textbf{Partial credit:} award 5--7 pts for identifying the speed difference and
+    that hybrid design exists, even without full mechanistic explanation.
+    \par\smallskip
+  \else
+    \writelines{7}
+  \fi
+
+% --- Q7: Buffer overflow mitigation ---
+\item \textit{(10 pts)}~Name and briefly describe \textbf{two} OS/compiler-level
+  mitigations for stack buffer overflow attacks.  For each mitigation, also state
+  one way an attacker might attempt to circumvent it.
+
+  \ifanswers
+    \par\smallskip\textit{Key answer (any two of the following; 5 pts each):}
+    \begin{itemize}[itemsep=2pt]
+      \item \textbf{Stack canary.} The compiler inserts a random sentinel value
+        (canary) between local buffers and the saved return address.  Before a function
+        returns, the canary is checked; a mismatch aborts the process.
+        \textit{Circumvention:} leak the canary value via a format-string or
+        information-disclosure vulnerability, then overwrite it with the correct value
+        when crafting the overflow payload.
+      \item \textbf{Non-executable stack (NX / W\^{}X).} Pages are marked either
+        writable or executable, never both.  Shellcode injected onto the stack cannot
+        run.
+        \textit{Circumvention:} return-oriented programming (ROP) — chain together
+        existing executable code gadgets (``ret'' sequences in libraries) to build
+        arbitrary computations without injecting new code.
+      \item \textbf{Address Space Layout Randomization (ASLR).} The OS randomizes the
+        base addresses of the stack, heap, and shared libraries at each execution.
+        Hardcoded jump targets in the exploit become unreliable.
+        \textit{Circumvention:} brute-force the address space (feasible on 32-bit);
+        leak an address from a running process via a format-string or memory-disclosure
+        bug to de-randomize the layout.
+    \end{itemize}
+    \par\smallskip
+  \else
+    \writelines{9}
+  \fi
+
+% --- Q8: Discretionary vs. mandatory access control ---
+\item \textit{(10 pts)}~Compare \textbf{Discretionary Access Control (DAC)} and
+  \textbf{Mandatory Access Control (MAC)}.  For each model: (i) who controls access
+  decisions, and (ii) give one concrete example of a system or OS feature that uses it.
+
+  \ifanswers
+    \par\smallskip\textit{Key answer:}
+
+    \textbf{DAC.}  The \emph{resource owner} (typically the user who created the
+    object) controls access.  The owner sets permissions and may grant them to other
+    subjects at will.  Example: Unix/Linux file permissions (\texttt{chmod},
+    \texttt{chown}) and POSIX ACLs — a user can \texttt{chmod 777} their own file to
+    grant global read/write access.
+
+    \textbf{MAC.}  Access decisions are controlled by the \emph{system policy},
+    enforced by the OS kernel (or a reference monitor) and cannot be overridden by
+    individual users.  Subjects and objects carry labels (e.g., security clearance
+    levels); the policy (Bell-LaPadula, Biba, etc.) determines whether a given
+    subject-to-object access is permitted.  Example: SELinux enforces MAC policy
+    on RHEL/Fedora — even \texttt{root} cannot read a file if the SELinux policy
+    forbids it.
+
+    \textbf{Key distinction:} in DAC a user can accidentally or maliciously share
+    sensitive data by relaxing permissions; MAC prevents this because the policy is
+    mandatory and users cannot weaken it.
+
+    \textbf{Partial credit:} 3--4 pts per model for a correct description without
+    a concrete example.
+    \par\smallskip
+  \else
+    \writelines{9}
+  \fi
+
+\end{enumerate}
+
+\par\vfill
+\begin{center}\small\textit{End of exam. \quad Total: 50 points.}\end{center}
+
+\end{document}

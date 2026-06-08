@@ -1,0 +1,65 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{fancyhdr,xcolor,pifont,enumitem}
+\pagestyle{fancy}
+\fancyhf{}
+% Per-student exam ID macros
+% NB: use \@ifundefined+\def (not \providecommand) so the default empty value
+% produces a non-\long macro, which \ifx-compares equal to \@empty.
+\makeatletter
+\@ifundefined{studentname}{\def\studentname{}}{}
+\@ifundefined{studentid}{\def\studentid{}}{}
+\@ifundefined{studentserial}{\def\studentserial{}}{}
+\makeatother
+\providecommand{\examserial}{XXXXXXXX}
+\fancyfoot[L]{\textit{\footnotesize Generated}}
+\fancyfoot[C]{\thepage}
+\makeatletter
+\fancyfoot[R]{\textit{\footnotesize Serial \texttt{\examserial}%
+  \ifx\studentserial\@empty\else
+    \ \textperiodcentered\ ID \texttt{\studentserial}%
+  \fi}}
+% \fieldline{width}{value} — value rests ON the rule (empty value => blank line).
+\newcommand{\fieldline}[2]{%
+  \rlap{\hspace{0.5em}\raisebox{2.2pt}{#2}}\rule[-3pt]{#1}{0.8pt}%
+}
+\newcommand{\identityinstruction}{%
+  \ifx\studentname\@empty
+    {\sffamily\bfseries\small\ding{43}~~PRINT CLEARLY. UNNAMED EXAMS CANNOT BE RETURNED OR GRADED.}%
+  \else
+    {\sffamily\bfseries\small\ding{43}~~VERIFY YOUR NAME AND STUDENT ID BELOW ARE CORRECT, THEN ADD TODAY'S DATE.}%
+  \fi%
+}
+\makeatother
+% Answer-key toggle: \def\answersmode{1} before \input to enable
+\makeatletter
+\@ifundefined{answersmode}{%
+  \newif\ifanswers\answersfalse
+}{%
+  \newif\ifanswers\answerstrue
+}
+\makeatother
+% Key color
+\definecolor{keyred}{rgb}{0.75,0.0,0.0}
+% Section heading command
+\newcommand{\examsection}[1]{\subsection*{#1}}
+% Choice commands (inline display)
+\newcommand{\correctchoice}[1]{#1}
+\newcommand{\wrongchoice}[1]{#1}
+\begin{document}
+\section*{Form B Exam Fixture}
+\noindent\identityinstruction\par\vspace{12pt}
+\noindent{\sffamily\bfseries\large NAME:}~\fieldline{13.5cm}{\large\studentname}\par\vspace{14pt}
+\noindent{\sffamily\bfseries\large STUDENT ID\#:}~\fieldline{5.5cm}{\large\ttfamily\studentid}\hfill{\sffamily\bfseries\large DATE:}~\rule[-3pt]{4cm}{0.8pt}\par\vspace{6pt}
+\examsection{Multiple Choice}
+\begin{enumerate}
+\item \textit{(2 pts)}~Form B question: pick (b).
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{alpha}
+    \item \correctchoice{beta}
+  \end{enumerate}
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} b} \fi
+\item \textit{(1 pt)}~\textsc{T~/~F.}~Form B true-false item.
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} False} \fi
+\end{enumerate}
+\end{document}

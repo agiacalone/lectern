@@ -1,0 +1,10 @@
+course: CECS 378
+term: su26
+exam: Exam 1
+forms:
+  - { id: A, source: form_a.tex }
+  - { id: B, source: form_b.tex }
+individualized: true
+roster: roster4.csv
+assign: alternating
+gradescope: region

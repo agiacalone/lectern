@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html class='pc firefox  psc_dir-ltr psc_form-xlarge' dir='ltr' lang='en'>
+<!-- Copyright (c) 2000, 2022, Oracle and/or its affiliates.  -->
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><body><table border='1' cellpadding='3' cellspacing='0'>
+<tr>
+<th>Notify</th><th>ID</th><th>Name</th><th>Pronouns</th><th>Graduation Candidate</th><th>Units</th><th>Program and Plan</th><th>Academic Level</th><th>Status Note</th><th>Add Dt</th><th>Grade Dt</th><th>Incomplete Grade Agreement</th><th>Additional Info</th></tr>
+<tr>
+<td  ></td>
+<td  >040100001</td>
+<td  >Alderman,Jake P</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >01/21/2026</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100002</td>
+<td  >Blackwell,Sam</td>
+<td  ></td>
+<td  ></td>
+<td  >0.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td  style="mso-number-format:\@;"  >Withdrawn</td>
+<td  >01/20/2026</td>
+<td  >04/16/2026</td>
+<td>&nbsp;
+</td>
+<td  style="mso-number-format:\@;"  >Repeating</td>
+<tr>
+<td  ></td>
+<td  >040100003</td>
+<td  >Calloway,Max</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >01/20/2026</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100004</td>
+<td  >Delgado,Priya Emilia</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/17/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100005</td>
+<td  >Endo,Kenji</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/24/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  >Repeating</td>
+<tr>
+<td  ></td>
+<td  >040100006</td>
+<td  >Ferreira,Rosa</td>
+<td  >She/Her/Hers</td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS - 
+Cybersecurity</td>
+<td  >Junior</td>
+<td>&nbsp;
+</td>
+<td  >12/04/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100007</td>
+<td  >Gutierrez,Tanya Marie</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/04/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100008</td>
+<td  >Haddad,Ryan Jacob</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >01/19/2026</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  >Repeating</td>
+<tr>
+<td  ></td>
+<td  >040100009</td>
+<td  >Ingram,Hannah Jasmin</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/04/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100011</td>
+<td  >Wilson,Slade</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Junior</td>
+<td>&nbsp;
+</td>
+<td  >12/10/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100012</td>
+<td  >Lopez,Marco Alfonso</td>
+<td  ></td>
+<td  ></td>
+<td  >0.00</td>
+<td  >Undergraduate Degree - 
+Computer Engineering BS</td>
+<td  >Senior</td>
+<td  style="mso-number-format:\@;"  >Withdrawn</td>
+<td  >12/28/2025</td>
+<td  >04/19/2026</td>
+<td>&nbsp;
+</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100013</td>
+<td  >Nguyen,Patrick Jayesh</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/04/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100014</td>
+<td  >Okafor,Nate Anthony</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >01/30/2026</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100015</td>
+<td  >Park,Matthew Gabriel</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/04/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+<tr>
+<td  ></td>
+<td  >040100016</td>
+<td  >Quinn,Tomas Phat</td>
+<td  ></td>
+<td  ></td>
+<td  >3.00</td>
+<td  >Undergraduate Degree - 
+Computer Science BS - 
+Cybersecurity</td>
+<td  >Senior</td>
+<td>&nbsp;
+</td>
+<td  >12/04/2025</td>
+<td  ></td>
+<td  >Add</td>
+<td  style="mso-number-format:\@;"  > </td>
+</table></body></html>

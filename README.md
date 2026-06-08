@@ -1,0 +1,232 @@
+# lectern
+
+**The Registrar** — a 100% open-source teaching-operations toolkit for university instructors.
+
+lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, LMS roster/grade import, and end-of-term archival. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
+
+---
+
+## Why open formats
+
+> **lectern is built entirely on open, plain-text, version-controllable file formats.**
+
+| Format | What it carries |
+|---|---|
+| **LaTeX** (`.tex`) | Exams — student copies, answer keys, per-student serialized PDFs |
+| **Markdown / plain text** (`.md`) | Course content, class notes, semester notes, ISA guides, documentation |
+| **CSV** (`.csv`) | Rosters, gradebooks, exam registers, GitHub-binding tables, grade exports |
+| **YAML** (`.yaml`) | Term specs, exam build manifests, archive manifests, gradebook schemas |
+
+There are no proprietary formats in this pipeline — no `.docx`, no `.xlsx`, no locked LMS exports that can only be read by one vendor. Every file is:
+
+- **Diff-able** — a grade change or question edit is a readable, reviewable diff
+- **Git-versionable** — the full history of every exam, gradebook, and archive bundle is in source control
+- **Scriptable** — plain CSV and YAML mean any tool (Python, awk, shell) can read or transform the data
+- **Durable** — a plain-text LaTeX exam authored today is reproducible decades from now, with no license or cloud account required
+
+This is a deliberate design principle, not an accident. Proprietary LMS gradebooks, locked PDF workflows, and cloud-only tooling create single points of failure and make reproducibility (essential for grade appeals, accreditation evidence, and academic-integrity investigations) fragile. lectern's answer is: every artifact that matters lives in a format you can open with a text editor.
+
+---
+
+## Feature tour
+
+### Command table (`reg-*`)
+
+| Wrapper | Module | What it does |
+|---|---|---|
+| `reg-term-create` | `term_create` | Scaffold a term from a YAML term-spec: semester note + per-section class notes + archive manifest skeletons + course-catalog wiring. Idempotent; `--init` writes a stub spec. |
+| `reg-term-finalize` | `term_finalize` | Reconcile grade distributions, flip section statuses to finalized, roll up enrollment-weighted aggregates. Supports `--dry-run`. |
+| `reg-term-archive` | `term_archive` | Build per-section archive bundles (roster → grades → GitHub → gradebook → exams → lectures → syllabus → `manifest.yaml`). `--check` validates an existing bundle for drift. |
+| `reg-gradebook` | `gradebook` | Consolidate normalized Canvas grades + LMS roster + a per-course YAML schema into `gradebook.csv` (weighted scores, letter grades, DFW rate) and a DataviewJS markdown view. |
+| `reg-exam-build` | `exam_build` | Assemble exam PDFs — single-source `.tex` mode or pack-mode `.yaml` manifest (multi-form A/B/C, per-student individualized, Gradescope products). See below. |
+| `reg-exam-verify` | `exam_verify` | Verify a student exam serial against the register. Confirms which form and which student a paper belongs to. |
+| `reg-lms-grades-import` | `lms_grades` | Normalize a Canvas `grades.csv` export to lectern's canonical format. |
+| `reg-lms-roster-import` | `lms_roster` | Normalize a faculty-center enrollment roster (`.xls`/`.xlsx`) to lectern's canonical format. |
+| `reg-classroom-roster-seed` | `classroom_seed` | Pre-seed a GitHub Classroom roster from a normalized roster CSV, using the 9-digit student ID as the identifier. |
+| `reg-github-bind` | `github_bind` | Bind student GitHub usernames to roster entries — from a Google Form CSV, a GitHub Classroom roster CSV, or org-scrape mode. |
+| `reg-isa-publish` | `isa_publish` | Publish ISA grading artifacts (exam keys, rubrics, print stacks) to a shared Drive folder via rclone or service-account backend. Hash-based idempotency: unchanged files are skipped. |
+
+### Exam build system
+
+`reg-exam-build` is the exam assembly engine. It dispatches on its input:
+
+- **Single-source mode** (`reg-exam-build <file>.tex`) — compile one exam into `<exam>.pdf` + `<exam>_key.pdf`. Both share a content-hash serial in the footer. No manifest required. All existing `.tex` workflows continue unchanged.
+- **Pack mode** (`reg-exam-build <exam.build.yaml>`) — read a manifest and drive the full matrix of forms × individualization × Gradescope products. This is the mode used when you have multiple form variants (A/B/C), per-student individualized copies, or need Gradescope import products.
+
+**The 2×2 build matrix:**
+
+| Forms | Individualized | Output |
+|---|---|---|
+| 1 | false | `build/A.pdf` + `build/A_key.pdf` |
+| 2+ | false | Per-form `<id>.pdf` + `<id>_key.pdf` |
+| 1 | true | Per-student serialized PDFs + `A_combined.pdf` + `build/register.csv` |
+| 2+ | true | All of the above per form; one `register.csv` covering the full roster split |
+
+**Per-student tamper-evident serials:** every individualized copy carries a unique 8-hex footer ID computed from `SHA-256(source_serial + ":" + canonical_name(student_name))[:8]`. The footer on every page reads `Serial XXXXXXXX · ID YYYYYYYY`, making every printed copy self-authenticating. `reg-exam-verify` re-derives the expected ID from the register and confirms it matches — answering "is this really the paper printed for student X?" without relying on the register as ground truth.
+
+**Grade-appeal reproducibility:** a build is fully deterministic. Given the same manifest, `.tex` sources, roster, and `assign_seed`, re-running `reg-exam-build` regenerates byte-identical content. This means a disputed paper can always be reproduced from archived sources — even weeks after the exam. See [docs/design/exam-tex-format.md](docs/design/exam-tex-format.md) for the full appeals runbook.
+
+**Gradescope products:** set `gradescope: region` or `gradescope: bubble` in the manifest to emit a `gradescope/` directory with per-form template PDFs, answer-key PDFs, and outline CSVs ready for Gradescope import. See [docs/gradescope-workflow.md](docs/gradescope-workflow.md).
+
+### Term lifecycle
+
+```
+reg-term-create --term fa26 --init --vault-root <root>   # write stub spec
+# fill in classes/fa26.spec.yaml
+reg-term-create --term fa26 --vault-root <root>           # materialize notes + manifests
+# ... run the term ...
+reg-gradebook import --course CECS_378 --term fa26 --section 01 ...
+reg-exam-build exams/midterm1/exam.build.yaml
+reg-isa-publish --term fa26 --section 01 ...
+reg-term-finalize --term fa26 --vault-root <root> --dry-run
+reg-term-archive --term fa26 --vault-root <root>
+reg-term-archive --check --term fa26 --vault-root <root>
+```
+
+---
+
+## Architecture
+
+```
+lectern/
+  term_create.py        term scaffolding from YAML spec
+  term_finalize.py      grade reconciliation + status rollup
+  term_archive.py       archive bundle orchestration
+  gradebook.py          Canvas grades + roster + schema → gradebook.csv/.md
+  exam_build.py         single-source .tex + pack-mode .yaml dispatch
+  exam_pack.py          multi-form / individualized / Gradescope orchestration
+  exam_serial.py        source serial + per-student serial computation
+  exam_verify.py        register-based serial verification
+  lms_grades.py         Canvas grades CSV normalization
+  lms_roster.py         enrollment roster normalization (.xls → .csv)
+  classroom_seed.py     GitHub Classroom roster pre-seeding
+  github_bind.py        student-id → GitHub username binding
+  isa_publish.py        Drive publishing (rclone/service-account backend)
+  manifest_schema.py    JSONSchema validator for archive bundle manifests
+  student_id.py         student ID normalization (9-digit zero-padding)
+  vault_notes.py        frontmatter helpers for Markdown note management
+
+references/
+  reference_exam.tex    canonical exam skeleton (copy, rename, author, build)
+
+examples/
+  cecs-378-demo/        worked example: one full CECS 378 semester
+```
+
+**Vault awareness.** Most commands accept `--vault-root <path>` to locate course notes, class notes, and archive bundles relative to a notes root. If you do not use a notes-based workflow, pass explicit `--vault-root .` or use the modules as a library with fully explicit paths. The vault path is never hard-coded.
+
+**Dependencies.** Python 3.11+. `pyyaml`, `jsonschema`, `vaultkit` (the companion path/slug/frontmatter utilities package). LaTeX toolchain (`pdflatex`, `pdfunite` or `qpdf`) for exam builds. `rclone` or a service-account credential for ISA publish.
+
+---
+
+## Install & quickstart
+
+```bash
+git clone https://github.com/agiacalone/lectern-public
+cd lectern-public
+./install.sh
+# Writes .venv/, installs editable, creates reg-* wrappers in ~/bin.
+```
+
+Or into any Python 3.11+ environment:
+
+```bash
+pip install -e .
+```
+
+Test the install:
+
+```bash
+reg-term-create --help
+reg-exam-build --help
+```
+
+### Minimal exam build (single form)
+
+```bash
+# Copy the reference skeleton and author your exam:
+cp references/reference_exam.tex exams/cecs378-midterm1-fa26.tex
+# ... edit the .tex ...
+
+# Build student PDF + answer key:
+reg-exam-build exams/cecs378-midterm1-fa26.tex
+# → exams/cecs378-midterm1-fa26.pdf
+# → exams/cecs378-midterm1-fa26_key.pdf
+```
+
+### Per-student individualized build
+
+```bash
+# Prepare roster.csv with at minimum a 'name' column:
+# name,student_id
+# Doe, Jane,012345678
+# Smith, John,087654321
+
+reg-exam-build --roster exams/roster.csv --combined exams/cecs378-midterm1-fa26.tex
+# → one PDF per student with unique footer serial
+# → cecs378-midterm1-fa26_combined.pdf (print stack)
+# → cecs378-midterm1-fa26_serials.csv (register)
+```
+
+### Pack mode (multi-form + Gradescope)
+
+```yaml
+# exam.build.yaml
+course: CECS 378
+term: fa26
+exam: Midterm 1
+forms:
+  - { id: A, source: cecs378-midterm1-fa26-A.tex }
+  - { id: B, source: cecs378-midterm1-fa26-B.tex }
+individualized: true
+roster: roster.csv
+assign: alternating
+gradescope: region
+```
+
+```bash
+reg-exam-build exam.build.yaml
+# → build/  (per-student PDFs, combined stacks, register.csv)
+# → gradescope/  (template PDFs, answer keys, outline CSVs, roster CSV)
+```
+
+---
+
+## Worked example
+
+`examples/cecs-378-demo/` walks a complete CECS 378 semester end-to-end: importing a roster and Canvas gradebook, building an A/B exam with individualized copies, publishing ISA artifacts, and producing a finalized archive bundle. See the README inside that directory.
+
+---
+
+## How this maps to standardized course-repository infrastructure
+
+lectern addresses several standardized-infrastructure concerns directly:
+
+**Naming conventions.** The install convention for course repos follows `[dept]-[num]-[type]-[name]` (e.g., `cecs-378-lab-spellbreaker`). `reg-github-bind` and `reg-classroom-roster-seed` use the same structured naming to bind student repos to roster entries.
+
+**GitHub Classroom binding.** `reg-classroom-roster-seed` pre-populates a Classroom roster from the enrollment list so students self-authenticate via GitHub OAuth at assignment time — no manual binding form needed. `reg-github-bind` reconciles the resulting username list back to student IDs for grade reporting.
+
+**Reproducible, auditable exams.** Every exam artifact is produced from version-controlled source (`.tex` + `exam.build.yaml` + `roster.csv`). A Git commit of the exam directory is a complete, reproducible record — re-running the build regenerates the same PDFs with matching footer serials. This satisfies both internal audit requirements and external accreditation evidence standards.
+
+**Autograding integration.** The archive bundle's `manifest.yaml` tracks template repo commits and lab names alongside exam serials and grade distributions. ISA-published artifacts (keys, rubrics) live in a structured Drive folder matching the term/section/course hierarchy so graders can always find the authoritative rubric for a given assignment.
+
+**Gradebook as data.** `reg-gradebook` produces `gradebook.csv` — a plain CSV that is the canonical, diff-able record of every student's grades. It is never the sole copy: Canvas is the student-facing authority, the archive bundle is the institutional record, and the CSV is the analytical layer that enables DFW rollups, section-to-section comparisons, and grade-appeal lookups from the command line.
+
+---
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/design/exam-system.md](docs/design/exam-system.md) | Multi-form exam system design: A/B variants, individualized builds, Gradescope products, defensibility |
+| [docs/design/exam-tex-format.md](docs/design/exam-tex-format.md) | House `.tex` format: header block, answer key toggle, per-student serials, color conventions, appeals runbook |
+| [docs/gradescope-workflow.md](docs/gradescope-workflow.md) | Using lectern-built exams with Gradescope: region/bubble, A/B Version Sets, roster, identity verification |
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+Copyright (c) 2026 Anthony Giacalone.

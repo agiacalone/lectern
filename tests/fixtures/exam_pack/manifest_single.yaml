@@ -1,0 +1,7 @@
+course: CECS 378
+term: su26
+exam: Exam 1
+forms:
+  - { id: A, source: form_a.tex }
+individualized: false
+gradescope: none

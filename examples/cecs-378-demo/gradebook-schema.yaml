@@ -1,0 +1,49 @@
+# Gradebook schema — CECS 378 demo
+# Consumed by: reg-gradebook import (and reg-term-archive)
+#
+# weights must sum to 1.0.
+# canvas_title must match the stripped Canvas assignment title (no Canvas ID suffix).
+
+course: CECS 378
+term_default: su26
+
+columns:
+  - canvas_title: "Lab 1 - Symmetric Cryptography"
+    short_name: lab1
+    title: "Lab 1 — Symmetric Cryptography"
+    points: 100
+    group: labs
+
+  - canvas_title: "Lab 2 - Exploiting Buffers"
+    short_name: lab2
+    title: "Lab 2 — Exploiting Buffers"
+    points: 100
+    group: labs
+
+  - canvas_title: "Lab 3 - Access Control"
+    short_name: lab3
+    title: "Lab 3 — Access Control"
+    points: 100
+    group: labs
+
+  - canvas_title: "Exam 1"
+    short_name: exam1
+    title: "Exam 1"
+    points: 50
+    group: exams
+
+# Grade weights: labs 40%, exams 60%
+weights:
+  labs:  0.40
+  exams: 0.60
+
+# Letter-grade cutoffs (weighted percentage)
+letter_cuts:
+  A:  90
+  B:  80
+  C:  70
+  D:  60
+  F:   0
+
+flags:
+  - withdrew

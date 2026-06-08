@@ -1,0 +1,29 @@
+# exam.build.yaml — CECS 378 Demo, Exam 1
+#
+# Pack-mode manifest consumed by:  reg-exam-build exam.build.yaml
+#
+# Single form, individualized build: each student gets a pre-filled PDF
+# with their name + student ID on the identity block.  Per-student serials
+# are printed in the footer for grade-appeals traceability.
+#
+# To produce an A/B version (two form variants), add a second entry under
+# `forms:` pointing to a second .tex source, then set `assign: alternating`.
+#
+# Results land in build/ :
+#   build/<stem>_<name-slug>_<student-serial>.pdf  — one per student
+#   build/A_combined.pdf                           — full class print stack
+#   build/register.csv                             — name / form / serials map
+
+course: CECS 378
+term: su26
+exam: Exam 1
+
+forms:
+  - { id: A, source: exam1.tex }
+
+individualized: true
+roster: roster.csv
+
+assign: alternating   # only one form here, so every student gets Form A
+
+points: 50

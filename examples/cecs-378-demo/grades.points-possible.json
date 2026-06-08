@@ -1,0 +1,22 @@
+{
+  "Current Grade": "(read only)",
+  "Current Score": "(read only)",
+  "Exam 1 (5004)": "50.00",
+  "Final Grade": "(read only)",
+  "Final Score": "(read only)",
+  "ID": "",
+  "Lab 1 - Symmetric Cryptography (5001)": "100.00",
+  "Lab 2 - Exploiting Buffers (5002)": "100.00",
+  "Lab 3 - Access Control (5003)": "100.00",
+  "Override Grade": "(read only)",
+  "Override Score": "(read only)",
+  "Override Status": "",
+  "SIS Login ID": "",
+  "SIS User ID": "",
+  "Section": "",
+  "Student": "    Points Possible",
+  "Unposted Current Grade": "(read only)",
+  "Unposted Current Score": "(read only)",
+  "Unposted Final Grade": "(read only)",
+  "Unposted Final Score": "(read only)"
+}
