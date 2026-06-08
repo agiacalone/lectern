@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# LaTeX build artifacts
+*.log
+*.aux
+*.pdf
+references/*.pdf
+
+# Secrets / environment
+*.env
+.env
+secrets/
+
+# Virtual environments
+.venv/
+venv/

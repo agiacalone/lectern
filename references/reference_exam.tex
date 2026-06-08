@@ -1,0 +1,253 @@
+% Reference exam skeleton — hand-author from a question bank, then build with reg-exam-build --roster. New format per notes/exam-tex-doctrine.
+%
+% Usage:
+%   1. Copy this file to your exam directory and rename it (e.g. cecs378-midterm1-fa26.tex).
+%   2. Edit the \metastrip{}{}{}{} arguments: course, term, exam name, total points.
+%   3. Edit the running header (\fancyhead lines) to match course/term/exam.
+%   4. Replace the placeholder sections below with your actual questions.
+%   5. Build: reg-exam-build --roster roster.csv cecs378-midterm1-fa26.tex
+%
+% A.2 per-student ID macros are in the preamble — do not remove them.
+% The \examserial, \studentname, \studentid, and \studentserial macros are all
+% injected at build time by reg-exam-build; the \@ifundefined+\def defaults here
+% are the fallback for stand-alone pdflatex compiles.
+
+\documentclass[11pt]{article}
+\usepackage[margin=0.9in,top=0.7in,bottom=0.85in,headheight=14pt,headsep=14pt]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+% --- Print-optimized font stack ---
+\usepackage{charter}                          % Bitstream Charter body
+\usepackage[scaled=0.92]{helvet}              % Helvetica-clone sans (metadata)
+\usepackage[scaled=0.95,varl]{inconsolata}    % Inconsolata mono, varl alt
+\renewcommand{\familydefault}{\rmdefault}
+\linespread{1.06}
+\frenchspacing
+
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage[hyphens]{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{pifont}                           % Zapf Dingbats — manicule (\ding{43})
+\usepackage{xcolor}
+\definecolor{keyred}{HTML}{B71C1C}
+\definecolor{keygreen}{HTML}{1B5E20}
+\definecolor{keygrey}{HTML}{616161}
+
+% MC choice color: green-bold for correct, grey for distractors. Gated by \ifanswers
+% so student PDFs render identically to the pre-color source.
+\newcommand{\correctchoice}[1]{\ifanswers\textcolor{keygreen}{\textbf{#1}}\else #1\fi}
+\newcommand{\wrongchoice}[1]{\ifanswers\textcolor{keygrey}{#1}\else #1\fi}
+
+% --- Build-time stamp (pdfTeX primitives) ---
+\newcount\stamphour
+\newcount\stampminute
+\stamphour=\time
+\divide\stamphour by 60
+\stampminute=\time
+\count255=\stamphour
+\multiply\count255 by 60
+\advance\stampminute by -\count255
+\newcommand{\padtwo}[1]{\ifnum#1<10 0\fi\the#1}
+\newcommand{\buildtime}{\the\year-\padtwo{\month}-\padtwo{\day}~\padtwo{\stamphour}:\padtwo{\stampminute}}
+
+% --- Answer key toggle ---
+% reg-exam-build injects \def\answersmode{1} for the key build; bridge that
+% to \ifanswers so the key PDF reveals answers.
+\newif\ifanswers
+\answersfalse
+\makeatletter
+\@ifundefined{answersmode}{}{\answerstrue}
+\makeatother
+
+% --- Exam serial (set at build time by reg-exam-build) ---
+\providecommand{\examserial}{XXXXXXXX}
+
+% --- Per-student exam ID macros (A.2 doctrine) ---
+% reg-exam-build injects \def\studentname, \def\studentid, \def\studentserial
+% before \input. These defaults are the stand-alone compile fallback only.
+% NB: use \@ifundefined+\def (not \providecommand) so the empty default is a
+% non-\long macro that \ifx-compares equal to \@empty — the prefill guards below
+% rely on it. \providecommand{}{} makes a \long macro that is NOT \ifx-\@empty.
+\makeatletter
+\@ifundefined{studentname}{\def\studentname{}}{}
+\@ifundefined{studentid}{\def\studentid{}}{}
+\@ifundefined{studentserial}{\def\studentserial{}}{}
+\makeatother
+
+% \fieldline{width}{value} — value rests ON the rule (empty => blank line for the
+% student to write in). \rlap gives the value zero width so the rule draws full
+% width; \raisebox lifts the baseline so text sits on the line, not through it.
+\newcommand{\fieldline}[2]{%
+  \rlap{\hspace{0.5em}\raisebox{2.2pt}{#2}}\rule[-3pt]{#1}{0.8pt}%
+}
+% \identityinstruction — pre-filled exams ask the student to VERIFY; blank copies
+% keep the PRINT-CLEARLY warning.
+\makeatletter
+\newcommand{\identityinstruction}{%
+  \ifx\studentname\@empty
+    {\sffamily\bfseries\small\ding{43}~~PRINT CLEARLY. UNNAMED EXAMS CANNOT BE RETURNED OR GRADED.}%
+  \else
+    {\sffamily\bfseries\small\ding{43}~~VERIFY YOUR NAME AND STUDENT ID BELOW ARE CORRECT, THEN ADD TODAY'S DATE.}%
+  \fi%
+}
+\makeatother
+
+% --- Running header + italic foot ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textit{\small CECS NNN · Term YYYY}}   % <-- edit course/term
+\fancyhead[R]{\textit{\small Exam Name}}               % <-- edit exam name
+\fancyfoot[L]{\textit{\footnotesize Generated \buildtime}}
+\fancyfoot[C]{\textit{\small p.~\thepage}}
+\makeatletter
+\fancyfoot[R]{\textit{\footnotesize Serial \texttt{\examserial}%
+  \ifx\studentserial\@empty\else
+    \ \textperiodcentered\ ID \texttt{\studentserial}%
+  \fi}}
+\makeatother
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Letterpress double rule ---
+\newcommand{\doublerule}{%
+  \noindent\rule{\linewidth}{1.0pt}\par\vspace{1.5pt}%
+  \noindent\rule{\linewidth}{0.3pt}\par}
+
+% --- Drafting-style metadata strip ---
+\newcommand{\metastrip}[4]{%
+  \par\noindent\rule{\linewidth}{0.3pt}\par\vspace{2pt}%
+  \noindent\begin{minipage}{\linewidth}%
+  \begin{tabbing}%
+  \hspace{6em}\=\hspace{16em}\=\hspace{6em}\=\kill%
+  \textsc{course}~~\>#1\>\textsc{term}~~\>#2\\[1pt]%
+  \textsc{exam}~~\>#3\>\textsc{points}~~\>#4%
+  \end{tabbing}%
+  \end{minipage}\par\vspace{-4pt}%
+  \noindent\rule{\linewidth}{0.3pt}\par}
+
+% --- Section heading ---
+\newcommand{\examsection}[1]{%
+  \par\vspace{1.4em}%
+  \noindent\rule{\linewidth}{0.3pt}\par\vspace{2pt}%
+  \noindent{\textsc{\large #1}}%
+  \par\vspace{0.4em}}
+
+% --- Writelines helper: blank ruled lines for short-answer responses ---
+\newcounter{writelinesi}
+\newcommand{\writelines}[1]{%
+  \par\vspace{4pt}%
+  \setcounter{writelinesi}{0}%
+  \loop\ifnum\value{writelinesi}<#1
+    \par\noindent\rule{\linewidth}{0.4pt}\vspace{1.4em}%
+    \stepcounter{writelinesi}%
+  \repeat
+  \par\vspace{4pt}}
+
+% --- List metrics: editorial proportions, tightened ---
+\setlist[enumerate,1]{leftmargin=2.4em, itemsep=0.45em, topsep=0.45em, parsep=0pt, label=\textbf{\arabic*.}}
+\setlist[enumerate,2]{leftmargin=1.8em, itemsep=0pt, topsep=0.1em, parsep=0pt, label=(\alph*)}
+
+% --- Code block style ---
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  numbers=none,
+  tabsize=3,
+  aboveskip=4mm,
+  belowskip=4mm,
+  frame=tb,
+  framerule=0.4pt,
+  framesep=6pt,
+  xleftmargin=12pt,
+  xrightmargin=12pt,
+}
+
+% --- Even-page padding for duplex printing ---
+\AtEndDocument{%
+  \clearpage%
+  \ifodd\value{page}\else%
+    \thispagestyle{plain}%
+    \null\vfill%
+    \begin{center}\textit{\small This page intentionally left blank.}\end{center}%
+    \vfill\null%
+  \fi%
+}
+
+\setlength{\emergencystretch}{2em}
+\sloppy
+
+% --- Key banner activation (answers mode) ---
+\ifanswers\fancyhead[R]{\textit{\small Exam Name --- \textcolor{keyred}{\textbf{KEY}}}}\fi
+
+\date{}
+
+\begin{document}
+
+\metastrip{CECS NNN}{Term YYYY}{Exam Name}{100}   % <-- edit all four fields
+\par\vspace{0.4em}
+\begin{center}{\Large\itshape Exam Name}\end{center}   % <-- edit exam name
+\par\vspace{-0.2em}
+\doublerule
+\par\vspace{0.9em}
+
+\par\vspace{6pt}
+\noindent\identityinstruction
+\par\vspace{12pt}
+
+\noindent{\sffamily\bfseries\large NAME:}~\fieldline{13.5cm}{\large\studentname}
+\par\vspace{14pt}
+\noindent{\sffamily\bfseries\large STUDENT ID\#:}~\fieldline{5.5cm}{\large\ttfamily\studentid}\hfill{\sffamily\bfseries\large DATE:}~\rule[-3pt]{4cm}{0.8pt}
+\par\vspace{6pt}
+
+\ifanswers\par\vspace{0.4em}\noindent\colorbox{keyred}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\centering\color{white}\sffamily\bfseries\large $\star$~~ANSWER KEY~~---~~NOT FOR DISTRIBUTION~~$\star$}}\par\vspace{0.4em}\fi
+
+\par\vspace{0.6em}
+\noindent\ding{43}~\textbf{Directions.}~\textit{Write on the exam paper. You may use one 3''$\times$5'' card of notes (both sides, handwritten only). \textbf{No electronic devices of any kind are allowed on your desk during the exam.}}
+\par\vspace{0.4em}
+
+% ============================================================
+%  QUESTION BODY — replace the placeholders below with your
+%  actual questions. Keep \examsection, \correctchoice /
+%  \wrongchoice, and \ifanswers gating intact.
+% ============================================================
+
+% --- Section 1: Multiple Choice (2 pts each) ---
+\examsection{Multiple Choice}
+\begin{enumerate}
+
+\item \textit{(2 pts)}~Placeholder MC stem (replace per exam).
+  \begin{enumerate}[label=(\alph*)]
+    \item \correctchoice{option A}
+    \item \wrongchoice{option B}
+    \item \wrongchoice{option C}
+    \item \wrongchoice{option D}
+  \end{enumerate}
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} a} \fi
+
+\end{enumerate}
+
+% --- Section 2: Short Answer (model answer behind \ifanswers) ---
+\examsection{Short Answer}
+\begin{enumerate}[resume]
+
+\item \textit{(10 pts)}~Placeholder short-answer prompt (replace per exam).
+  \ifanswers
+    \par\smallskip\textit{Key:} model answer here.
+  \else
+    \writelines{6}
+  \fi
+
+\end{enumerate}
+
+\par\vfill
+\begin{center}\small\textit{End of exam.}\end{center}
+
+\end{document}

@@ -1,0 +1,35 @@
+# Term-spec for su26 — CECS 378 Summer 2026 demo
+# Run: reg-term-create --term su26 --vault-root <vault>
+#
+# This is a realistic spec for a two-section summer offering of
+# "Introduction to Computer Security Principles".  Edit and re-run
+# reg-term-create at any time — existing files are skipped (idempotent).
+
+term: su26
+term-name: Summer 2026
+year: 2026
+semester-code: su
+instructor: A. Instructor
+
+start: 2026-06-02            # first day of instruction
+end: 2026-07-25             # last day of instruction
+finals-week-start: 2026-07-27
+finals-week-end: 2026-07-31
+grade-submission-deadline: 2026-08-07
+
+sections:
+  - course: CECS 378
+    section: "01"
+    class-number: 20001      # MyCSULB class number (illustrative)
+    room: ECS-403
+    meets: "MWF 09:00-10:50"
+    enrolled: 10
+    final-exam-date: 2026-07-28
+
+  - course: CECS 378
+    section: "02"
+    class-number: 20002
+    room: ECS-403
+    meets: "MWF 11:00-12:50"
+    enrolled: 10
+    final-exam-date: 2026-07-29

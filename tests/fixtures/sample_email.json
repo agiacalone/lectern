@@ -1,0 +1,16 @@
+{
+  "id": "msg-123",
+  "messageId": ["<abc@fastmail.com>"],
+  "from": [{"name": "Alice Example", "email": "alice@example.com"}],
+  "to": [{"name": "Anthony", "email": "agiacalone@fastmail.com"}],
+  "subject": "Conference Registration Confirmation",
+  "sentAt": "2026-04-18T15:30:00Z",
+  "htmlBody": [{"partId": "1"}],
+  "bodyValues": {
+    "1": {
+      "value": "<p>Hi Anthony,</p><p>Your registration is <b>confirmed</b>. See you at <a href=\"https://conf.example.com\">the conference</a>.</p>",
+      "isTruncated": false
+    }
+  },
+  "attachments": []
+}

@@ -1,0 +1,6 @@
+Student,ID,SIS User ID,SIS Login ID,Section,Lab 1 (1001),Final Exam (1002),Final Grade,Final Score
+,,,,,Manual Posting,Manual Posting,,
+    Points Possible,,,,,20.00,100.00,,
+"Smith, Jane",1,111111111,111111111,CECS 478 Sec01 1001,18.00,85.00,A,85.50
+"Doe, John",2,222222222,222222222,CECS 478 Sec01 1001,16.00,72.00,C,73.00
+"Test, ISA",3,040100010SA,040100010SA,CECS 478 Sec01 1001,0.00,0.00,F,0.00

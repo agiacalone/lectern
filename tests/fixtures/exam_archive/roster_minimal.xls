@@ -1,0 +1,6 @@
+<!DOCTYPE html><html><body><table>
+<tr><th>Notify</th><th>ID</th><th>Name</th><th>Pronouns</th><th>Graduation Candidate</th><th>Units</th><th>Program and Plan</th><th>Academic Level</th><th>Status Note</th><th>Add Dt</th><th>Grade Dt</th><th>Incomplete Grade Agreement</th><th>Additional Info</th></tr>
+<tr><td></td><td>111111111</td><td>Smith,Jane</td><td></td><td></td><td>3.00</td><td>Computer Science BS</td><td>Senior</td><td></td><td>01/21/2026</td><td></td><td>Add</td><td></td>
+<tr><td></td><td>222222222</td><td>Doe,John</td><td></td><td></td><td>3.00</td><td>Computer Science BS</td><td>Senior</td><td></td><td>01/20/2026</td><td></td><td>Add</td><td></td>
+<tr><td></td><td>333333333</td><td>López,María José</td><td></td><td></td><td>3.00</td><td>Computer Science BS</td><td>Senior</td><td>Withdrawn</td><td>01/20/2026</td><td>04/16/2026</td><td></td><td></td>
+</table></body></html>

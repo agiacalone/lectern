@@ -1,0 +1,13 @@
+Student,ID,SIS User ID,SIS Login ID,Section,Lab 1 - Symmetric Cryptography (5001),Lab 2 - Exploiting Buffers (5002),Lab 3 - Access Control (5003),Exam 1 (5004),Current Score,Unposted Current Score,Final Score,Unposted Final Score,Current Grade,Unposted Current Grade,Final Grade,Unposted Final Grade,Override Score,Override Grade,Override Status
+,,,,,Manual Posting,Manual Posting,Manual Posting,Manual Posting,,,,,,,,,,,,
+    Points Possible,,,,,100.00,100.00,100.00,50.00,(read only),(read only),(read only),(read only),(read only),(read only),(read only),(read only),(read only),(read only),
+"Nakamura, Alice",1001,040100101,040100101,CECS 378 Sec01 20001,95.00,88.00,92.00,44.00,89.75,89.75,89.75,89.75,B,B,B,B,,,
+"Okonkwo, Bob",1002,040100102,040100102,CECS 378 Sec01 20001,80.00,75.00,85.00,38.00,79.50,79.50,79.50,79.50,C,C,C,C,,,
+"Delgado, Carmen",1003,040100103,040100103,CECS 378 Sec01 20001,100.00,95.00,98.00,48.00,95.25,95.25,95.25,95.25,A,A,A,A,,,
+"Hartley, Devon",1004,040100104,040100104,CECS 378 Sec01 20001,70.00,65.00,72.00,31.00,69.50,69.50,69.50,69.50,C,C,D,D,,,
+"Vasquez, Elena",1005,040100105,040100105,CECS 378 Sec01 20001,55.00,60.00,58.00,22.00,58.75,58.75,58.75,58.75,F,F,F,F,,,
+"Osei, Frank",1006,040100106,040100106,CECS 378 Sec01 20001,88.00,90.00,91.00,45.00,88.50,88.50,88.50,88.50,B,B,B,B,,,
+"Lindqvist, Grace",1007,040100107,040100107,CECS 378 Sec01 20001,92.00,85.00,89.00,43.00,87.25,87.25,87.25,87.25,B,B,B,B,,,
+"Tanaka, Hiro",1008,040100108,040100108,CECS 378 Sec01 20001,78.00,80.00,75.00,35.00,77.00,77.00,77.00,77.00,C,C,C,C,,,
+"Moreau, Ines",1009,040100109,040100109,CECS 378 Sec01 20001,100.00,98.00,100.00,50.00,97.00,97.00,97.00,97.00,A,A,A,A,,,
+"Kowalczyk, James",1010,040100110,040100110,CECS 378 Sec01 20001,60.00,55.00,62.00,28.00,61.25,61.25,61.25,61.25,F,F,F,F,,,
