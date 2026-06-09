@@ -36,6 +36,7 @@ def _vault(tmp_path):
     (V / "templates").mkdir(parents=True)
     (V / "classes" / "326").mkdir(parents=True)
     (V / "classes" / "378-478").mkdir(parents=True)
+    (V / "classes" / "semesters").mkdir(parents=True)
     (V / "notes").mkdir(parents=True)
     # minimal templates carrying the frontmatter keys create() injects into
     (V / "templates" / "semester-note.md").write_text(
@@ -52,14 +53,14 @@ def _vault(tmp_path):
         "# {{course}} §{{section}}\n")
     (V / "notes" / "MOC-cecs-326.md").write_text(
         "---\ntype: moc\n---\n# CECS 326\n## ☷ Sections taught\n\n## ▲ Labs\n")
-    (V / "classes" / "fa26.spec.yaml").write_text(SPEC)
+    (V / "classes" / "semesters" / "fa26.spec.yaml").write_text(SPEC)
     return V
 
 def test_create_materializes_everything(tmp_path):
     V = _vault(tmp_path)
     assert create_main(["--term", "fa26", "--vault-root", str(V)]) == 0
     # semester note
-    sem = (V / "classes" / "fa26.md").read_text()
+    sem = (V / "classes" / "semesters" / "fa26.md").read_text()
     fm, _ = split_frontmatter(sem)
     assert fm["section-count"] == 2
     assert sorted(fm["courses"]) == ["CECS 326", "CECS 478"]
@@ -92,7 +93,7 @@ def test_create_idempotent(tmp_path):
 
 def test_init_writes_stub_and_refuses_overwrite(tmp_path):
     V = _vault(tmp_path)
-    (V / "classes" / "fa26.spec.yaml").unlink()
+    (V / "classes" / "semesters" / "fa26.spec.yaml").unlink()
     assert create_main(["--term", "fa26", "--init", "--vault-root", str(V)]) == 0
-    assert (V / "classes" / "fa26.spec.yaml").exists()
+    assert (V / "classes" / "semesters" / "fa26.spec.yaml").exists()
     assert create_main(["--term", "fa26", "--init", "--vault-root", str(V)]) == 1  # refuse
