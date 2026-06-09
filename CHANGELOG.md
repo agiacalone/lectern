@@ -12,10 +12,15 @@ All notable changes to lectern are documented here.
   - Per-student individualized builds (pre-filled NAME/ID, unique footer serials)
   - Form-assignment policies: `alternating`, `seeded-random`, `every-form`
   - Gradescope product emission: `region` (template/key/outline) and `bubble` (bubble key/outline)
+  - Gradescope **grading note** (`GRADING_NOTE.md`): one self-contained, ISA-ready Markdown grading guide per exam — exam identity, Gradescope setup steps, and a per-form answer-key + rubric table. Emitted whenever a `gradescope:` target is set. Because Gradescope imports no key or rubric, this is the human crib a grader (especially a TA who did not author the exam) works from.
+  - Per-question `% name:` / `% rubric:` LaTeX annotations: authored in the exam `.tex`, they supply the grading note's question names and rubric criteria. `% name:` is required on every question; `% rubric:` is required on `fib`/`code` items and optional (defaults to all-or-nothing) on `mc`/`tf`.
   - Consolidated `register.csv` with `form` column spanning all forms
 - `reg-exam-build` now dispatches on input type: `.tex` for legacy single-source mode, `.yaml` for pack mode
 - Per-student identity block: `\fieldline` + `\identityinstruction` macros pre-fill student name and ID on individualized copies; student only adds the date
 - `references/reference_exam.tex`: canonical A.2 exam skeleton with all per-student macros, single-source answer key toggle, color conventions, and Gradescope-additive rubric structure
+
+### Fixed
+- `exam_pack`: fill-in-the-blank answers in `<form>_outline.csv` are no longer truncated to the first blank — multi-blank FIB answers (e.g. `confusion; diffusion`) are preserved in full.
 
 ### Documentation
 - `docs/design/exam-system.md`: multi-form exam system design, build matrix, defensibility

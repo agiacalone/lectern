@@ -31,6 +31,28 @@ Set `gradescope: region` or `gradescope: bubble` in `exam.build.yaml`, then run
   per-student serialized PDFs, per-form `<id>_combined.pdf` print stacks, and
   `register.csv` (which student got which form and what serial).
 - **`gradescope/`** — the import products covered in this document.
+- **`GRADING_NOTE.md`** — the grading note (next to the manifest). One Markdown
+  file per exam: exam identity, the Gradescope setup steps, and a per-form
+  answer-key + rubric table. Gradescope imports no key or rubric, so this is the
+  human crib a grader works from — and it is self-contained enough to hand to a
+  TA/ISA who did not author the exam. See §1a.
+
+### 1a. The grading note (`GRADING_NOTE.md`)
+
+Question **names** and **rubric criteria** come from `% name:` / `% rubric:`
+comments authored directly above each question's `\item` in the exam `.tex`:
+
+```latex
+% name: CIA — availability (backup destroyed in fire)
+% rubric: Correct = (b) Availability. 2 pts, all-or-nothing.
+\item \textit{(2 pts)}~A backup tape containing customer records ...
+```
+
+`% name:` is required on every question (a missing one fails the build, naming the
+question number). `% rubric:` is required on `fib` and `code` questions and
+optional on `mc`/`tf` (which default to "correct choice = full points, else 0").
+The note collects all forms, so an A/B exam yields one note with a `## Form A` and
+`## Form B` section, each a `Q · Name · Pts · Type · Answer · Rubric` table.
 
 ### Region target (fixed-template, rubric grading) — the standard
 
