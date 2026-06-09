@@ -1,7 +1,7 @@
 """``reg-term-create`` — scaffold a term from a term-spec.
 
-Idempotently materializes, from ``classes/<term>.spec.yaml``:
-  1. the semester note ``classes/<term>.md``;
+Idempotently materializes, from ``classes/semesters/<term>.spec.yaml``:
+  1. the semester note ``classes/semesters/<term>.md``;
   2. one class note per section ``classes/<dir>/<num>-<sec>-<term>.md``;
   3. one manifest skeleton per section under ``archives/<term>-<sec>/``;
   4. MOC wiring (append a section link under "Sections taught" if the MOC exists).
@@ -69,7 +69,7 @@ def _semester_note(spec: dict, vault: Path, created: list, skipped: list) -> Non
         "section-count": len(spec["sections"]),
         "courses": courses,
     })
-    _write_new(vault / "classes" / f"{term}.md", text, created, skipped)
+    _write_new(vault / "classes" / "semesters" / f"{term}.md", text, created, skipped)
 
 
 def _class_note(spec: dict, sec: dict, vault: Path, created: list, skipped: list) -> None:
@@ -153,7 +153,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     vault = args.vault_root
-    spec_path = vault / "classes" / f"{args.term}.spec.yaml"
+    spec_path = vault / "classes" / "semesters" / f"{args.term}.spec.yaml"
 
     if args.init:
         if spec_path.exists():
