@@ -1,0 +1,33 @@
+\documentclass{article}
+\newif\ifanswers\answersfalse
+\begin{document}
+\begin{enumerate}
+
+% name: CIA — confidentiality
+% rubric: Correct = (a). 2 pts all-or-nothing.
+\item \textit{(2 pts)}~Copying a file violates which property?
+  \begin{enumerate}[label=(\alph*)]
+    \item \correctchoice{Confidentiality}
+    \item \wrongchoice{Integrity}
+  \end{enumerate}
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} a} \fi
+
+% name: Insider attack
+\item \textit{(2 pts)}~\textsc{T~/~F.}~An insider can exceed their access.
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} True} \fi
+
+% name: Code — CTR fixed nonce
+% rubric: False; reused nonce reuses keystream. 2 pts.
+\item \textit{(2 pts)}~\textsc{Code.}~True or False?
+\begin{lstlisting}
+nonce = b"\x00"*8
+\end{lstlisting}
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} False --- reused nonce} \fi
+
+% name: FIB — Shannon goals
+% rubric: 1 pt per blank.
+\item \textit{(2 pts)}~\textsc{Fill in the blank.}~Goals: \rule[-2pt]{3cm}{0.4pt} and \rule[-2pt]{3cm}{0.4pt}.
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} confusion; diffusion} \fi
+
+\end{enumerate}
+\end{document}
