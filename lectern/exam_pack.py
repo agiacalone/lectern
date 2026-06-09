@@ -12,6 +12,7 @@ import csv
 import random
 import re
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,6 +56,8 @@ class OutlineRow:
     points: int
     type: str                            # mc | tf | fib | code
     answer: str
+    name: str = ""
+    rubric: str = ""
 
 
 @dataclass
@@ -64,6 +67,7 @@ class PackResult:
     gradescope_dir: Path | None
     register_csv: Path | None
     student_pdf_count: int
+    grading_note: Path | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -138,18 +142,55 @@ def assign_forms(names: list[str], form_ids: list[str], policy: str, seed: str |
 
 _PTS_RE = re.compile(r"\\textit\{\((\d+)\s*pts?\)\}")
 _ANS_RE = re.compile(r"\\textbf\{Answer:\}\s*([^\\}\n]+)")
+_NAME_RE = re.compile(r"^\s*%\s*name:\s*(.+?)\s*$")
+_RUBRIC_RE = re.compile(r"^\s*%\s*rubric:\s*(.+?)\s*$")
+_QSTART_RE = re.compile(r"\\item\b.*?\\textit\{\(\d+\s*pts?\)\}")
+
+
+def _strip_comments(block: str) -> str:
+    """Remove LaTeX comment lines (% ...) from a block before classification."""
+    return "\n".join(
+        line for line in block.splitlines()
+        if not re.match(r"^\s*%", line)
+    )
 
 
 def _classify(block: str) -> str:
-    if "lstlisting" in block:
+    b = _strip_comments(block)
+    if "lstlisting" in b:
         return "code"
-    if "\\textsc{T" in block or re.search(r"\bT\s*/\s*F\b", block):
+    if "\\textsc{T" in b or re.search(r"\bT\s*/\s*F\b", b):
         return "tf"
-    if "\\correctchoice" in block or re.search(r"\\begin\{enumerate\}\[label=\(\\alph", block):
+    if "\\correctchoice" in b or re.search(r"\\begin\{enumerate\}\[label=\(\\alph", b):
         return "mc"
-    if "\\rule[" in block or "\\_\\_\\_" in block or "fill in the blank" in block.lower():
+    if "\\rule[" in b or "\\_\\_\\_" in b or "fill in the blank" in b.lower():
         return "fib"
     return "mc"
+
+
+def _parse_annotations(tex_content: str) -> dict[int, tuple[str, str]]:
+    """Map 1-based question number -> (name, rubric) from % name:/% rubric:
+    comments immediately preceding each (N pts) \\item, in document order."""
+    body = tex_content.split("\\begin{document}", 1)[-1]
+    out: dict[int, tuple[str, str]] = {}
+    q = 0
+    pending_name = ""
+    pending_rubric: list[str] = []
+    for line in body.splitlines():
+        m_name = _NAME_RE.match(line)
+        if m_name:
+            pending_name = m_name.group(1)
+            continue
+        m_rub = _RUBRIC_RE.match(line)
+        if m_rub:
+            pending_rubric.append(m_rub.group(1))
+            continue
+        if _QSTART_RE.search(line):
+            q += 1
+            out[q] = (pending_name, "\n".join(pending_rubric))
+            pending_name = ""
+            pending_rubric = []
+    return out
 
 
 def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
@@ -171,13 +212,26 @@ def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
     if cur is not None:
         blocks.append(cur)
 
+    annotations = _parse_annotations(tex_content)
     rows = []
     for q, block in enumerate(blocks, start=1):
         m_pts = _PTS_RE.search(block)
+        qtype = _classify(block)
         ans_m = _ANS_RE.search(block)
-        answer = ans_m.group(1).strip().split()[0].rstrip(".") if ans_m else ""
-        rows.append(OutlineRow(q_num=q, points=int(m_pts.group(1)),
-                               type=_classify(block), answer=answer))
+        raw = ans_m.group(1).strip() if ans_m else ""
+        # type-aware: FIB keeps all ;-joined blanks; others take first token
+        answer = raw if qtype == "fib" else (raw.split()[0].rstrip(".") if raw else "")
+        name, rubric = annotations.get(q, ("", ""))
+        if not name:
+            raise SystemExit(f"exam_pack: question {q} is missing a '% name:' annotation")
+        if not rubric:
+            if qtype in ("fib", "code"):
+                raise SystemExit(
+                    f"exam_pack: missing rubric annotation on {qtype} question {q}"
+                )
+            rubric = f"Correct = {answer} ({int(m_pts.group(1))} pts, all-or-nothing)."
+        rows.append(OutlineRow(q_num=q, points=int(m_pts.group(1)), type=qtype,
+                               answer=answer, name=name, rubric=rubric))
     return rows
 
 
@@ -233,6 +287,77 @@ def emit_region_products(form_id, blank_pdf, key_pdf, outline, gs_dir):
     shutil.copyfile(key_pdf, answer_key)
     outline_csv = _write_outline_csv(form_id, outline, gs_dir)
     return [template, answer_key, outline_csv]
+
+
+def _pdf_page_count(pdf_path: Path) -> int:
+    """Page count via pdfinfo; 0 if unavailable (note still renders)."""
+    try:
+        out = subprocess.run(["pdfinfo", str(pdf_path)], capture_output=True,
+                             text=True, check=True).stdout
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return 0
+    for line in out.splitlines():
+        if line.startswith("Pages:"):
+            return int(line.split()[1])
+    return 0
+
+
+def _course_tag(course: str) -> str:
+    return course.strip().lower().replace(" ", "-")
+
+
+def _grading_note_table(rows) -> str:
+    head = "| Q | Name | Pts | Type | Answer | Rubric |\n| -: | --- | -: | --- | --- | --- |"
+    body = "\n".join(
+        f"| {r.q_num} | {r.name} | {r.points} | {r.type} | {r.answer} | "
+        f"{r.rubric.replace(chr(10), ' ')} |"
+        for r in rows
+    )
+    return head + "\n" + body
+
+
+def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root) -> Path:
+    exam_root = Path(exam_root)
+    out = exam_root / "GRADING_NOTE.md"
+    forms = [f.id for f in manifest.forms]
+    total_pts = sum(r.points for r in next(iter(per_form_outline.values())))
+    nq = sum(len(v) for v in per_form_outline.values())
+    pages = per_form_pages.get(forms[0], 0)
+    tag = _course_tag(manifest.course)
+
+    fm = (
+        "---\n"
+        f"type: grading-note\n"
+        f"tags: [teaching, {tag}, exam, gradescope, answer-key, internal]\n"
+        "visibility: private\n"
+        "icon: LiClipboardCheck\n"
+        "iconColor: var(--color-red)\n"
+        "---\n"
+    )
+    parts = [
+        fm,
+        f"# {manifest.exam} — Gradescope Grading Note ({manifest.course} {manifest.term})\n",
+        "> [!warning] Internal — answer key\n"
+        "> Grader/ISA only. Never student-facing. Serials/register are grader "
+        "infra (see [[project_exam_serial_internal_only]]).\n",
+        f"{total_pts} pts · {nq} questions · {len(forms)} forms · {pages}/exam\n",
+        "## Gradescope setup\n"
+        "1. Two assignments — one per form — linked as a **Version Set**.\n"
+        "2. Upload `gradescope/<form>_template.pdf` (the BLANK form) as each template.\n"
+        "3. Build the outline: one region per question, points from the table.\n"
+        "4. Enter the key in-UI (Gradescope imports nothing); keep "
+        "`gradescope/<form>_answer_key.pdf` open.\n"
+        f"5. Upload each form's scanned stack to its own version; length = {pages} pages.\n",
+    ]
+    for fid in forms:
+        parts.append(f"## Form {fid}\n" + _grading_note_table(per_form_outline[fid]) + "\n")
+    parts.append(
+        "## Appeals\n"
+        "Each paper's footer `Serial · ID` resolves to one student + form via "
+        "`reg-exam-verify --register build/register.csv --dir build/`.\n"
+    )
+    out.write_text("\n".join(parts), encoding="utf-8")
+    return out
 
 
 def _read_names(roster_path: Path) -> list[str]:
@@ -311,20 +436,26 @@ def run(manifest, workdir):
             w.writerows(register_rows)
 
     gs_dir = None
+    grading_note = None
     if manifest.gradescope != "none":
         gs_dir = workdir / "gradescope"
         gs_dir.mkdir(parents=True, exist_ok=True)
+        per_form_outline = {}
+        per_form_pages = {}
         for form in manifest.forms:
             outline = parse_outline_from_tex(form.source.read_text())
+            per_form_outline[form.id] = outline
+            per_form_pages[form.id] = _pdf_page_count(blank_pdfs[form.id])
             if manifest.gradescope == "region":
                 emit_region_products(form.id, blank_pdfs[form.id], key_pdfs[form.id], outline, gs_dir)
             elif manifest.gradescope == "bubble":
                 emit_bubble_products(form.id, outline, gs_dir)
         if manifest.roster is not None:
             emit_gradescope_roster(manifest.roster, gs_dir)
+        grading_note = emit_grading_note(manifest, per_form_outline, per_form_pages, workdir)
 
     return PackResult(
         forms=[f.id for f in manifest.forms], build_dir=build_dir,
         gradescope_dir=gs_dir, register_csv=register_csv,
-        student_pdf_count=student_pdf_count,
+        student_pdf_count=student_pdf_count, grading_note=grading_note,
     )

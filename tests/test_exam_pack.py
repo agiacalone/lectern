@@ -9,7 +9,8 @@ import pytest
 from lectern.exam_pack import (
     ExamManifest, FormSpec, OutlineRow, PackResult,
     assign_forms, emit_bubble_products, emit_gradescope_roster,
-    emit_region_products, load_manifest, parse_outline_from_tex, run,
+    emit_grading_note, emit_region_products, load_manifest,
+    parse_outline_from_tex, run,
 )
 
 FIX = Path(__file__).parent / "fixtures" / "exam_pack"
@@ -149,6 +150,59 @@ def test_parse_outline_mixed_types():
     assert sum(r.points for r in rows) == 7
 
 
+def test_parse_outline_captures_name_rubric_and_full_fib_answer():
+    tex = (FIX / "annotated_sample.tex").read_text()
+    rows = parse_outline_from_tex(tex)
+    assert [r.q_num for r in rows] == [1, 2, 3, 4]
+    # names from % name:
+    assert rows[0].name == "CIA — confidentiality"
+    assert rows[3].name == "FIB — Shannon goals"
+    # authored rubric where present
+    assert rows[0].rubric == "Correct = (a). 2 pts all-or-nothing."
+    assert rows[3].rubric == "1 pt per blank."
+    # type-aware answers
+    assert rows[0].type == "mc" and rows[0].answer == "a"
+    assert rows[1].type == "tf" and rows[1].answer == "True"
+    assert rows[2].type == "code" and rows[2].answer == "False"
+    # FIB keeps BOTH blanks (regression: used to truncate to "confusion;")
+    assert rows[3].type == "fib" and rows[3].answer == "confusion; diffusion"
+
+
+def test_missing_name_errors_with_question_number(tmp_path):
+    tex = (
+        "\\begin{document}\\begin{enumerate}\n"
+        "\\item \\textit{(2 pts)}~No name here.\n"
+        "  \\ifanswers \\textbf{Answer:} a \\fi\n"
+        "\\end{enumerate}\\end{document}"
+    )
+    with pytest.raises(SystemExit, match="question 1"):
+        parse_outline_from_tex(tex)
+
+
+def test_missing_rubric_on_fib_errors(tmp_path):
+    tex = (
+        "\\begin{document}\\begin{enumerate}\n"
+        "% name: FIB no rubric\n"
+        "\\item \\textit{(2 pts)}~\\textsc{Fill in the blank.}~x \\rule[-2pt]{2cm}{0.4pt}.\n"
+        "  \\ifanswers \\textbf{Answer:} foo \\fi\n"
+        "\\end{enumerate}\\end{document}"
+    )
+    with pytest.raises(SystemExit, match="rubric.*question 1"):
+        parse_outline_from_tex(tex)
+
+
+def test_mc_default_rubric_when_unannotated():
+    tex = (
+        "\\begin{document}\\begin{enumerate}\n"
+        "% name: MC default\n"
+        "\\item \\textit{(3 pts)}~pick \\correctchoice{x}\n"
+        "  \\ifanswers \\textbf{Answer:} b \\fi\n"
+        "\\end{enumerate}\\end{document}"
+    )
+    rows = parse_outline_from_tex(tex)
+    assert rows[0].rubric == "Correct = b (3 pts, all-or-nothing)."
+
+
 OUTLINE = [
     OutlineRow(1, 2, "mc", "a"),
     OutlineRow(2, 1, "tf", "True"),
@@ -179,6 +233,31 @@ def test_emit_gradescope_roster_columns(tmp_path):
     assert rows[0]["Email"] == ""                # email not carried — left blank
 
 
+def test_emit_grading_note_structure(tmp_path):
+    a = [
+        OutlineRow(1, 2, "mc", "a", "CIA — confidentiality", "Correct = a (2 pts)."),
+        OutlineRow(2, 2, "fib", "confusion; diffusion", "FIB — Shannon", "1 pt/blank."),
+    ]
+    b = [OutlineRow(1, 2, "mc", "c", "CIA — availability", "Correct = c (2 pts).")]
+    man = ExamManifest(course="CECS 378", term="su26", exam="Exam 1",
+                       forms=[FormSpec("A", tmp_path / "A.tex"),
+                              FormSpec("B", tmp_path / "B.tex")],
+                       gradescope="region", points=4)
+    note = emit_grading_note(
+        man, {"A": a, "B": b}, {"A": 4, "B": 4}, tmp_path
+    )
+    assert note == tmp_path / "GRADING_NOTE.md"
+    text = note.read_text()
+    assert "type: grading-note" in text
+    assert "tags: [teaching, cecs-378, exam, gradescope, answer-key, internal]" in text
+    assert "## Form A" in text and "## Form B" in text
+    assert "CIA — confidentiality" in text
+    assert "confusion; diffusion" in text          # FIB full answer in table
+    assert "4 pts · 3 questions · 2 forms · 4/exam" in text
+    assert "length = 4 pages" in text
+    assert "[!warning] Internal" in text
+
+
 def test_emit_region_products_copies_and_outlines(tmp_path):
     blank = tmp_path / "A.pdf"; blank.write_bytes(b"%PDF-1.4 blank")
     key = tmp_path / "A_key.pdf"; key.write_bytes(b"%PDF-1.4 key")
@@ -206,6 +285,20 @@ def _manifest(tmp_path, **over):
     man = tmp_path / "exam.build.yaml"
     man.write_text("\n".join(lines) + "\n")
     return man
+
+
+@needs_latex
+def test_run_emits_grading_note(tmp_path):
+    shutil.copytree(FIX, tmp_path / "fix")
+    fixd = tmp_path / "fix"
+    m = load_manifest(fixd / "manifest_ab.yaml")
+    result = run(m, fixd)
+    note = fixd / "GRADING_NOTE.md"
+    assert note.exists()
+    assert result.grading_note == note
+    text = note.read_text()
+    assert "## Form A" in text and "## Form B" in text
+    assert "type: grading-note" in text
 
 
 @needs_latex
