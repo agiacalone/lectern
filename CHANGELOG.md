@@ -7,6 +7,11 @@ All notable changes to lectern are documented here.
 ## [Unreleased]
 
 ### Added
+- `reg-gradescope-stats`: per-outcome **item analysis** from Gradescope *Export Evaluations*. Joins each rubric-item column back to the exam's `form·Qn·slot` keys in the grading note, computing per-question difficulty (p-value) and per-distractor selection counts.
+  - Flags **non-functioning distractors** (chosen by 0), **distractors more popular than the key**, and a **miskey alarm** (a credited item applied yet the question mean is 0 → rubric point value misset in Gradescope).
+  - Robust join: exact text → MC `(letter)` prefix (survives prose typos) → no-answer/blank → order outcome; excludes the Gradescope `Rubric Numbers` legend row and impossible-score rows.
+  - Emits three artifacts: `ITEM_ANALYSIS.md` (Obsidian-tagged report), `item_analysis.html` (a self-contained newspaper/agate **Item Analysis broadsheet**), and `item_analysis.json` (downstream analytics). Can splice a *Post-exam statistics* link section into the grading note (`--link-grading-note`).
+  - New module `lectern.gradescope_stats` + `references/item_analysis.template.html`.
 - `reg-gradebook build` + `reg-gradebook export-canvas`: **vault-native gradebook** — the vault is the grade source of truth; grades flow vault → Canvas (inverting the Canvas → vault `import` path).
   - `build` rolls per-component score files into `gradebook.csv` (+ `gradebook.md` cockpit) via a per-section `components.yaml` registry that binds each scores file (`sid`, `score`, `status`) to a `gradebook-schema` column.
   - **In-progress current standing**: `compute_weighted(graded_only=…)` renormalizes group weights over graded work, so a partly-graded term is not scored all-F and converges to the full-schema final once every column is graded.

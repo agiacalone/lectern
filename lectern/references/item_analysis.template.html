@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Item Analysis — Exam Statistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f1ece0; --paper-2:#e9e2d2; --ink:#211c16; --ink-soft:#5b5347;
+  --faint:#8a8273; --rule:#cbc2ae; --hair:#d8d0bd;
+  --red:#a8231b; --red-deep:#7d1812; --green:#3f6b3a; --gold:#9a7a2e;
+  --bar:#2c261d; --bar-key:#a8231b; --bar-dead:#d2cab7;
+}
+*{box-sizing:border-box}
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0; background:var(--paper);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif;
+  font-size:17px; line-height:1.5;
+  font-variant-numeric:oldstyle-nums proportional-nums;
+  /* newsprint grain */
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(168,35,27,0.04), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+.sheet{ max-width:1180px; margin:0 auto; padding:28px 30px 70px; }
+
+/* ── MASTHEAD ─────────────────────────────────────────── */
+.flag-top{
+  display:flex; justify-content:space-between; align-items:flex-end;
+  font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.18em; font-size:11px; color:var(--ink-soft);
+  border-bottom:1px solid var(--ink); padding-bottom:5px;
+}
+.flag-top .ed{ color:var(--red-deep); font-weight:700; }
+.nameplate{
+  text-align:center; margin:6px 0 2px;
+  font-family:"Playfair Display",serif; font-weight:900;
+  font-size:clamp(42px,8.6vw,104px); line-height:.92; letter-spacing:-.01em;
+  text-shadow:0 1px 0 rgba(255,255,255,.5), 0 2px 1px rgba(0,0,0,.08);
+}
+.nameplate .the{
+  display:block; font-size:.26em; letter-spacing:.42em; font-weight:700;
+  margin-bottom:.1em; text-indent:.42em;
+}
+.dateline{
+  display:flex; justify-content:space-between; align-items:center;
+  font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.16em; font-size:11.5px; color:var(--ink-soft);
+  border-top:3px double var(--ink); border-bottom:3px double var(--ink);
+  padding:5px 2px; margin-top:6px;
+}
+.dateline b{ color:var(--ink); font-weight:700; }
+.dateline .star{ color:var(--red); }
+
+/* ── LEDE ─────────────────────────────────────────────── */
+.lede{ display:grid; grid-template-columns:1.55fr 1fr; gap:34px; margin:26px 0 8px; }
+.kicker{
+  font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.2em; font-size:12px; color:var(--red-deep); font-weight:700;
+  border-bottom:1px solid var(--rule); padding-bottom:4px; margin-bottom:9px;
+}
+.headline{
+  font-family:"Playfair Display",serif; font-weight:700;
+  font-size:clamp(26px,3.4vw,40px); line-height:1.04; margin:0 0 12px;
+}
+.standfirst{ font-style:italic; color:var(--ink-soft); font-size:18px; margin:0 0 14px; }
+.lede p{ margin:0 0 11px; }
+.lede p.body::first-letter{
+  font-family:"Playfair Display",serif; font-weight:900;
+  float:left; font-size:64px; line-height:.74; padding:6px 10px 0 0; color:var(--red-deep);
+}
+.col-rule{ border-left:1px solid var(--hair); padding-left:30px; }
+
+/* by-the-numbers box */
+.box{ border:1px solid var(--ink); background:rgba(255,255,255,.22); }
+.box-h{
+  background:var(--ink); color:var(--paper); text-align:center;
+  font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.24em; font-size:11px; font-weight:600; padding:5px;
+}
+.stat-grid{ display:grid; grid-template-columns:1fr 1fr; }
+.stat{ padding:11px 14px; border-bottom:1px solid var(--hair); }
+.stat:nth-child(odd){ border-right:1px solid var(--hair); }
+.stat .v{ font-family:"Playfair Display",serif; font-weight:900; font-size:30px; line-height:1;
+  font-variant-numeric:lining-nums tabular-nums; }
+.stat .v small{ font-size:.5em; font-weight:700; color:var(--faint); }
+.stat .l{ font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.16em; font-size:10px; color:var(--ink-soft); margin-top:3px; }
+.curve{ display:flex; height:30px; border-top:1px solid var(--hair); }
+.curve .seg{ display:flex; align-items:center; justify-content:center;
+  font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:12px; color:#fff;
+  font-variant-numeric:tabular-nums; }
+.curve-cap{ font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.16em; font-size:9.5px; color:var(--faint); text-align:center; padding:4px; }
+
+/* ── SECTION RULE ─────────────────────────────────────── */
+.band{
+  margin:30px 0 4px; display:flex; align-items:center; gap:14px;
+  border-top:2px solid var(--ink); padding-top:7px;
+}
+.band h2{
+  font-family:"Playfair Display",serif; font-weight:900; font-size:26px; margin:0;
+  text-transform:uppercase; letter-spacing:.02em;
+}
+.band .dingbat{ color:var(--red); font-size:20px; }
+.band .tag{ margin-left:auto; font-family:"Archivo Narrow",sans-serif;
+  text-transform:uppercase; letter-spacing:.18em; font-size:11px; color:var(--ink-soft); }
+
+/* ── DIFFICULTY LEAGUE TABLE ──────────────────────────── */
+.league{ width:100%; border-collapse:collapse; margin-top:10px;
+  font-variant-numeric:lining-nums tabular-nums; }
+.league thead th{
+  font-family:"Archivo Narrow",sans-serif; text-transform:uppercase; letter-spacing:.12em;
+  font-size:11px; color:var(--ink-soft); text-align:left; padding:4px 8px;
+  border-bottom:2px solid var(--ink);
+}
+.league th.num,.league td.num{ text-align:right; }
+.league td{ padding:5px 8px; border-bottom:1px solid var(--hair); font-size:15px; }
+.league tbody tr:hover{ background:rgba(168,35,27,.05); }
+.league .q{ font-family:"Archivo Narrow",sans-serif; font-weight:700; letter-spacing:.04em; }
+.league .topic{ color:var(--ink); }
+.league .ty{ font-family:"Archivo Narrow",sans-serif; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--faint); }
+.pbar{ position:relative; height:9px; width:120px; background:var(--bar-dead); display:inline-block;
+  vertical-align:middle; }
+.pbar > i{ position:absolute; left:0; top:0; bottom:0; background:var(--bar);
+  width:var(--w); animation:grow 1s cubic-bezier(.2,.8,.2,1) both; }
+.pbar.hard > i{ background:var(--red); }
+.pdot{ font-variant-numeric:tabular-nums; font-weight:600; }
+.flag-pill{ font-family:"Archivo Narrow",sans-serif; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.08em; padding:1px 6px; border:1px solid currentColor; }
+.flag-zero{ color:var(--red-deep); }
+
+/* ── PER-QUESTION AGATE ───────────────────────────────── */
+.qcols{ column-count:2; column-gap:36px; margin-top:14px; }
+@media(max-width:820px){ .qcols{ column-count:1; } .lede{ grid-template-columns:1fr; } .col-rule{ border-left:0; padding-left:0; } }
+.q{ break-inside:avoid; margin:0 0 18px; padding-bottom:6px; border-bottom:1px solid var(--hair); }
+.q-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
+.q-h .qn{ font-family:"Archivo Narrow",sans-serif; font-weight:700; color:var(--red-deep);
+  letter-spacing:.04em; font-size:14px; }
+.q-h .qname{ font-weight:600; font-size:16px; }
+.q-h .qty{ margin-left:auto; font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.12em; font-size:10px; color:var(--faint); }
+.q-sub{ font-family:"Archivo Narrow",sans-serif; font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--ink-soft); margin-bottom:7px;
+  font-variant-numeric:tabular-nums; }
+.q-sub .sep{ color:var(--rule); padding:0 5px; }
+.q-sub .hardp{ color:var(--red-deep); font-weight:700; }
+.q.miskey{ outline:2px solid var(--red); outline-offset:5px; }
+.q.miskey .warn{ display:block; background:var(--red); color:#fff; font-family:"Archivo Narrow",sans-serif;
+  font-size:11px; letter-spacing:.06em; text-transform:uppercase; padding:3px 7px; margin-bottom:7px; }
+.warn{ display:none; }
+
+.opt{ display:grid; grid-template-columns:13px 1fr auto; align-items:center; gap:9px;
+  padding:2.5px 0; font-size:14.5px; font-variant-numeric:lining-nums tabular-nums; }
+.opt .mk{ font-size:12px; text-align:center; color:var(--faint); }
+.opt.key .mk{ color:var(--red); }
+.opt .txt{ position:relative; padding-left:2px; }
+.opt .txt .bar{ display:block; height:4px; background:var(--bar); width:var(--w);
+  margin-top:3px; animation:grow .9s cubic-bezier(.2,.8,.2,1) both; }
+.opt.key .txt{ font-weight:600; }
+.opt.key .txt .bar{ background:var(--bar-key); height:5px; }
+.opt.dead{ color:var(--faint); }
+.opt.dead .label{ }
+.opt.dead .txt .bar{ background:var(--bar-dead); }
+.opt.over .num{ color:var(--red); font-weight:700; }
+.opt .num{ font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:13px;
+  white-space:nowrap; color:var(--ink-soft); }
+.opt .num b{ color:var(--ink); }
+.opt .label .label-txt{ }
+
+/* ── COLOPHON ─────────────────────────────────────────── */
+.colophon{ margin-top:40px; border-top:3px double var(--ink); padding-top:12px;
+  font-size:13px; color:var(--ink-soft); column-count:2; column-gap:36px; }
+.colophon h3{ font-family:"Archivo Narrow",sans-serif; text-transform:uppercase;
+  letter-spacing:.2em; font-size:11px; color:var(--ink); margin:0 0 5px; }
+.colophon p{ margin:0 0 9px; }
+.colophon .leg{ display:inline-flex; align-items:center; gap:5px; margin-right:14px; }
+.swatch{ width:22px; height:8px; display:inline-block; }
+
+/* legend strip under difficulty */
+.legend{ display:flex; flex-wrap:wrap; gap:18px; margin:9px 0 0;
+  font-family:"Archivo Narrow",sans-serif; font-size:11px; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--ink-soft); }
+.legend span{ display:inline-flex; align-items:center; gap:6px; }
+
+@keyframes grow{ from{ width:0 } }
+.fade{ opacity:0; transform:translateY(10px); animation:up .7s ease forwards; }
+@keyframes up{ to{ opacity:1; transform:none } }
+
+@media print{
+  body{ background:#fff; }
+  .sheet{ max-width:none; padding:0; }
+  .opt .txt .bar, .pbar>i{ animation:none; }
+  .fade{ animation:none; opacity:1; transform:none; }
+  .q{ break-inside:avoid; }
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="flag-top">
+    <span>No. 1 · Single Edition</span>
+    <span class="ed">Grader / ISA Eyes Only</span>
+    <span>Per-Distractor Statistics</span>
+  </div>
+  <div class="nameplate"><span class="the">The Obsidian Bay</span>Item Analysis</div>
+  <div class="dateline">
+    <span id="dl-left">—</span>
+    <span class="star">✦ &nbsp; psychometrics of the written examination &nbsp; ✦</span>
+    <span id="dl-right">—</span>
+  </div>
+
+  <section class="lede fade">
+    <div>
+      <div class="kicker" id="lede-kicker">The Examination in Brief</div>
+      <h1 class="headline" id="lede-head">—</h1>
+      <p class="standfirst" id="lede-stand">—</p>
+      <p class="body" id="lede-body">—</p>
+      <p id="lede-body2"></p>
+    </div>
+    <div class="col-rule">
+      <div class="box">
+        <div class="box-h">By the Numbers</div>
+        <div class="stat-grid" id="stat-grid"></div>
+        <div class="curve" id="curve"></div>
+        <div class="curve-cap">grade distribution · n graded</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band fade"><span class="dingbat">☞</span><h2>Degree of Difficulty</h2>
+    <span class="tag">Both forms · hardest first · p = share earning full marks</span></div>
+  <table class="league fade" id="league"><thead><tr>
+    <th>Q</th><th>Topic</th><th>Type</th><th class="num">n</th>
+    <th class="num">p&nbsp;value</th><th>Difficulty</th><th class="num">Mean</th>
+  </tr></thead><tbody id="league-body"></tbody></table>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--red)"></span> p &lt; .35 — hardest quartile</span>
+    <span><span class="swatch" style="background:var(--bar)"></span> p ≥ .35</span>
+    <span>✦ keyed answer &nbsp;·&nbsp; † distractor over the key &nbsp;·&nbsp; ░ non-functioning (0 chose)</span>
+  </div>
+
+  <div id="forms"></div>
+
+  <div class="colophon fade">
+    <div>
+      <h3>How to read this sheet</h3>
+      <p><b>p value</b> is the fraction of students who earned full marks on the item — the
+      lower the number, the harder the question. <b>Mean</b> is average points earned.
+      Each option lists how many students selected it and its share; the keyed answer is
+      marked <b style="color:var(--red)">✦</b>. A distractor no one chose (<b>░</b>) is
+      non-functioning; one chosen by more students than the key (<b style="color:var(--red)">†</b>)
+      is a miskey or a genuinely seductive wrong answer worth review.</p>
+    </div>
+    <div>
+      <h3>Provenance</h3>
+      <p id="colo-prov">—</p>
+      <p>Source: Gradescope <i>Export Evaluations</i>, joined on stable <code>form·Qn·slot</code>
+      keys to the grading note. Internal grader instrument — never student-facing.</p>
+      <p style="font-style:italic">Set in Playfair Display, Newsreader &amp; Archivo Narrow.
+      Composed by <span style="font-variant:small-caps">lectern · reg-gradescope-stats</span>.</p>
+    </div>
+  </div>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const M = D.meta, E = D.exam;
+const FORMS = Object.keys(D.forms);
+const fmean = f => (E.form_means && E.form_means[f] != null) ? E.form_means[f] : "—";
+const esc = s => (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+// dateline + kickers
+document.getElementById("dl-left").innerHTML = `<b>${M.course}</b> — ${M.term} — §${M.section}`;
+document.getElementById("dl-right").innerHTML = `${M.exam} — graded <b>${M.graded}</b>`;
+document.getElementById("lede-kicker").textContent = `${M.exam} · ${M.course} · The Examination in Brief`;
+document.getElementById("colo-prov").innerHTML =
+  `${M.course} ${M.exam}, §${M.section}, ${M.term}. Graded ${M.graded}. ` +
+  `n = ${E.n} identified papers across Forms ${FORMS.map(f=>`${f} (${fmean(f)})`).join(" and ")}.`;
+
+// headline + lede — written from the data
+const allQ = FORMS.flatMap(f=>D.forms[f].map(q=>({f,...q})));
+const hardest = [...allQ].sort((a,b)=>a.p-b.p);
+const deadCount = allQ.reduce((n,q)=>n+q.distractors.filter(x=>x.dead).length,0);
+const miskeys = allQ.filter(q=>q.miskey);
+const pctFull = Math.round(E.mean/E.maxpts*100);
+document.getElementById("lede-head").innerHTML =
+  `Class clears ${pctFull}% of the bar; a handful of items do the bulk of the damage`;
+document.getElementById("lede-stand").innerHTML =
+  `Mean ${E.mean} of ${E.maxpts} &mdash; median ${E.median}, spread ${E.min}&ndash;${E.max} &mdash; ` +
+  `with the forms landing within ${(Math.max(...FORMS.map(fmean))-Math.min(...FORMS.map(fmean))).toFixed(1)} of a point of one another.`;
+const h1 = hardest[0], h2 = hardest[1];
+document.getElementById("lede-body").innerHTML =
+  `The examination behaved. Across ${allQ.length} scored items the cohort earned a mean of ` +
+  `<b>${E.mean}/${E.maxpts}</b> (${pctFull}%), median ${E.median}, with a standard deviation of ` +
+  `${E.sd} points. The difficulty is concentrated, not diffuse: the toughest item — ` +
+  `<b>${h1.f}·Q${h1.n}, ${esc(h1.name)}</b> — was earned in full by ${Math.round(h1.p*100)}% of takers, ` +
+  `with <b>${h2.f}·Q${h2.n}</b> close behind. Most other questions cleared comfortably.`;
+document.getElementById("lede-body2").innerHTML =
+  `Of ${allQ.length*1} items, <b>${deadCount}</b> distractors drew no takers at all — ` +
+  `non-functioning options that could be retired or sharpened — and ` +
+  (miskeys.length
+    ? `<b style="color:var(--red)">${miskeys.length}</b> item(s) tripped the miskey alarm.`
+    : `<b style="color:var(--green)">no</b> item tripped the miskey alarm after the Form&nbsp;B Q23 point-value fix.`);
+
+// by-the-numbers
+const stats = [
+  ["v","mean", E.mean, `/ ${E.maxpts}`], ["v","median", E.median, ""],
+  ["v","std dev", E.sd, "pts"], ["v","range", `${E.min}–${E.max}`, ""],
+];
+document.getElementById("stat-grid").innerHTML = stats.map(s=>
+  `<div class="stat"><div class="v">${s[2]}${s[3]?`<small> ${s[3]}</small>`:""}</div><div class="l">${s[1]}</div></div>`
+).join("");
+const tierColor={A:"#3f6b3a",B:"#4a6f7a",C:"#7a6f4a",D:"#9a7a2e",F:"#a8231b"};
+const total=Object.values(E.dist).reduce((a,b)=>a+b,0);
+document.getElementById("curve").innerHTML = Object.entries(E.dist).map(([k,v])=>
+  `<div class="seg" style="flex:${v};background:${tierColor[k]}" title="${k}: ${v}">${k} ${v}</div>`
+).join("");
+
+// difficulty league
+const par = p => p<.35 ? "hard" : "";
+document.getElementById("league-body").innerHTML = hardest.map(q=>{
+  const w = Math.round(q.p*100);
+  return `<tr><td class="q">${q.f}·Q${q.n}</td><td class="topic">${esc(q.name)}</td>`+
+    `<td class="ty">${q.type}</td><td class="num">${q.nrows}</td>`+
+    `<td class="num pdot">${q.p.toFixed(2)}</td>`+
+    `<td><span class="pbar ${par(q.p)}"><i style="--w:${w}%"></i></span></td>`+
+    `<td class="num">${q.mean.toFixed(2)}<span style="color:var(--faint)">/${q.pts}</span></td></tr>`;
+}).join("");
+
+// per-form agate
+const letters="abcdefgh";
+function optRow(o){
+  const cls = ["opt", o.is_key?"key":"", o.dead?"dead":"", o.over_key?"over":""].filter(Boolean).join(" ");
+  const mk = o.is_key ? "✦" : o.dead ? "░" : o.over_key ? "†" : "·";
+  return `<div class="${cls}"><span class="mk">${mk}</span>`+
+    `<span class="txt"><span class="label-txt">${esc(o.text)}</span>`+
+    `<span class="bar" style="--w:${o.pct}%"></span></span>`+
+    `<span class="num"><b>${o.n}</b> · ${o.pct}%</span></div>`;
+}
+document.getElementById("forms").innerHTML = FORMS.map(f=>{
+  const qs = D.forms[f];
+  const blocks = qs.map(q=>{
+    const hard = q.p<.35;
+    return `<div class="q${q.miskey?" miskey":""} fade">`+
+      `<div class="warn">⛔ keyed answer applied but scored 0 — fix rubric points</div>`+
+      `<div class="q-h"><span class="qn">${f}·Q${q.n}</span>`+
+      `<span class="qname">${esc(q.name)}</span><span class="qty">${q.type}</span></div>`+
+      `<div class="q-sub">n ${q.nrows}<span class="sep">·</span>`+
+      `p <span class="${hard?"hardp":""}">${q.p.toFixed(2)}</span>`+
+      `<span class="sep">·</span>mean ${q.mean.toFixed(2)}/${q.pts}</div>`+
+      q.distractors.map(optRow).join("")+
+      `</div>`;
+  }).join("");
+  return `<div class="band fade"><span class="dingbat">§</span><h2>Form ${f}</h2>`+
+    `<span class="tag">${qs.length} items · mean ${fmean(f)}/${E.maxpts}</span></div>`+
+    `<div class="qcols">${blocks}</div>`;
+}).join("");
+
+// stagger the fade-ins
+document.querySelectorAll(".fade").forEach((el,i)=>{ el.style.animationDelay=(i*70)+"ms"; });
+</script>
+</body>
+</html>
