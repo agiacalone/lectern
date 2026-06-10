@@ -188,6 +188,14 @@ def build_gradebook(
                 if name:
                     break
         enroll = (rinfo or {}).get("enrollment_status", "unknown" if not rinfo else "enrolled")
+        # Withdrawal trumps the computed standing: a roster status of 'withdrawn'
+        # yields a W (and the 'withdrew' flag), mirroring the Canvas-import path.
+        if enroll == "withdrawn":
+            letter = "W"
+            if "withdrew" in schema.flags:
+                flags.append("withdrew")
+        else:
+            letter = apply_letter_cuts(standing, schema)
         rows.append({
             "student_id": sid,
             "display_name": name,
@@ -195,7 +203,7 @@ def build_gradebook(
             "raw_scores": json.dumps(raw),
             "standing_score": standing,
             "weighted_score": standing,           # cockpit-compat alias
-            "letter_grade": apply_letter_cuts(standing, schema),
+            "letter_grade": letter,
             "in_progress": "true" if len(graded) < total_cols else "false",
             "graded_cols": str(len(graded)),
             "total_cols": str(total_cols),

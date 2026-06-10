@@ -139,6 +139,32 @@ def test_build_gradebook_unions_and_flags_stale_roster(tmp_path, schema_378):
     assert by["034935496"]["graded_cols"] == "0"           # roster-only, ungraded
 
 
+def test_build_gradebook_withdrawn_yields_W(tmp_path, schema_378):
+    """roster enrollment_status 'withdrawn' → letter W + 'withdrew' flag, mirroring
+    the Canvas-import path. Withdrawal trumps the computed standing (even a passing
+    score yields W); an *enrolled* no-show is unaffected (stays 0/F)."""
+    schema = load_schema(schema_378)
+    sc = tmp_path / "exam1_scores.csv"
+    _write_scores(sc, [
+        "Bell,Ryan,034935496,A,40.0,Graded",       # enrolled → B
+        "Matsuzoe,Sena,033247550,A,45.0,Graded",    # withdrawn but 45/50=90% → still W
+    ])
+    reg = tmp_path / "components.yaml"
+    reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
+                   encoding="utf-8")
+    roster = _roster(tmp_path, [
+        "034935496,Ryan Bell,enrolled",
+        "033247550,Sena Matsuzoe,withdrawn",
+    ])
+    out = tmp_path / "out"; out.mkdir()
+    rows = build_gradebook(reg, roster, schema, out)
+    by = {r["student_id"]: r for r in rows}
+    assert by["033247550"]["letter_grade"] == "W"          # withdrawal trumps the 90%
+    assert "withdrew" in by["033247550"]["flags"]
+    assert by["033247550"]["enrollment_status"] == "withdrawn"
+    assert by["034935496"]["letter_grade"] == "B"          # enrolled student unaffected
+
+
 # ── canvas export ───────────────────────────────────────────────────────────
 
 def test_export_canvas_only_graded_components(tmp_path, schema_378):
