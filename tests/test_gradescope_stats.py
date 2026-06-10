@@ -168,6 +168,33 @@ def test_link_into_grading_note_idempotent(note_file):
     assert link_into_grading_note(note_file, "ITEM_ANALYSIS.md", "item_analysis.html") is False
 
 
+def test_read_eval_student_scores(tmp_path):
+    from lectern.gradescope_stats import read_eval_student_scores
+    cols = ["(a) X", "(b) Y", "No answer / multiple marks"]
+    p = tmp_path / "1.csv"
+    _eval(p, cols, [
+        (101, "040100204", 2.0, [False, True, False]),
+        (102, "30611852", 0.0, [True, False, False]),       # short SID → padded
+        ("Rubric Numbers", "", 1.2, [False, False, False]),  # legend → skip
+    ])
+    got = read_eval_student_scores(p)
+    assert got == {"040100204": 2.0, "040100213": 0.0}
+
+
+def test_emit_item_scores(tmp_path):
+    from lectern.gradescope_stats import emit_item_scores
+    ev = tmp_path / "stats"; (ev / "groupA").mkdir(parents=True)
+    _eval(ev / "groupA" / "1_q1.csv", ["(a) X", "(b) Y"],
+          [(1, "040100204", 2.0, [False, True])])
+    _eval(ev / "groupA" / "2_q2.csv", ["(a) X", "(b) Y"],
+          [(1, "040100204", 3.0, [True, False])])
+    out = tmp_path / "out"; out.mkdir()
+    written = emit_item_scores(ev, out)
+    text = (out / "item_scores_A.csv").read_text()
+    assert "student_id,Q1,Q2,total" in text
+    assert "040100204,2,3,5" in text
+
+
 def test_cli_end_to_end(stats_tree, tmp_path):
     ev, note, scores = stats_tree
     out = tmp_path / "out"

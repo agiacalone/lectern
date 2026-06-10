@@ -42,6 +42,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from lectern.student_id import pad_student_id
+
 PREFIX_LAST = "Submission Time"   # last identity column before the rubric items
 SUFFIX_FIRST = "Adjustment"       # first trailing column after the rubric items
 QHEAD = re.compile(r"^####\s+(\w+)·Q(\d+)\s+·\s+(.+?)\s+·\s+(\d+)\s+pts\s+·\s+(\w+)")
@@ -330,6 +332,54 @@ def link_into_grading_note(note_path: Path, md_name: str, html_name: str) -> boo
     return True
 
 
+# ── item-scores matrix emitter ───────────────────────────────────────────────
+
+def read_eval_student_scores(path: Path) -> dict[str, float]:
+    """{padded_sid: points} for one question's eval CSV. Skips the non-numeric
+    'Rubric Numbers' legend row and blank-score rows."""
+    with path.open(encoding="utf-8") as fh:
+        rows = list(csv.reader(fh))
+    header = rows[0]
+    sid_i = header.index("SID")
+    sc_i = header.index("Score")
+    out: dict[str, float] = {}
+    for r in rows[1:]:
+        if not r or not r[0].strip().isdigit():
+            continue
+        if sc_i >= len(r) or not r[sc_i].strip():
+            continue
+        out[pad_student_id(r[sid_i].strip())] = float(r[sc_i])
+    return out
+
+
+def emit_item_scores(eval_dir: Path, out_dir: Path) -> list[Path]:
+    """Write item_scores_<form>.csv (student_id, Q1..Qn, total) per form. Forms
+    have disjoint rosters/questions, so one file each. Returns the paths written."""
+    written: list[Path] = []
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for form, gdir in _form_dirs(eval_dir).items():
+        files: dict[int, Path] = {}
+        for p in gdir.glob("*.csv"):
+            mm = re.match(r"(\d+)_", p.name)
+            if mm:
+                files[int(mm.group(1))] = p
+        qs = sorted(files)
+        mat: dict[str, dict[int, float]] = {}
+        for q in qs:
+            for sid, sc in read_eval_student_scores(files[q]).items():
+                mat.setdefault(sid, {})[q] = sc
+        dest = out_dir / f"item_scores_{form}.csv"
+        with dest.open("w", newline="", encoding="utf-8") as fh:
+            w = csv.writer(fh)
+            w.writerow(["student_id"] + [f"Q{q}" for q in qs] + ["total"])
+            for sid in sorted(mat):
+                cells = [mat[sid].get(q) for q in qs]
+                total = sum(v for v in cells if v is not None)
+                w.writerow([sid] + ["" if v is None else f"{v:g}" for v in cells] + [f"{total:g}"])
+        written.append(dest)
+    return written
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> int:
@@ -351,6 +401,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--link-grading-note", action="store_true",
                     help="splice a stats-link section into the grading note")
     ap.add_argument("--no-html", action="store_true", help="skip the HTML broadsheet")
+    ap.add_argument("--no-item-scores", action="store_true",
+                    help="skip the per-student×question item_scores matrix")
     a = ap.parse_args(argv)
 
     meta = {"course": a.course, "term": a.term, "section": a.section,
@@ -368,6 +420,9 @@ def main(argv: list[str] | None = None) -> int:
     if not a.no_html:
         (a.out_dir / "item_analysis.html").write_text(render_html(stats), encoding="utf-8")
         outs.append("item_analysis.html")
+    if not a.no_item_scores:
+        paths = emit_item_scores(a.eval_dir, a.out_dir)
+        outs += [p.name for p in paths]
     if a.link_grading_note and a.grading_note.exists():
         if link_into_grading_note(a.grading_note, "ITEM_ANALYSIS.md", "item_analysis.html"):
             print(f"→ linked stats into {a.grading_note.name}")

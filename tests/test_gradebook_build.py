@@ -120,7 +120,7 @@ def test_build_gradebook_in_progress_standing(tmp_path, schema_378):
     assert by["040100204"]["graded_cols"] == "1" and by["040100204"]["total_cols"] == "3"
     assert by["040100215"]["standing_score"] == 0.0
     assert by["040100204"]["weighted_score"] == 80.0  # cockpit-compat alias
-    assert (out / "gradebook.csv").exists() and (out / "gradebook.md").exists()
+    assert (out / "gradebook.csv").exists() and (out / "GRADEBOOK.md").exists()
 
 
 def test_build_gradebook_unions_and_flags_stale_roster(tmp_path, schema_378):
@@ -137,6 +137,32 @@ def test_build_gradebook_unions_and_flags_stale_roster(tmp_path, schema_378):
     assert "stale-roster" in by["040100214"]["flags"]      # scored, not in roster
     assert by["040100214"]["display_name"] == "Cassandra Cain"  # name from scores file
     assert by["040100204"]["graded_cols"] == "0"           # roster-only, ungraded
+
+
+def test_build_gradebook_withdrawn_yields_W(tmp_path, schema_378):
+    """roster enrollment_status 'withdrawn' → letter W + 'withdrew' flag, mirroring
+    the Canvas-import path. Withdrawal trumps the computed standing (even a passing
+    score yields W); an *enrolled* no-show is unaffected (stays 0/F)."""
+    schema = load_schema(schema_378)
+    sc = tmp_path / "exam1_scores.csv"
+    _write_scores(sc, [
+        "Gordon,James,040100204,A,40.0,Graded",       # enrolled → B
+        "Todd,Jason,040100215,A,45.0,Graded",    # withdrawn but 45/50=90% → still W
+    ])
+    reg = tmp_path / "components.yaml"
+    reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
+                   encoding="utf-8")
+    roster = _roster(tmp_path, [
+        "040100204,James Gordon,enrolled",
+        "040100215,Jason Todd,withdrawn",
+    ])
+    out = tmp_path / "out"; out.mkdir()
+    rows = build_gradebook(reg, roster, schema, out)
+    by = {r["student_id"]: r for r in rows}
+    assert by["040100215"]["letter_grade"] == "W"          # withdrawal trumps the 90%
+    assert "withdrew" in by["040100215"]["flags"]
+    assert by["040100215"]["enrollment_status"] == "withdrawn"
+    assert by["040100204"]["letter_grade"] == "B"          # enrolled student unaffected
 
 
 # ── canvas export ───────────────────────────────────────────────────────────
@@ -183,20 +209,69 @@ def test_cli_build_then_export(tmp_path, schema_378):
     assert (out / "canvas_import.csv").read_text().splitlines()[0] == "SIS User ID,Exam 1"
 
 
-# ── gradebook.md in-progress marker ─────────────────────────────────────────
 
-def test_gradebook_md_surfaces_in_progress(tmp_path, schema_378):
-    schema = load_schema(schema_378)
-    sc = tmp_path / "exam1_scores.csv"
-    _write_scores(sc, ["Gordon,James,040100204,A,40.0,Graded"])
+def test_registry_optional_fields(tmp_path):
+    from lectern.gradebook_build import load_registry, RegistryEntry
+    sc = tmp_path / "exam1_scores.csv"; sc.write_text("last,first,sid,version,score,status\n", encoding="utf-8")
+    bk = tmp_path / "item_scores_A.csv"; bk.write_text("student_id\n", encoding="utf-8")
     reg = tmp_path / "components.yaml"
-    reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
-                   encoding="utf-8")
-    roster = _roster(tmp_path, ["040100204,James Gordon,enrolled"])
-    out = tmp_path / "out"; out.mkdir()
-    build_gradebook(reg, roster, schema, out)
-    md = (out / "gradebook.md").read_text(encoding="utf-8")
-    assert "in_progress" in md and "graded_cols" in md   # template reads the new fields
+    reg.write_text(
+        "components:\n"
+        "  - short_name: exam1\n"
+        "    scores: exam1_scores.csv\n"
+        "    link: classes/378-478/exams/exam1_su26/GRADING_NOTE\n"
+        "    analysis: classes/378-478/exams/exam1_su26/ITEM_ANALYSIS\n"
+        "    breakdown: item_scores_A.csv\n"
+        "    kind: exam\n", encoding="utf-8")
+    e = load_registry(reg)[0]
+    assert e.short_name == "exam1"
+    assert e.link == "classes/378-478/exams/exam1_su26/GRADING_NOTE"
+    assert e.analysis == "classes/378-478/exams/exam1_su26/ITEM_ANALYSIS"
+    assert e.breakdown == ((tmp_path / "item_scores_A.csv").resolve(),)
+    assert e.kind == "exam"
+
+
+def test_registry_defaults_when_optional_absent(tmp_path):
+    from lectern.gradebook_build import load_registry
+    sc = tmp_path / "exam1_scores.csv"; sc.write_text("x\n", encoding="utf-8")
+    reg = tmp_path / "components.yaml"
+    reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n", encoding="utf-8")
+    e = load_registry(reg)[0]
+    assert e.link is None and e.analysis is None and e.breakdown == () and e.kind is None
+
+
+def test_registry_breakdown_glob(tmp_path):
+    """breakdown: item_scores_*.csv expands to a sorted tuple of matching paths."""
+    from lectern.gradebook_build import load_registry
+    sc = tmp_path / "exam1_scores.csv"; sc.write_text("x\n", encoding="utf-8")
+    bk_a = tmp_path / "item_scores_A.csv"; bk_a.write_text("student_id\n", encoding="utf-8")
+    bk_b = tmp_path / "item_scores_B.csv"; bk_b.write_text("student_id\n", encoding="utf-8")
+    reg = tmp_path / "components.yaml"
+    reg.write_text(
+        "components:\n"
+        "  - short_name: exam1\n"
+        "    scores: exam1_scores.csv\n"
+        "    breakdown: item_scores_*.csv\n", encoding="utf-8")
+    e = load_registry(reg)[0]
+    assert e.breakdown == (bk_a.resolve(), bk_b.resolve())
+
+
+def test_registry_breakdown_list(tmp_path):
+    """breakdown: [A.csv, B.csv] (YAML list) yields a tuple of those paths."""
+    from lectern.gradebook_build import load_registry
+    sc = tmp_path / "exam1_scores.csv"; sc.write_text("x\n", encoding="utf-8")
+    bk_a = tmp_path / "item_scores_A.csv"; bk_a.write_text("student_id\n", encoding="utf-8")
+    bk_b = tmp_path / "item_scores_B.csv"; bk_b.write_text("student_id\n", encoding="utf-8")
+    reg = tmp_path / "components.yaml"
+    reg.write_text(
+        "components:\n"
+        "  - short_name: exam1\n"
+        "    scores: exam1_scores.csv\n"
+        "    breakdown:\n"
+        "      - item_scores_A.csv\n"
+        "      - item_scores_B.csv\n", encoding="utf-8")
+    e = load_registry(reg)[0]
+    assert e.breakdown == (bk_a.resolve(), bk_b.resolve())
 
 
 def test_build_gradebook_excludes_dropped_noshow_not_in_roster(tmp_path, schema_378):
@@ -222,3 +297,19 @@ def test_build_gradebook_excludes_dropped_noshow_not_in_roster(tmp_path, schema_
     assert "040100215" in sids              # enrolled no-show kept (0/F)
     by = {r["student_id"]: r for r in rows}
     assert by["040100215"]["standing_score"] == 0.0
+
+
+def test_build_writes_ledger_surfaces(tmp_path, schema_378):
+    schema = load_schema(schema_378)
+    sc = tmp_path / "exam1_scores.csv"
+    _write_scores(sc, ["Gordon,James,040100204,A,40.0,Graded"])
+    reg = tmp_path / "components.yaml"
+    reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n    kind: exam\n",
+                   encoding="utf-8")
+    roster = _roster(tmp_path, ["040100204,James Gordon,enrolled"])
+    out = tmp_path / "out"; out.mkdir()
+    build_gradebook(reg, roster, schema, out, section="01", term="su26")
+    assert (out / "GRADEBOOK.md").exists()
+    assert (out / "assignments" / "exam1.md").exists()
+    gb = (out / "GRADEBOOK.md").read_text()
+    assert "Per-student statements" in gb and "exam1" in gb
