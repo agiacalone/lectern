@@ -116,3 +116,32 @@ def test_dfw_rate():
 
 def test_dfw_rate_empty():
     assert dfw_rate([]) == 0.0
+
+
+def test_compute_weighted_graded_only_renormalizes(schema_478):
+    """Only `final` graded → standing == final_pct (labs weight dropped)."""
+    s = load_schema(schema_478)
+    standing = compute_weighted(
+        {"final": 90.0}, s, graded_only=True, graded_cols={"final"}
+    )
+    assert standing == 90.0  # 0.5/0.5 * 90, labs renormalized out
+
+
+def test_compute_weighted_graded_only_converges_to_full(schema_478):
+    """All columns graded → graded_only == legacy full-schema weighted."""
+    s = load_schema(schema_478)
+    scores = {"lab1": 20.0, "final": 80.0}  # labs 100%, final 80%
+    full = compute_weighted(scores, s)
+    standing = compute_weighted(
+        scores, s, graded_only=True, graded_cols={"lab1", "final"}
+    )
+    assert standing == full == 90.0  # 0.5*100 + 0.5*80
+
+
+def test_compute_weighted_graded_only_excludes_ungraded_column(schema_478):
+    """A graded group counts ONLY its graded columns in earned/max."""
+    s = load_schema(schema_478)
+    standing = compute_weighted(
+        {"lab1": 10.0}, s, graded_only=True, graded_cols={"lab1"}
+    )
+    assert standing == 50.0  # lab1 10/20 = 50%, only graded group
