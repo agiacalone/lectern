@@ -77,18 +77,33 @@ def load_schema(path: Path) -> GradebookSchema:
 # ── computation ────────────────────────────────────────────────────────────
 
 
-def compute_weighted(raw_scores: dict[str, float], schema: GradebookSchema) -> float:
+def compute_weighted(
+    raw_scores: dict[str, float],
+    schema: GradebookSchema,
+    *,
+    graded_only: bool = False,
+    graded_cols: set[str] | None = None,
+) -> float:
     """raw_scores: {short_name: float}. Returns weighted percentage 0-100.
 
-    Per group: group_pct = sum(earned in group) / sum(max in group) * 100.
-    Weighted total = sum(weights[group] * group_pct).
-    Missing assignments → treated as 0 earned (max still counts).
+    Default (graded_only=False): per group, group_pct = sum(earned) /
+    sum(max) * 100; weighted = sum(weights[group] * group_pct); missing
+    assignments count as 0 earned with max still counting. (Legacy import path.)
+
+    graded_only=True: restrict earned/max to columns in `graded_cols`, drop
+    groups with no graded column, and RENORMALIZE the remaining group weights to
+    sum to 1.0. This yields an in-progress "current standing" that does not zero
+    ungraded work, and converges to the full-schema number once every column is
+    graded.
     """
+    gc = graded_cols or set()
     # Bucket columns by group, summing earned + max points.
     by_group: dict[str, dict[str, float]] = {}
     for col in schema.columns:
-        group = col.get("group") or ""
         short = col.get("short_name") or ""
+        if graded_only and short not in gc:
+            continue
+        group = col.get("group") or ""
         try:
             max_pts = float(col.get("points") or 0)
         except (TypeError, ValueError):
@@ -98,6 +113,15 @@ def compute_weighted(raw_scores: dict[str, float], schema: GradebookSchema) -> f
         bucket["earned"] += earned
         bucket["max"] += max_pts
 
+    # Renormalize over groups that have at least one graded column (graded_only).
+    graded_groups = {
+        g: w for g, w in schema.weights.items()
+        if by_group.get(g, {}).get("max", 0.0) > 0
+    }
+    denom = sum(graded_groups.values()) if graded_only else 1.0
+    if denom <= 0:
+        return 0.0
+
     total = 0.0
     for group, weight in schema.weights.items():
         bucket = by_group.get(group, {"earned": 0.0, "max": 0.0})
@@ -105,7 +129,7 @@ def compute_weighted(raw_scores: dict[str, float], schema: GradebookSchema) -> f
             # Group has no columns or all-zero max → contributes 0
             continue
         pct = (bucket["earned"] / bucket["max"]) * 100.0
-        total += float(weight) * pct
+        total += (float(weight) / denom) * pct
 
     return round(total, 2)
 
@@ -386,16 +410,21 @@ const rows = lines.slice(1).map(l => {{
   const cells = l.split(",");
   return Object.fromEntries(headers.map((h, i) => [h, cells[i]]));
 }});
-const tbl = rows.map(r => [
-  r.display_name,
-  r.canvas_final_score,
-  r.canvas_final_grade,
-  (r.override_grade ? `${{r.override_score}} / ${{r.override_grade}}` : "—"),
-  r.letter_grade,
-  r.grade_source,
-  r.enrollment_status,
-]);
-dv.table(["Name", "Total %", "Total Gr", "Override", "Effective", "Source", "Status"], tbl);
+// Unified standing view (vault-native `build` is primary; legacy `import` rows
+// also carry weighted_score + letter_grade). in_progress → "B*"; graded_cols/
+// total_cols → progress chip. Override detail (import path) folds into Status.
+const tbl = rows.map(r => {{
+  const inProg = String(r.in_progress) === "true";
+  const standing = (r.weighted_score ?? r.canvas_final_score ?? "");
+  const letterCell = (r.letter_grade || "") + (inProg ? "*" : "");
+  const prog = (r.graded_cols !== undefined && r.total_cols !== undefined)
+    ? `${{r.graded_cols}}/${{r.total_cols}}` : "—";
+  const status = (r.override_grade
+    ? `${{r.enrollment_status}} · ovr ${{r.override_grade}}`
+    : r.enrollment_status);
+  return [r.display_name, standing, letterCell, prog, status];
+}});
+dv.table(["Name", "Standing %", "Letter", "Graded", "Status"], tbl);
 ```
 
 > [!note] Footer
@@ -529,24 +558,18 @@ def grade_distribution(gradebook_csv: Path) -> dict:
 
 
 def _default_archives_root() -> Path:
-    """Best-effort classes root for DFW rollups.
-
-    Prefer an explicit ``--vault-root``; this is only a fallback. Override the
-    default with the ``LECTERN_VAULT`` environment variable.
-    """
-    import os
-
-    env = os.environ.get("LECTERN_VAULT")
-    fallback = Path.home() / "vault" / "classes"
-    candidates = [Path(env) / "classes" if env else None, fallback]
+    """Best-effort vault classes root for dfw rollups."""
+    candidates = [
+        Path.home() / "documents" / "obsidian" / "vault" / "classes",
+    ]
     for c in candidates:
-        if c and c.exists():
+        if c.exists():
             return c
-    return fallback
+    return candidates[0]
 
 
 def _schema_for_course(course: str) -> Path:
-    """Resolve <vault-root>/classes/<dir>/gradebook-schema.yaml for a course code.
+    """Resolve <vault>/classes/<dir>/gradebook-schema.yaml for a course code.
 
     Prefers a course-specific override (`gradebook-schema-<num>.yaml`) before
     falling back to the shared `gradebook-schema.yaml` in the same folder.
@@ -586,6 +609,30 @@ def _cmd_import(args: argparse.Namespace) -> int:
 
     print(f"→ {out_dir}/gradebook.csv ({len(rows)} rows)")
     print(f"→ {out_dir}/gradebook.md")
+    return 0
+
+
+def _cmd_build(args: argparse.Namespace) -> int:
+    from lectern.gradebook_build import build_gradebook
+    schema_path = args.schema or _schema_for_course(args.course)
+    schema = load_schema(schema_path)
+    rows = build_gradebook(
+        args.registry, args.roster, schema, args.out,
+        section=args.section, term=args.term,
+    )
+    in_prog = sum(1 for r in rows if r["in_progress"] == "true")
+    print(f"→ {args.out}/gradebook.csv ({len(rows)} students, {in_prog} in-progress)")
+    return 0
+
+
+def _cmd_export_canvas(args: argparse.Namespace) -> int:
+    from lectern.gradebook_build import export_canvas
+    schema_path = args.schema or (_schema_for_course(args.course) if args.course else None)
+    if schema_path is None:
+        sys.exit("export-canvas needs --schema or --course to resolve the schema")
+    schema = load_schema(schema_path)
+    export_canvas(args.gradebook, schema, args.out)
+    print(f"→ {args.out}")
     return 0
 
 
@@ -681,6 +728,23 @@ def main(argv: list[str] | None = None) -> int:
     pi.add_argument("--schema", type=Path,
                     help="path to gradebook-schema.yaml (else resolved by --course)")
     pi.set_defaults(func=_cmd_import)
+
+    pb = sub.add_parser("build", help="build gradebook from per-component score files (vault SoT)")
+    pb.add_argument("--course", required=True, help="course code, e.g. CECS_378")
+    pb.add_argument("--term", required=True)
+    pb.add_argument("--section", required=True)
+    pb.add_argument("--registry", type=Path, required=True, help="components.yaml")
+    pb.add_argument("--roster", type=Path, required=True, help="normalized roster.csv")
+    pb.add_argument("--out", type=Path, required=True, help="output directory")
+    pb.add_argument("--schema", type=Path, help="schema yaml (else resolved by --course)")
+    pb.set_defaults(func=_cmd_build)
+
+    pe = sub.add_parser("export-canvas", help="emit Canvas bulk-upload CSV from gradebook.csv")
+    pe.add_argument("--gradebook", type=Path, required=True)
+    pe.add_argument("--schema", type=Path, help="schema yaml (else resolved by --course)")
+    pe.add_argument("--course", help="course code (used only to resolve --schema)")
+    pe.add_argument("--out", type=Path, required=True)
+    pe.set_defaults(func=_cmd_export_canvas)
 
     pd = sub.add_parser("dfw", help="roll up DFW rate across sections of a term")
     pd.add_argument("--term", required=True)
