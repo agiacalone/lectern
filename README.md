@@ -37,7 +37,8 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 | `reg-term-create` | `term_create` | Scaffold a term from a YAML term-spec: semester note + per-section class notes + archive manifest skeletons + course-catalog wiring. Idempotent; `--init` writes a stub spec. |
 | `reg-term-finalize` | `term_finalize` | Reconcile grade distributions, flip section statuses to finalized, roll up enrollment-weighted aggregates. Supports `--dry-run`. |
 | `reg-term-archive` | `term_archive` | Build per-section archive bundles (roster → grades → GitHub → gradebook → exams → lectures → syllabus → `manifest.yaml`). `--check` validates an existing bundle for drift. |
-| `reg-gradebook` | `gradebook` | Consolidate normalized Canvas grades + LMS roster + a per-course YAML schema into `gradebook.csv` (weighted scores, letter grades, DFW rate) and a DataviewJS markdown view. |
+| `reg-gradebook` | `gradebook` + `gradebook_ledger` | Vault-native **grades ledger** (the vault is the grade source of truth; grades flow vault → Canvas). `build` rolls per-component score files (a `components.yaml` registry) into `gradebook.csv` + a `GRADEBOOK.md` ledger (grouped overview + per-assignment subsidiary ledgers + a live per-student view) with source-document reconciliation; `export-canvas` emits a Canvas bulk-upload CSV; the legacy `import` (Canvas → vault) and `dfw` / `dist` / `check` remain. |
+| `reg-gradescope-stats` | `gradescope_stats` | Per-outcome **item analysis** from Gradescope *Export Evaluations* — per-distractor stats joined to the grading-note `form·Qn·slot` keys; flags dead distractors, over-key distractors, and the miskey alarm. Emits `ITEM_ANALYSIS.md`, a self-contained newspaper/agate **broadsheet**, and a per-student×question `item_scores` matrix. |
 | `reg-exam-build` | `exam_build` | Assemble exam PDFs — single-source `.tex` mode or pack-mode `.yaml` manifest (multi-form A/B/C, per-student individualized, Gradescope products). See below. |
 | `reg-exam-verify` | `exam_verify` | Verify a student exam serial against the register. Confirms which form and which student a paper belongs to. |
 | `reg-lms-grades-import` | `lms_grades` | Normalize a Canvas `grades.csv` export to lectern's canonical format. |
@@ -75,8 +76,10 @@ reg-term-create --term fa26 --init --vault-root <root>   # write stub spec
 # fill in classes/fa26.spec.yaml
 reg-term-create --term fa26 --vault-root <root>           # materialize notes + manifests
 # ... run the term ...
-reg-gradebook import --course CECS_378 --term fa26 --section 01 ...
 reg-exam-build exams/midterm1/exam.build.yaml
+reg-gradescope-stats --eval-dir … --grading-note GRADING_NOTE.md --out-dir …   # item analysis + item_scores
+reg-gradebook build --course CECS_378 --term fa26 --section 01 \
+  --registry archives/fa26-01/components.yaml --roster … --out archives/fa26-01/   # vault-native ledger
 reg-isa-publish --term fa26 --section 01 ...
 reg-term-finalize --term fa26 --vault-root <root> --dry-run
 reg-term-archive --term fa26 --vault-root <root>

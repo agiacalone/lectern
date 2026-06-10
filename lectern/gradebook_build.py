@@ -20,12 +20,25 @@ from lectern.gradebook import (
     GradebookSchema, apply_letter_cuts, compute_weighted, render_view,
 )
 from lectern.student_id import pad_student_id
+from lectern import gradebook_ledger
+
+
+def _vault_root(p: Path) -> Path:
+    """Walk up from p to the dir containing an `.obsidian` folder (the vault root)."""
+    for parent in [p, *p.resolve().parents]:
+        if (parent / ".obsidian").is_dir():
+            return parent
+    raise RuntimeError("no .obsidian vault root above " + str(p))
 
 
 @dataclass(frozen=True)
 class RegistryEntry:
     short_name: str
     scores_path: Path
+    link: str | None = None              # vault note path (no ext) — assignment header → grading note
+    analysis: str | None = None          # vault note path (no ext) — → ITEM_ANALYSIS (exam stats)
+    breakdown: tuple[Path, ...] = ()     # per-student×question matrices (one per form; empty = none)
+    kind: str | None = None              # 'exam' | 'lab' | 'reading'; None → inferred
 
 
 def load_registry(path: Path) -> list[RegistryEntry]:
@@ -43,7 +56,29 @@ def load_registry(path: Path) -> list[RegistryEntry]:
         sp = (base / str(c["scores"])).resolve()
         if not sp.exists():
             sys.exit(f"{path}: scores file not found: {c['scores']} (resolved {sp})")
-        out.append(RegistryEntry(short_name=str(c["short_name"]), scores_path=sp))
+        bp = c.get("breakdown")
+        breakdown: tuple[Path, ...]
+        if bp is None:
+            breakdown = ()
+        elif isinstance(bp, list):
+            breakdown = tuple(
+                (base / str(item)).resolve()
+                for item in bp
+                if (base / str(item)).resolve().exists()
+            )
+        elif isinstance(bp, str) and "*" in bp:
+            breakdown = tuple(sorted(p.resolve() for p in base.glob(bp)))
+        else:
+            resolved = (base / str(bp)).resolve()
+            breakdown = (resolved,) if resolved.exists() else ()
+        out.append(RegistryEntry(
+            short_name=str(c["short_name"]),
+            scores_path=sp,
+            link=str(c["link"]) if c.get("link") else None,
+            analysis=str(c["analysis"]) if c.get("analysis") else None,
+            breakdown=breakdown,
+            kind=str(c["kind"]) if c.get("kind") else None,
+        ))
     return out
 
 
@@ -176,7 +211,31 @@ def build_gradebook(
         w = csv.DictWriter(fh, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
-    render_view(csv_path, schema, out, section=section, term=term)
+    # ── ledger surfaces ──────────────────────────────────────────────
+    by_short = {e.short_name: e for e in entries}
+    # vault-relative path to the assignments dir (for header wikilinks)
+    try:
+        vault_rel = out.resolve().relative_to(_vault_root(out))
+        assign_dir_rel = str(vault_rel / "assignments")
+    except (ValueError, RuntimeError):
+        assign_dir_rel = "assignments"
+    overview = gradebook_ledger.render_overview(
+        rows, schema, entries, assign_dir_rel=assign_dir_rel,
+        course=schema.course, term=term, section=section)
+    student_block = gradebook_ledger.render_student_view_block(schema)
+    (out / "GRADEBOOK.md").write_text(
+        "---\ntype: gradebook\n"
+        f"tags: [gradebook, teaching, {schema.course.lower().replace(' ', '-')}, term-{term}]\n"
+        f"course: \"{schema.course}\"\nterm: \"{term}\"\nsection: \"{section}\"\n"
+        "visibility: private\nicon: LiBookCheck\niconColor: var(--text-normal)\n---\n"
+        f"# {schema.course} §{section} — Gradebook ({term})\n\n"
+        + overview + "\n\n" + student_block, encoding="utf-8")
+    adir = out / "assignments"; adir.mkdir(exist_ok=True)
+    for e in entries:
+        (adir / f"{e.short_name}.md").write_text(
+            gradebook_ledger.render_assignment_page(e, schema, rows), encoding="utf-8")
+    # The new GRADEBOOK.md ledger supersedes the legacy standalone gradebook.md view;
+    # `build` no longer emits it (render_view remains for the legacy `import` path).
     return rows
 
 

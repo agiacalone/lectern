@@ -7,6 +7,16 @@ All notable changes to lectern are documented here.
 ## [Unreleased]
 
 ### Added
+- **Gradebook ledger** — `reg-gradebook build` now emits a navigable grades ledger (bookkeeping model: single-entry with source-document reconciliation):
+  - **`GRADEBOOK.md`** — a grouped general ledger: components by weight category (Assignments / Midterms / Final) with per-group subtotals → standing; ungraded cells render `·` (never `0`), in-progress `*`; each component header wikilinks its assignment page. Plus a live per-student statement view (DataviewJS).
+  - **`assignments/<short>.md`** — a subsidiary ledger per component. Exam pages carry the score roster (n/mean/median/σ + distribution), links + an `![[ITEM_ANALYSIS]]` embed, and a collapsible per-student×question grid **per form** (A/B).
+  - **Reconciliation** — every assignment page reconciles grid totals to recorded scores: true value mismatches surface under an *Out of balance* danger callout; roster differences (e.g. no-shows with a recorded score but no submission) surface as informational *Reconciling items* — surfaced, never silently absorbed.
+  - `components.yaml` gains optional `link:` / `analysis:` (assignment + item-analysis wikilinks), `breakdown:` (per-student×question matrix; accepts a glob/list for multi-form exams), and `kind:` (exam/lab/reading).
+  - `reg-gradescope-stats` emits a per-student×question `item_scores_<form>.csv` matrix (the grid + reconciliation source).
+  - New module `lectern.gradebook_ledger`.
+
+### Changed
+- `reg-gradebook build` no longer emits the legacy standalone `gradebook.md` cockpit — the new `GRADEBOOK.md` ledger supersedes it. (`render_view` is retained for the legacy Canvas→vault `import` path; the class-note cockpit reads `gradebook.csv` directly and is unaffected.)
 - `reg-gradescope-stats`: per-outcome **item analysis** from Gradescope *Export Evaluations*. Joins each rubric-item column back to the exam's `form·Qn·slot` keys in the grading note, computing per-question difficulty (p-value) and per-distractor selection counts.
   - Flags **non-functioning distractors** (chosen by 0), **distractors more popular than the key**, and a **miskey alarm** (a credited item applied yet the question mean is 0 → rubric point value misset in Gradescope).
   - Robust join: exact text → MC `(letter)` prefix (survives prose typos) → no-answer/blank → order outcome; excludes the Gradescope `Rubric Numbers` legend row and impossible-score rows.
