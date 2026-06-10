@@ -12,6 +12,12 @@ All notable changes to lectern are documented here.
   - Robust join: exact text → MC `(letter)` prefix (survives prose typos) → no-answer/blank → order outcome; excludes the Gradescope `Rubric Numbers` legend row and impossible-score rows.
   - Emits three artifacts: `ITEM_ANALYSIS.md` (Obsidian-tagged report), `item_analysis.html` (a self-contained newspaper/agate **Item Analysis broadsheet**), and `item_analysis.json` (downstream analytics). Can splice a *Post-exam statistics* link section into the grading note (`--link-grading-note`).
   - New module `lectern.gradescope_stats` + `references/item_analysis.template.html`.
+- `reg-gradebook build` + `reg-gradebook export-canvas`: **vault-native gradebook** — the vault is the grade source of truth; grades flow vault → Canvas (inverting the Canvas → vault `import` path).
+  - `build` rolls per-component score files into `gradebook.csv` (+ `gradebook.md` cockpit) via a per-section `components.yaml` registry that binds each scores file (`sid`, `score`, `status`) to a `gradebook-schema` column.
+  - **In-progress current standing**: `compute_weighted(graded_only=…)` renormalizes group weights over graded work, so a partly-graded term is not scored all-F and converges to the full-schema final once every column is graded.
+  - Roster handling: off-roster students with a real grade (e.g. a new enrollee) are kept and flagged `stale-roster`; a non-roster student who only no-showed is treated as dropped and excluded from the gradebook.
+  - `export-canvas` emits a Canvas bulk-upload CSV (`SIS User ID` + one column per graded component) for pushing grades back to Canvas; ungraded components get no column (never upload-zeroes work that isn't done).
+  - New module `lectern.gradebook_build`; legacy `reg-gradebook import` (Canvas → vault) retained for reconciliation.
 - `exam_pack` module: pack-mode exam build via `exam.build.yaml` manifest
   - Multi-form (A/B/C) support with hand-authored form variants
   - Per-student individualized builds (pre-filled NAME/ID, unique footer serials)
