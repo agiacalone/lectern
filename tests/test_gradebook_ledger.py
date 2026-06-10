@@ -90,6 +90,10 @@ def test_render_student_view_block(schema_378):
     assert "raw_scores" in block            # reads the per-component data
     assert "gradebook.csv" in block         # from the ledger CSV
     assert "assignments" in block           # links each component to its page
+    # schema-tolerant fallbacks: works for new-build AND legacy/backfilled gradebook.csv
+    assert "short_scores" in block          # legacy import key (preferred when present)
+    assert "canvas_final_score" in block    # legacy standing fallback
+    assert "override_grade" in block        # recorded-letter override honored
 
 
 # ── BLOCKER 1: RFC-4180 CSV parser in DataviewJS block ───────────────────────
