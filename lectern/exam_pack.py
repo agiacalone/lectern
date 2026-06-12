@@ -3,7 +3,7 @@
 Drives the existing lectern.exam_build (build_variant / build_roster) per form,
 assigns forms to students, and emits Gradescope region/bubble products.
 
-See docs/design/exam-multiform-gradescope-design.md for the
+See <vault>/plans/specs/2026-06-07-exam-multiform-gradescope-design.md for the
 full design spec.
 """
 from __future__ import annotations

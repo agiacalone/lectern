@@ -1,8 +1,8 @@
 """3-route Google Drive backend auto-detection for pa-isa-publish.
 
-Three plausible paths to writing files to the ``ExampleDept-ISA/`` Drive
-hierarchy. Each has different operational tradeoffs; ``pa-isa-publish`` picks
-one at startup based on what's available.
+Anthony's environment has three plausible paths to writing files to the
+``Giacalone-ISA/`` Drive hierarchy. Each has different operational tradeoffs;
+``pa-isa-publish`` picks one at startup based on what's available.
 
   1. **MCPBackend** — when this Claude session has the Google Drive MCP
      connector mounted. The subagent that runs ``pa-isa-publish`` does **not**
@@ -14,12 +14,14 @@ one at startup based on what's available.
      Needed when running unattended from cron (no human to OAuth). Stubbed in
      v1; activates when ``~/.config/google/sa-isa-publish.json`` exists.
 
-  3. **RcloneBackend** — the user's existing ``gdrive:`` rclone remote. Already
+  3. **RcloneBackend** — Anthony's existing ``gdrive:`` rclone remote. Already
      authenticated (the user runs ``rclone`` for other things). This is the
      pragmatic CLI path: ``rclone copyto`` for upload, ``rclone hashsum md5``
      for drift detection.
 
 Detection order: env var → keyfile → rclone listremotes → exit with help.
+
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design Part 6.
 """
 from __future__ import annotations
 
@@ -172,7 +174,7 @@ def detect_backend() -> DriveBackend:
         "  - MCP: set MCP_DRIVE_AVAILABLE=1 when running inside a Claude\n"
         "    session that has the Google Drive MCP connector.\n"
         f"  - Service account: drop a keyfile at {SA_KEYFILE} and grant it\n"
-        "    write access to ExampleDept-ISA/.\n"
+        "    write access to Giacalone-ISA/.\n"
         "  - rclone: install rclone, run `rclone config` to add a 'gdrive:'\n"
         "    remote, then re-run pa-isa-publish.\n"
     )

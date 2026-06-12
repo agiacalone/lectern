@@ -9,7 +9,7 @@ The per-student build injects \\def\\studentname / \\def\\studentserial via
 the command line. The exam .tex must define empty defaults for both macros
 (via \\@ifundefined+\\def or \\providecommand). See A.2 doctrine.
 
-See docs/design/per-student-exam-id-design Part 1.
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design Part 1.
 """
 from __future__ import annotations
 
@@ -265,7 +265,7 @@ def build_roster(cfg: ExamBuildConfig) -> BuildResult:
         raise SystemExit(
             "pa-exam-build: source .tex lacks per-student macros — regenerate"
             " from lecture-materials-assistant or hand-patch the preamble per"
-            " docs/design/per-student-exam-id-design"
+            " <vault>/plans/specs/2026-05-13-per-student-exam-id-design"
             " § Backward-Compat Gotcha."
         )
 

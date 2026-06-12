@@ -1,8 +1,8 @@
-"""pa-isa-publish — sync vault archive artifacts to the ExampleDept-ISA Drive.
+"""pa-isa-publish — sync vault archive artifacts to the Giacalone-ISA Drive.
 
 This module is the orchestrator. It walks an archive bundle (and selected
 vault-wide artifacts), applies a routing table to determine each artifact's
-destination path under ``ExampleDept-ISA/<term>/...``, and dispatches uploads
+destination path under ``Giacalone-ISA/<term>/...``, and dispatches uploads
 via the detected backend (MCP/service-account/rclone — see pa.drive_auth).
 
 Idempotency is hash-based: each entry's SHA-256 source hash is stored in the
@@ -12,10 +12,10 @@ the existing Drive file (preserving its shareable link and permissions).
 
 Out-of-scope for v1 per spec:
   - Two-way Drive→vault sync.
-  - Permission auditing (Drive shares inherit from ExampleDept-ISA/ root).
+  - Permission auditing (Drive shares inherit from Giacalone-ISA/ root).
   - Notification (Drive's built-in 'new file' emails cover this).
 
-See docs/design/per-student-exam-id-design Part 6.
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design Part 6.
 """
 from __future__ import annotations
 
@@ -50,16 +50,16 @@ from lectern.isa_publish_schema import (
 
 ROUTING_TABLE: list[tuple[str, str, str, str]] = [
     ("exams/*_key.pdf",
-     "ExampleDept-ISA/{TERM}/Finals/",
+     "Giacalone-ISA/{TERM}/Finals/",
      "bundle", "exam grading keys"),
     ("exams/*_combined.pdf",
-     "ExampleDept-ISA/{TERM}/{COURSE} Section {SECTION}/",
+     "Giacalone-ISA/{TERM}/{COURSE} Section {SECTION}/",
      "bundle", "per-student print stacks"),
     ("**/lab_*_grading_rubric.md",
-     "ExampleDept-ISA/{TERM}/Grading Rubrics/",
+     "Giacalone-ISA/{TERM}/Grading Rubrics/",
      "bundle", "lab grading rubrics"),
     ("notes/isa-grading-delegation-*.md",
-     "ExampleDept-ISA/{TERM}/",
+     "Giacalone-ISA/{TERM}/",
      "vault", "ISA division of labor"),
 ]
 
@@ -307,7 +307,7 @@ def _load_existing_manifest(bundle_dir: Path) -> dict | None:
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="pa-isa-publish",
-        description="Sync vault archive artifacts to the ExampleDept-ISA Google Drive.",
+        description="Sync vault archive artifacts to the Giacalone-ISA Google Drive.",
     )
     p.add_argument("--bundle", type=Path, help="path to an archive bundle directory")
     p.add_argument("--course", help='course code like "CECS 478"')
