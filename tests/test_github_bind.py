@@ -20,15 +20,15 @@ def test_normalize_student_id():
     # Strip non-digits + zero-pad
     assert normalize_student_id("  040100001  ") == ("040100001", [])
     # Letter prefix stripped
-    sid, flags = normalize_student_id("C40100020")
-    assert sid == "040100020"   # 9-pad after letter strip
+    sid, flags = normalize_student_id("C02962436")
+    assert sid == "002962436"   # 9-pad after letter strip
     assert flags == []
     # Way too short — flagged
-    sid, flags = normalize_student_id("401002")
-    assert sid == "000401002"
+    sid, flags = normalize_student_id("424657")
+    assert sid == "000424657"
     assert "malformed_id_6d" in flags or any("6d" in f for f in flags)
     # 10 digits — flagged (didn't fit 9)
-    sid, flags = normalize_student_id("4010002000")
+    sid, flags = normalize_student_id("0401000255")
     assert "malformed_id_10d" in flags or any("10d" in f for f in flags)
 
 
@@ -60,14 +60,14 @@ def test_bind_from_form_minimal_happy_path(tmp_path):
 
 def test_bind_from_form_dedup_consistent(tmp_path):
     """When the same student submits twice with the same username, dedup keeps latest + sets consistent_dedup."""
-    form = FIX / "github_form_sp26.csv"   # has 2 dupes for SID 400222333 (Beltran)
+    form = FIX / "github_form_sp26.csv"   # has 2 dupes for SID 400222333 (Vale in synthetic)
     # Build a synthetic roster matching the form's SIDs
     roster = tmp_path / "roster.csv"
-    # The form rows include SID 400222333 twice — name "Beltran"
+    # The synthetic form rows include SID 400222333 twice — name "Vale"
     roster.write_text(
         "student_id,lms_name,display_name,canonical_name,section,enrollment_status,"
         "add_dt,grade_dt,program,academic_level\n"
-        '400222333,"Beltran,Sofia Maria",Sofia Maria Beltran,sofia maria beltran,04,enrolled,2026-01-21,,,Senior\n'
+        '400222333,"Vale,Vicki Marie",Vicki Marie Vale,vicki marie vale,04,enrolled,2026-01-21,,,Senior\n'
     )
     out = bind_from_form(form, roster, section="04")
     by_sid = {b.student_id: b for b in out}
@@ -75,7 +75,7 @@ def test_bind_from_form_dedup_consistent(tmp_path):
     b = by_sid["400222333"]
     # Both form rows have the same username → consistent_dedup
     assert b.verified == "consistent_dedup"
-    assert b.github_username == "sbeltran02"
+    assert b.github_username == "vvale02"
 
 
 def test_bind_from_form_missing_student(tmp_path):

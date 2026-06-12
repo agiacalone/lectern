@@ -26,9 +26,12 @@ All tools are vault-aware via an explicit `--vault-root` argument.
 | `reg-classroom-roster-seed` | classroom_seed | Seed a GitHub Classroom roster from a normalized roster |
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
+| `reg-gradescope-stats` | gradescope_stats | Per-outcome **item analysis** from Gradescope *Export Evaluations* — per-distractor stats joined to grading-note `form·Qn·slot` keys (dead/over-key distractors, miskey alarm); emits `ITEM_ANALYSIS.md` newspaper broadsheet + `item_scores` matrix |
+| `reg-triage` | triage | Git-history **authenticity triage** for GitHub Classroom submissions: `init` scaffolds a manifest, `sweep` scores a class into FLAG/REVIEW/PASS (CSV + Markdown broadsheet; org-`scrape` repo discovery post-Classroom), `report` emits a two-tier audit doc with a sanitized `--release` variant, `rhythm` flags cross-assignment commit-rhythm shifts. 100% triage — no student penalized without human review |
+| `reg-syllabus` | syllabus | Generate course syllabi from Markdown with a tamper-evident control-number serial: `stamp` injects a repo-tree SHA-256 + register row, `build` renders `syllabus.html` + a Canvas-RCE-safe `syllabus_canvas.html` (`--pdf` opt-in, print only) |
 
 Library modules (no wrapper): `exam_serial`, `manifest_schema`, `student_id`,
-`drive_auth`, `isa_publish_schema`.
+`drive_auth`, `isa_publish_schema`. Triage engine: `triage_signals`, `triage_engine`, `triage_manifest`, `triage_rhythm`, `triage_scrape`, `triage_version`. Plus `syllabus_serial`, `qbank`.
 
 ## Exam reading-list study guides (`reg-exam-readinglist`)
 

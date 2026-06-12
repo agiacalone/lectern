@@ -79,8 +79,8 @@ def test_read_eval_counts_and_skips(tmp_path):
     cols = ["(a) Confidentiality", "(b) Availability", "(c) Integrity", "No answer / multiple marks"]
     p = tmp_path / "1.csv"
     _eval(p, cols, [
-        (101, "034935496", 2.0, [False, True, False, False]),   # correct
-        (102, "030611852", 0.0, [False, False, True, False]),   # wrong (c)
+        (101, "040100020", 2.0, [False, True, False, False]),   # correct
+        (102, "040100021", 0.0, [False, False, True, False]),   # wrong (c)
         ("Rubric Numbers", "", 1.2, [False, False, False, False]),  # legend row → skip
     ])
     n, pairs, scores, anom, skipped = read_eval(p, 2)
@@ -92,7 +92,7 @@ def test_read_eval_counts_and_skips(tmp_path):
 def test_read_eval_flags_anomaly(tmp_path):
     cols = ["(b) Availability", "No answer / multiple marks"]
     p = tmp_path / "1.csv"
-    _eval(p, cols, [(101, "034935496", 23.2, [True, False])])   # 23.2 on a 2-pt Q
+    _eval(p, cols, [(101, "040100020", 23.2, [True, False])])   # 23.2 on a 2-pt Q
     n, pairs, scores, anom, skipped = read_eval(p, 2)
     assert n == 0 and anom and anom[0][1] == 23.2
 
@@ -103,10 +103,10 @@ def test_exam_summary(tmp_path):
     p = tmp_path / "scores.csv"
     p.write_text(
         "last,first,sid,version,score,status\n"
-        "Bell,Ryan,034935496,A,45.0,Graded\n"     # 90% → A
-        "Doe,Jane,030611852,B,35.0,Graded\n"      # 70% → C
-        "Khunt,Avi,030766500,A,15.0,Graded\n"     # 30% → F
-        "Matsuzoe,Sena,033247550,A,,No-show\n",   # excluded
+        "Kane,Kate,040100020,A,45.0,Graded\n"     # 90% → A
+        "Zsasz,Victoria,040100021,B,35.0,Graded\n"      # 70% → C
+        "Nashton,Edward,040100022,A,15.0,Graded\n"     # 30% → F
+        "Pennyworth,Alfreda,040100010,A,,No-show\n",   # excluded
         encoding="utf-8")
     s = exam_summary(p, 50)
     assert s["n"] == 3 and s["maxpts"] == 50
@@ -122,17 +122,17 @@ def stats_tree(tmp_path, note_file):
     (ev / "groupA").mkdir(parents=True)
     _eval(ev / "groupA" / "1_cia.csv",
           ["(a) Confidentiality", "(b) Availability", "(c) Integrity", "No answer / multiple marks"],
-          [(1, "034935496", 2.0, [False, True, False, False]),
-           (2, "030611852", 2.0, [False, True, False, False]),
-           (3, "030766500", 0.0, [False, False, True, False])])
+          [(1, "040100020", 2.0, [False, True, False, False]),
+           (2, "040100021", 2.0, [False, True, False, False]),
+           (3, "040100022", 0.0, [False, False, True, False])])
     # FIB Q2 with all scores 0 but key items applied → miskey alarm
     _eval(ev / "groupA" / "2_fib.csv",
           ['blank 1 = "56"', 'blank 2 = "128"', "No answer / multiple marks"],
-          [(1, "034935496", 0.0, [True, True, False]),
-           (2, "030611852", 0.0, [True, False, False])])
+          [(1, "040100020", 0.0, [True, True, False]),
+           (2, "040100021", 0.0, [True, False, False])])
     scores = tmp_path / "scores.csv"
     scores.write_text("last,first,sid,version,score,status\n"
-                      "Bell,Ryan,034935496,A,2.0,Graded\n", encoding="utf-8")
+                      "Kane,Kate,040100020,A,2.0,Graded\n", encoding="utf-8")
     return ev, note_file, scores
 
 
@@ -173,26 +173,26 @@ def test_read_eval_student_scores(tmp_path):
     cols = ["(a) X", "(b) Y", "No answer / multiple marks"]
     p = tmp_path / "1.csv"
     _eval(p, cols, [
-        (101, "034935496", 2.0, [False, True, False]),
-        (102, "30611852", 0.0, [True, False, False]),       # short SID → padded
+        (101, "040100020", 2.0, [False, True, False]),
+        (102, "40100021", 0.0, [True, False, False]),       # short SID → padded
         ("Rubric Numbers", "", 1.2, [False, False, False]),  # legend → skip
     ])
     got = read_eval_student_scores(p)
-    assert got == {"034935496": 2.0, "030611852": 0.0}
+    assert got == {"040100020": 2.0, "040100021": 0.0}
 
 
 def test_emit_item_scores(tmp_path):
     from lectern.gradescope_stats import emit_item_scores
     ev = tmp_path / "stats"; (ev / "groupA").mkdir(parents=True)
     _eval(ev / "groupA" / "1_q1.csv", ["(a) X", "(b) Y"],
-          [(1, "034935496", 2.0, [False, True])])
+          [(1, "040100020", 2.0, [False, True])])
     _eval(ev / "groupA" / "2_q2.csv", ["(a) X", "(b) Y"],
-          [(1, "034935496", 3.0, [True, False])])
+          [(1, "040100020", 3.0, [True, False])])
     out = tmp_path / "out"; out.mkdir()
     written = emit_item_scores(ev, out)
     text = (out / "item_scores_A.csv").read_text()
     assert "student_id,Q1,Q2,total" in text
-    assert "034935496,2,3,5" in text
+    assert "040100020,2,3,5" in text
 
 
 def test_cli_end_to_end(stats_tree, tmp_path):

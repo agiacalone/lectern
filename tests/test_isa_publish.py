@@ -64,7 +64,7 @@ def test_build_publish_manifest_routes_key_to_finals(bundle):
     key_entry = next(
         e for e in entries if str(e.source).endswith("478-final-sp26-b_key.pdf")
     )
-    assert key_entry.drive_path.startswith("ExampleDept-ISA/SP26/Finals/")
+    assert key_entry.drive_path.startswith("Giacalone-ISA/SP26/Finals/")
 
 
 def test_build_publish_manifest_routes_combined_to_section(bundle):

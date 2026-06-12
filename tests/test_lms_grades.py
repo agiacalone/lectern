@@ -32,7 +32,7 @@ def test_parse_minimal_metadata_rows():
 def test_normalize_filters_isa_real():
     parsed = parse_canvas_csv(FIX / "grades_478-04_sp26.csv")
     norm = normalize_grades(parsed)
-    # 13 students remain after ISA (040100010SA) filtered
+    # 13 students remain after ISA (040100099SA) filtered
     assert len(norm.grades) == 13
     assert len(norm.filtered) == 1
     assert norm.filtered[0].reason == "isa"
@@ -44,8 +44,8 @@ def test_normalize_filters_isa_real():
 def test_normalize_assignment_scores_json():
     parsed = parse_canvas_csv(FIX / "grades_minimal.csv")
     norm = normalize_grades(parsed)
-    alderman_like = next(r for r in norm.grades if r.student_id == "111111111")
-    scores = json.loads(alderman_like.assignment_scores)
+    wayne_like = next(r for r in norm.grades if r.student_id == "111111111")
+    scores = json.loads(wayne_like.assignment_scores)
     # Keys are stripped of (canvas_id) suffix
     assert "Lab 1" in scores
     assert scores["Lab 1"] == "18.00"
@@ -54,12 +54,12 @@ def test_normalize_assignment_scores_json():
 def test_normalize_letter_columns_present_real():
     parsed = parse_canvas_csv(FIX / "grades_478-04_sp26.csv")
     norm = normalize_grades(parsed)
-    alderman = next(r for r in norm.grades if r.student_id == "040100001")
+    wayne = next(r for r in norm.grades if r.student_id == "040100001")
     # Pre-finals all-F state — final_grade should be 'F' on this snapshot
-    assert alderman.final_grade == "F"
+    assert wayne.final_grade == "F"
     # final_score and current_score populated
-    assert alderman.final_score != ""
-    assert alderman.current_score != ""
+    assert wayne.final_score != ""
+    assert wayne.current_score != ""
 
 
 def test_write_grades_csv(tmp_path):
@@ -81,7 +81,7 @@ def test_write_filtered_csv(tmp_path):
     out = tmp_path / "grades.filtered.csv"
     write_filtered_csv(norm, out)
     text = out.read_text()
-    assert "040100010SA" in text
+    assert "040100099SA" in text
     assert "isa" in text
 
 

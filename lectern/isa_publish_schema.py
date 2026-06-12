@@ -3,7 +3,7 @@
 Each archive bundle that publishes artifacts to Google Drive ships with an
 ``isa-publish.yaml`` next to its ``manifest.yaml``. The publish manifest tracks
 (source_path, drive_path, source_hash, drive_file_id, last_pushed) for every
-artifact mirrored to ``ExampleDept-ISA/`` so pa-isa-publish can:
+artifact mirrored to ``Giacalone-ISA/`` so pa-isa-publish can:
 
   - Skip uploads when the source hash is unchanged (idempotency).
   - Update existing Drive files in place (preserve permissions, shareable links).
@@ -12,7 +12,7 @@ artifact mirrored to ``ExampleDept-ISA/`` so pa-isa-publish can:
 This module is the schema layer only. The orchestration lives in
 ``pa.isa_publish`` and the I/O backends live in ``pa.drive_auth``.
 
-See docs/design/per-student-exam-id-design Part 6.
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design Part 6.
 """
 from __future__ import annotations
 
