@@ -18,17 +18,17 @@ class TestNormalizeStudentId:
 
     def test_csulb_letter_prefix_form(self):
         """Campus Solutions C-prefix: drop letter, pad digits to 9."""
-        sid, flags = normalize_student_id("C40100020")
-        assert sid == "040100020"
+        sid, flags = normalize_student_id("C02962436")
+        assert sid == "002962436"
         assert flags == []
 
     def test_letter_prefix_lowercase(self):
-        sid, _ = normalize_student_id("c40100020")
-        assert sid == "040100020"
+        sid, _ = normalize_student_id("c02962436")
+        assert sid == "002962436"
 
     def test_under_9_digits_flagged(self):
-        sid, flags = normalize_student_id("401002")
-        assert sid == "000401002"
+        sid, flags = normalize_student_id("424657")
+        assert sid == "000424657"
         assert "malformed_id_6d" in flags
 
     def test_over_9_digits_flagged(self):

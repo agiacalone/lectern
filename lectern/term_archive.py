@@ -460,7 +460,7 @@ def _ingest_exams(cfg: ArchiveConfig, bundle: Path, manifest: dict) -> None:
             if "tex" in slot:
                 notes_lines.append(
                     f"spec_json missing for {stem}: pre-Su26 generator gap, "
-                    "documented at docs/exam-tex-doctrine"
+                    "documented at <vault>/notes/exam-tex-doctrine"
                 )
         if "serials_csv" in slot:
             _copy(slot["serials_csv"], exams_dir / slot["serials_csv"].name)

@@ -46,7 +46,7 @@ def _roster(tmp_path, rows):
 def test_load_registry_resolves_relative_paths(tmp_path):
     (tmp_path / "exams").mkdir()
     sc = tmp_path / "exams" / "exam1_scores.csv"
-    _write_scores(sc, ["Bell,Ryan,034935496,A,43.0,Graded"])
+    _write_scores(sc, ["Kane,Kate,040100020,A,43.0,Graded"])
     reg = tmp_path / "components.yaml"
     reg.write_text(
         "components:\n"
@@ -70,26 +70,26 @@ def test_load_registry_missing_file_errors(tmp_path):
 def test_read_component_scores_basic(tmp_path):
     sc = tmp_path / "exam1_scores.csv"
     _write_scores(sc, [
-        "Bell,Ryan,034935496,A,43.0,Graded",
-        "Matsuzoe,Sena,033247550,A,,No-show",
-        "Khunt,Avi,30766500,A,15.0,Graded",   # short SID → padded
+        "Kane,Kate,040100020,A,43.0,Graded",
+        "Pennyworth,Alfreda,040100010,A,,No-show",
+        "Nashton,Edward,40100022,A,15.0,Graded",   # short SID → padded
     ])
     got = read_component_scores(sc)
-    assert got["034935496"] == (43.0, "Graded")
-    assert got["033247550"] == (0.0, "No-show")   # no-show → earned 0
-    assert got["030766500"] == (15.0, "Graded")   # padded to 9 digits
+    assert got["040100020"] == (43.0, "Graded")
+    assert got["040100010"] == (0.0, "No-show")   # no-show → earned 0
+    assert got["040100022"] == (15.0, "Graded")   # padded to 9 digits
 
 
 def test_read_component_scores_blank_is_ungraded(tmp_path):
     sc = tmp_path / "exam1_scores.csv"
-    _write_scores(sc, ["Doe,Jane,012345678,A,,"])   # blank score + blank status
+    _write_scores(sc, ["Zsasz,Victoria,012345678,A,,"])   # blank score + blank status
     got = read_component_scores(sc)
     assert "012345678" not in got   # ungraded: excluded entirely
 
 
 def test_read_component_scores_bad_number_errors(tmp_path):
     sc = tmp_path / "exam1_scores.csv"
-    _write_scores(sc, ["Doe,Jane,012345678,A,abc,Graded"])
+    _write_scores(sc, ["Zsasz,Victoria,012345678,A,abc,Graded"])
     with pytest.raises(SystemExit, match="012345678"):
         read_component_scores(sc)
 
@@ -100,43 +100,43 @@ def test_build_gradebook_in_progress_standing(tmp_path, schema_378):
     schema = load_schema(schema_378)
     sc = tmp_path / "exam1_scores.csv"
     _write_scores(sc, [
-        "Bell,Ryan,034935496,A,40.0,Graded",     # 40/50 = 80%
-        "Matsuzoe,Sena,033247550,A,,No-show",     # 0 → 0%
+        "Kane,Kate,040100020,A,40.0,Graded",     # 40/50 = 80%
+        "Pennyworth,Alfreda,040100010,A,,No-show",     # 0 → 0%
     ])
     reg = tmp_path / "components.yaml"
     reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
                    encoding="utf-8")
     roster = _roster(tmp_path, [
-        "034935496,Ryan Bell,enrolled",
-        "033247550,Sena Matsuzoe,enrolled",
+        "040100020,Kate Kane,enrolled",
+        "040100010,Alfreda Pennyworth,enrolled",
     ])
     out = tmp_path / "out"; out.mkdir()
     rows = build_gradebook(reg, roster, schema, out)
     by = {r["student_id"]: r for r in rows}
     # only midterms graded → standing == exam1_pct (renormalized)
-    assert by["034935496"]["standing_score"] == 80.0
-    assert by["034935496"]["letter_grade"] == "B"
-    assert by["034935496"]["in_progress"] == "true"
-    assert by["034935496"]["graded_cols"] == "1" and by["034935496"]["total_cols"] == "3"
-    assert by["033247550"]["standing_score"] == 0.0
-    assert by["034935496"]["weighted_score"] == 80.0  # cockpit-compat alias
+    assert by["040100020"]["standing_score"] == 80.0
+    assert by["040100020"]["letter_grade"] == "B"
+    assert by["040100020"]["in_progress"] == "true"
+    assert by["040100020"]["graded_cols"] == "1" and by["040100020"]["total_cols"] == "3"
+    assert by["040100010"]["standing_score"] == 0.0
+    assert by["040100020"]["weighted_score"] == 80.0  # cockpit-compat alias
     assert (out / "gradebook.csv").exists() and (out / "GRADEBOOK.md").exists()
 
 
 def test_build_gradebook_unions_and_flags_stale_roster(tmp_path, schema_378):
     schema = load_schema(schema_378)
     sc = tmp_path / "exam1_scores.csv"
-    _write_scores(sc, ["Khunt,Avi,030766500,A,15.0,Graded"])  # not in roster
+    _write_scores(sc, ["Nashton,Edward,040100022,A,15.0,Graded"])  # not in roster
     reg = tmp_path / "components.yaml"
     reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
                    encoding="utf-8")
-    roster = _roster(tmp_path, ["034935496,Ryan Bell,enrolled"])  # no scores
+    roster = _roster(tmp_path, ["040100020,Kate Kane,enrolled"])  # no scores
     out = tmp_path / "out"; out.mkdir()
     rows = build_gradebook(reg, roster, schema, out)
     by = {r["student_id"]: r for r in rows}
-    assert "stale-roster" in by["030766500"]["flags"]      # scored, not in roster
-    assert by["030766500"]["display_name"] == "Avi Khunt"  # name from scores file
-    assert by["034935496"]["graded_cols"] == "0"           # roster-only, ungraded
+    assert "stale-roster" in by["040100022"]["flags"]      # scored, not in roster
+    assert by["040100022"]["display_name"] == "Edward Nashton"  # name from scores file
+    assert by["040100020"]["graded_cols"] == "0"           # roster-only, ungraded
 
 
 def test_build_gradebook_withdrawn_yields_W(tmp_path, schema_378):
@@ -146,23 +146,23 @@ def test_build_gradebook_withdrawn_yields_W(tmp_path, schema_378):
     schema = load_schema(schema_378)
     sc = tmp_path / "exam1_scores.csv"
     _write_scores(sc, [
-        "Bell,Ryan,034935496,A,40.0,Graded",       # enrolled → B
-        "Matsuzoe,Sena,033247550,A,45.0,Graded",    # withdrawn but 45/50=90% → still W
+        "Kane,Kate,040100020,A,40.0,Graded",       # enrolled → B
+        "Pennyworth,Alfreda,040100010,A,45.0,Graded",    # withdrawn but 45/50=90% → still W
     ])
     reg = tmp_path / "components.yaml"
     reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
                    encoding="utf-8")
     roster = _roster(tmp_path, [
-        "034935496,Ryan Bell,enrolled",
-        "033247550,Sena Matsuzoe,withdrawn",
+        "040100020,Kate Kane,enrolled",
+        "040100010,Alfreda Pennyworth,withdrawn",
     ])
     out = tmp_path / "out"; out.mkdir()
     rows = build_gradebook(reg, roster, schema, out)
     by = {r["student_id"]: r for r in rows}
-    assert by["033247550"]["letter_grade"] == "W"          # withdrawal trumps the 90%
-    assert "withdrew" in by["033247550"]["flags"]
-    assert by["033247550"]["enrollment_status"] == "withdrawn"
-    assert by["034935496"]["letter_grade"] == "B"          # enrolled student unaffected
+    assert by["040100010"]["letter_grade"] == "W"          # withdrawal trumps the 90%
+    assert "withdrew" in by["040100010"]["flags"]
+    assert by["040100010"]["enrollment_status"] == "withdrawn"
+    assert by["040100020"]["letter_grade"] == "B"          # enrolled student unaffected
 
 
 # ── canvas export ───────────────────────────────────────────────────────────
@@ -173,27 +173,27 @@ def test_export_canvas_only_graded_components(tmp_path, schema_378):
     gb.write_text(
         "student_id,display_name,enrollment_status,raw_scores,standing_score,"
         "weighted_score,letter_grade,in_progress,graded_cols,total_cols,flags\n"
-        '034935496,Ryan Bell,enrolled,"{""exam1"": 40.0}",80.0,80.0,B,true,1,3,\n'
-        '033247550,Sena Matsuzoe,enrolled,"{""exam1"": 0.0}",0.0,0.0,F,true,1,3,\n',
+        '040100020,Kate Kane,enrolled,"{""exam1"": 40.0}",80.0,80.0,B,true,1,3,\n'
+        '040100010,Alfreda Pennyworth,enrolled,"{""exam1"": 0.0}",0.0,0.0,F,true,1,3,\n',
         encoding="utf-8")
     out = tmp_path / "canvas_import.csv"
     export_canvas(gb, schema, out)
     lines = out.read_text(encoding="utf-8").splitlines()
     assert lines[0] == "SIS User ID,Exam 1"        # only the graded component column
     assert "Lab 1 - Symmetric Cryptography" not in lines[0]
-    assert lines[1] == "034935496,40.0"
-    assert lines[2] == "033247550,0.0"             # no-show exports 0
+    assert lines[1] == "040100020,40.0"
+    assert lines[2] == "040100010,0.0"             # no-show exports 0
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 def test_cli_build_then_export(tmp_path, schema_378):
     sc = tmp_path / "exam1_scores.csv"
-    _write_scores(sc, ["Bell,Ryan,034935496,A,40.0,Graded"])
+    _write_scores(sc, ["Kane,Kate,040100020,A,40.0,Graded"])
     reg = tmp_path / "components.yaml"
     reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
                    encoding="utf-8")
-    roster = _roster(tmp_path, ["034935496,Ryan Bell,enrolled"])
+    roster = _roster(tmp_path, ["040100020,Kate Kane,enrolled"])
     out = tmp_path / "out"; out.mkdir()
     rc = gradebook_main([
         "build", "--course", "CECS_378", "--term", "su26", "--section", "01",
@@ -279,34 +279,34 @@ def test_build_gradebook_excludes_dropped_noshow_not_in_roster(tmp_path, schema_
     schema = load_schema(schema_378)
     sc = tmp_path / "exam1_scores.csv"
     _write_scores(sc, [
-        "Bell,Ryan,034935496,A,40.0,Graded",            # enrolled, graded
-        "Matsuzoe,Sena,033247550,A,,No-show",            # enrolled no-show → 0/F
-        "Hill,Gerald,028781777,A,,No-show (dropped)",    # NOT in roster → excluded
+        "Kane,Kate,040100020,A,40.0,Graded",            # enrolled, graded
+        "Pennyworth,Alfreda,040100010,A,,No-show",            # enrolled no-show → 0/F
+        "Brown,Stephanie,040100023,A,,No-show (dropped)",    # NOT in roster → excluded
     ])
     reg = tmp_path / "components.yaml"
     reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n",
                    encoding="utf-8")
     roster = _roster(tmp_path, [
-        "034935496,Ryan Bell,enrolled",
-        "033247550,Sena Matsuzoe,enrolled",
+        "040100020,Kate Kane,enrolled",
+        "040100010,Alfreda Pennyworth,enrolled",
     ])
     out = tmp_path / "out"; out.mkdir()
     rows = build_gradebook(reg, roster, schema, out)
     sids = {r["student_id"] for r in rows}
-    assert "028781777" not in sids          # dropped no-show excluded
-    assert "033247550" in sids              # enrolled no-show kept (0/F)
+    assert "040100023" not in sids          # dropped no-show excluded
+    assert "040100010" in sids              # enrolled no-show kept (0/F)
     by = {r["student_id"]: r for r in rows}
-    assert by["033247550"]["standing_score"] == 0.0
+    assert by["040100010"]["standing_score"] == 0.0
 
 
 def test_build_writes_ledger_surfaces(tmp_path, schema_378):
     schema = load_schema(schema_378)
     sc = tmp_path / "exam1_scores.csv"
-    _write_scores(sc, ["Bell,Ryan,034935496,A,40.0,Graded"])
+    _write_scores(sc, ["Kane,Kate,040100020,A,40.0,Graded"])
     reg = tmp_path / "components.yaml"
     reg.write_text("components:\n  - short_name: exam1\n    scores: exam1_scores.csv\n    kind: exam\n",
                    encoding="utf-8")
-    roster = _roster(tmp_path, ["034935496,Ryan Bell,enrolled"])
+    roster = _roster(tmp_path, ["040100020,Kate Kane,enrolled"])
     out = tmp_path / "out"; out.mkdir()
     build_gradebook(reg, roster, schema, out, section="01", term="su26")
     assert (out / "GRADEBOOK.md").exists()

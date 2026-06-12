@@ -5,7 +5,7 @@ Two layers:
   - student_serial: 8-hex hash of source_serial + ":" + canonical(name)
 
 Both internal-only — never student-facing.
-See docs/design/per-student-exam-id-design for the full system.
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design for the full system.
 """
 from __future__ import annotations
 import hashlib

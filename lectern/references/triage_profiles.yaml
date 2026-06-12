@@ -1,0 +1,12 @@
+single-sitting:
+  thresholds: {pass: 45, flag: 15}
+  weights: {commit_count: 15, spread_days: 15, started_early: 15, interval_cv: 5,
+            deletions: 20, file_churn: 15, no_dump: 10, cleanup_commits: 0}
+short-project:
+  thresholds: {pass: 60, flag: 20}
+  weights: {commit_count: 15, spread_days: 20, started_early: 15, interval_cv: 10,
+            deletions: 15, file_churn: 10, no_dump: 15, cleanup_commits: 0}
+term-project:
+  thresholds: {pass: 65, flag: 25}
+  weights: {commit_count: 20, spread_days: 30, started_early: 10, interval_cv: 5,
+            deletions: 10, file_churn: 0, no_dump: 10, cleanup_commits: 15, crunch: 10}

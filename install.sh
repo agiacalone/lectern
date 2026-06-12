@@ -34,5 +34,8 @@ make_wrapper reg-lms-roster-import     lectern.lms_roster
 make_wrapper reg-classroom-roster-seed lectern.classroom_seed
 make_wrapper reg-github-bind           lectern.github_bind
 make_wrapper reg-isa-publish           lectern.isa_publish
+make_wrapper reg-gradescope-stats      lectern.gradescope_stats
+make_wrapper reg-syllabus              lectern.syllabus
+make_wrapper reg-triage                lectern.triage
 
 echo "lectern installed. reg-* wrappers in $BIN."
