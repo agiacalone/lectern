@@ -46,7 +46,7 @@ def test_missing_required_key_raises(tmp_path):
         load_term_spec(_w(tmp_path / "b.yaml", bad))
 
 def test_duplicate_section_raises(tmp_path):
-    # Append a second copy of the CECS 326 §01 section. (Indentation kept
+    # Append a second copy of the CECS 326 section 01 entry. (Indentation kept
     # literal — textwrap.dedent here would strip the list-item indent and
     # corrupt the YAML, masking the duplicate-detection path under test.)
     dup = VALID + (

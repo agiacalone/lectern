@@ -46,6 +46,8 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 | `reg-classroom-roster-seed` | `classroom_seed` | Pre-seed a GitHub Classroom roster from a normalized roster CSV, using the 9-digit student ID as the identifier. |
 | `reg-github-bind` | `github_bind` | Bind student GitHub usernames to roster entries — from a Google Form CSV, a GitHub Classroom roster CSV, or org-scrape mode. |
 | `reg-isa-publish` | `isa_publish` | Publish ISA grading artifacts (exam keys, rubrics, print stacks) to a shared Drive folder via rclone or service-account backend. Hash-based idempotency: unchanged files are skipped. |
+| `reg-syllabus` | `syllabus` | Generate course syllabi from Markdown with a tamper-evident control-number serial. `stamp` injects a repo-tree SHA-256 into the frontmatter + footer and appends a register row (course/section/term/CRN from the repo name); `build` renders `syllabus.html` + a Canvas-RCE-safe `syllabus_canvas.html` (`--pdf` opt-in, print only). |
+| `reg-triage` | `triage` | Git-history **authenticity triage** for GitHub Classroom submissions. `init` scaffolds an assignment manifest; `sweep` scores the class into FLAG/REVIEW/PASS (CSV + Markdown broadsheet; optionally discovers repos via org-`scrape` mode post-Classroom); `report` generates a two-tier (verified-record / advisory-heuristic) audit document with a sanitized release variant; `rhythm` flags cross-assignment commit-rhythm shifts (advisory). Roster joins from `github.csv`; 100% triage — no student penalized without human review. |
 
 ### Exam build system
 
@@ -77,6 +79,9 @@ reg-term-create --term fa26 --init --vault-root <root>   # write stub spec
 reg-term-create --term fa26 --vault-root <root>           # materialize notes + manifests
 # ... run the term ...
 reg-exam-build exams/midterm1/exam.build.yaml
+reg-syllabus stamp <syllabus-repo> --vault-root <root>                         # inject control-number serial + register row
+reg-syllabus build <syllabus-repo> --pdf                                       # syllabus.html + Canvas-safe variant
+reg-triage sweep --manifest <assignment>.triage.yaml --out triage/            # score class → FLAG/REVIEW/PASS
 reg-gradescope-stats --eval-dir … --grading-note GRADING_NOTE.md --out-dir …   # item analysis + item_scores
 reg-gradebook build --course CECS_378 --term fa26 --section 01 \
   --registry archives/fa26-01/components.yaml --roster … --out archives/fa26-01/   # vault-native ledger

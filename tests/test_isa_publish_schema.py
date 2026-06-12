@@ -24,7 +24,7 @@ def test_minimal_valid_manifest():
         "publish": [
             {
                 "source": "exams/478-final-sp26-b_key.pdf",
-                "drive_path": "ExampleDept-ISA/SP26/Finals/CECS 478 Final Key.pdf",
+                "drive_path": "Giacalone-ISA/SP26/Finals/CECS 478 Final Key.pdf",
                 "source_hash": "sha256:abc123",
             }
         ]
@@ -37,7 +37,7 @@ def test_full_entry_with_optional_fields():
         "publish": [
             {
                 "source": "exams/x_key.pdf",
-                "drive_path": "ExampleDept-ISA/SP26/Finals/x.pdf",
+                "drive_path": "Giacalone-ISA/SP26/Finals/x.pdf",
                 "source_hash": "sha256:deadbeef",
                 "last_pushed": "2026-05-14T08:00:00-07:00",
                 "drive_file_id": "1ABCxyz",
@@ -52,7 +52,7 @@ def test_missing_required_field():
         "publish": [
             {
                 "source": "exams/x.pdf",
-                "drive_path": "ExampleDept-ISA/SP26/x.pdf",
+                "drive_path": "Giacalone-ISA/SP26/x.pdf",
                 # missing source_hash
             }
         ]
@@ -81,7 +81,7 @@ def test_yaml_roundtrip(tmp_path: Path):
         "publish": [
             {
                 "source": "exams/x_key.pdf",
-                "drive_path": "ExampleDept-ISA/SP26/Finals/x.pdf",
+                "drive_path": "Giacalone-ISA/SP26/Finals/x.pdf",
                 "source_hash": "sha256:abc",
             }
         ]

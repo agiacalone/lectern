@@ -23,12 +23,12 @@ def test_mcp_backend_plans_upload(tmp_path, capsys):
     backend = MCPBackend()
     src = tmp_path / "key.pdf"
     src.write_text("fake pdf")
-    file_id = backend.upload(src, "ExampleDept-ISA/SP26/Finals/key.pdf")
+    file_id = backend.upload(src, "Giacalone-ISA/SP26/Finals/key.pdf")
     out = capsys.readouterr().out
     assert file_id.startswith("MCP-PLANNED-")
     assert "MCP-PLANNED" in out
     assert "upload" in out
-    assert "ExampleDept-ISA/SP26/Finals/key.pdf" in out
+    assert "Giacalone-ISA/SP26/Finals/key.pdf" in out
 
 
 def test_mcp_backend_plans_update(tmp_path, capsys):
@@ -69,7 +69,7 @@ def test_rclone_backend_upload_constructs_command(tmp_path):
     backend = RcloneBackend()
     src = tmp_path / "key.pdf"
     src.write_text("pdf")
-    drive_path = "ExampleDept-ISA/SP26/Finals/key.pdf"
+    drive_path = "Giacalone-ISA/SP26/Finals/key.pdf"
 
     with mock.patch("subprocess.run") as run:
         run.return_value = subprocess.CompletedProcess(
@@ -92,10 +92,10 @@ def test_rclone_backend_file_md5_parses_hashsum(tmp_path):
         run.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=0,
-            stdout="deadbeef1234  ExampleDept-ISA/SP26/Finals/key.pdf\n",
+            stdout="deadbeef1234  Giacalone-ISA/SP26/Finals/key.pdf\n",
             stderr="",
         )
-        md5 = backend.file_md5("gdrive:ExampleDept-ISA/SP26/Finals/key.pdf")
+        md5 = backend.file_md5("gdrive:Giacalone-ISA/SP26/Finals/key.pdf")
         assert md5 == "deadbeef1234"
 
 
