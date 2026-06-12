@@ -28,7 +28,7 @@ flags: [dss]
 
 def _rows():
     return [
-        {"student_id": "895444082", "display_name": "Stephanie Brown", "enrollment_status": "enrolled",
+        {"student_id": "040100020", "display_name": "Kate Kane", "enrollment_status": "enrolled",
          "raw_scores": json.dumps({"exam1": 40.0}), "standing_score": 80.0, "weighted_score": 80.0,
          "letter_grade": "B", "in_progress": "true", "graded_cols": "1", "total_cols": "3", "flags": ""},
     ]
@@ -46,14 +46,14 @@ def test_render_overview_grouped_with_links(schema_378):
 
 def _exam_rows():
     return [
-        {"student_id": "895444082", "display_name": "Stephanie Brown", "raw_scores": json.dumps({"exam1": 40.0})},
-        {"student_id": "406974877", "display_name": "Sena M", "raw_scores": json.dumps({"exam1": 0.0})},
+        {"student_id": "040100020", "display_name": "Kate Kane", "raw_scores": json.dumps({"exam1": 40.0})},
+        {"student_id": "040100010", "display_name": "Alfreda P", "raw_scores": json.dumps({"exam1": 0.0})},
     ]
 
 
 def test_render_assignment_page_exam_with_grid(tmp_path, schema_378):
     matrix = tmp_path / "item_scores_A.csv"
-    matrix.write_text("student_id,Q1,Q2,total\n895444082,2,2,40\n", encoding="utf-8")
+    matrix.write_text("student_id,Q1,Q2,total\n040100020,2,2,40\n", encoding="utf-8")
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",
                           link="classes/378-478/exams/exam1_su26/GRADING_NOTE",
                           analysis="classes/378-478/exams/exam1_su26/ITEM_ANALYSIS",
@@ -62,26 +62,26 @@ def test_render_assignment_page_exam_with_grid(tmp_path, schema_378):
     assert "# Exam 1" in md
     assert "[[classes/378-478/exams/exam1_su26/GRADING_NOTE" in md   # links the grading note
     assert "[[classes/378-478/exams/exam1_su26/ITEM_ANALYSIS" in md  # links the item analysis
-    assert "Stephanie Brown" in md and "40" in md                          # score roster
+    assert "Kate Kane" in md and "40" in md                          # score roster
     assert "Per-question grid" in md and "Q1" in md                  # collapsible grid present
 
 
 def test_render_assignment_page_lab_no_grid(tmp_path, schema_378):
     entry = RegistryEntry(short_name="lab1", scores_path=tmp_path / "x.csv", kind="lab")
-    rows = [{"student_id": "895444082", "display_name": "Stephanie Brown",
+    rows = [{"student_id": "040100020", "display_name": "Kate Kane",
              "raw_scores": json.dumps({"lab1": 55.0})}]
     md = render_assignment_page(entry, schema_378, rows)
-    assert "# Lab 1" in md and "Stephanie Brown" in md and "55" in md
+    assert "# Lab 1" in md and "Kate Kane" in md and "55" in md
     assert "Per-question grid" not in md   # labs have no item grid
 
 
 def test_reconcile_assignment_flags_mismatch(tmp_path, schema_378):
     matrix = tmp_path / "item_scores_A.csv"
-    matrix.write_text("student_id,Q1,Q2,total\n895444082,2,2,41\n", encoding="utf-8")  # 41 ≠ 40
+    matrix.write_text("student_id,Q1,Q2,total\n040100020,2,2,41\n", encoding="utf-8")  # 41 ≠ 40
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",
                           breakdown=(matrix,), kind="exam")
     result = reconcile_assignment(entry, _exam_rows())
-    assert any("895444082" in f and "41" in f and "40" in f for f in result["mismatches"])
+    assert any("040100020" in f and "41" in f and "40" in f for f in result["mismatches"])
 
 
 def test_render_student_view_block(schema_378):
@@ -116,7 +116,7 @@ def test_student_view_block_rfc4180_parser(schema_378):
 def test_reconcile_malformed_matrix_no_total(tmp_path, schema_378):
     """A breakdown matrix missing the 'total' column lands in mismatches, not reconciling."""
     matrix = tmp_path / "bad_matrix.csv"
-    matrix.write_text("student_id,Q1\n895444082,20\n", encoding="utf-8")
+    matrix.write_text("student_id,Q1\n040100020,20\n", encoding="utf-8")
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",
                           breakdown=(matrix,), kind="exam")
     result = reconcile_assignment(entry, _exam_rows())
@@ -129,20 +129,20 @@ def test_reconcile_malformed_matrix_no_total(tmp_path, schema_378):
 
 def test_reconcile_flags_roster_mismatches(tmp_path, schema_378):
     """Sids in grid but not in recorded, and vice versa, land in reconciling (not mismatches)."""
-    # 895444082 is in _exam_rows() (recorded), 406974877 is also in _exam_rows()
-    # Matrix has 895444082 (in both) + 099999999 (grid-only, not in rows)
-    # 406974877 is in rows but NOT in matrix → "recorded but no grid row"
+    # 040100020 is in _exam_rows() (recorded), 040100010 is also in _exam_rows()
+    # Matrix has 040100020 (in both) + 099999999 (grid-only, not in rows)
+    # 040100010 is in rows but NOT in matrix → "recorded but no grid row"
     matrix = tmp_path / "matrix.csv"
     matrix.write_text(
-        "student_id,Q1,Q2,total\n895444082,2,2,40\n099999999,1,1,0\n",
+        "student_id,Q1,Q2,total\n040100020,2,2,40\n099999999,1,1,0\n",
         encoding="utf-8",
     )
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",
                           breakdown=(matrix,), kind="exam")
     result = reconcile_assignment(entry, _exam_rows())
     sid_reconciling = " ".join(result["reconciling"])
-    # 406974877 scored 0.0 in _exam_rows but is absent from the matrix
-    assert "406974877" in sid_reconciling and "recorded but no grid row" in sid_reconciling
+    # 040100010 scored 0.0 in _exam_rows but is absent from the matrix
+    assert "040100010" in sid_reconciling and "recorded but no grid row" in sid_reconciling
     # 099999999 is in matrix but has no recorded score in _exam_rows
     assert "099999999" in sid_reconciling and "grid row but no recorded score" in sid_reconciling
     # These are NOT mismatches — value-wise all is fine for the one student in both
@@ -161,7 +161,7 @@ def test_render_assignment_page_stats(tmp_path, schema_378):
     assert "σ" in md
     # distribution bands present
     assert "A:" in md and "B:" in md and "F:" in md
-    # Stephanie Brown: 40/50 = 80% → B band; Sena M: 0/50 = 0% → F band
+    # Kate Kane: 40/50 = 80% → B band; Alfreda P: 0/50 = 0% → F band
     assert "B:1" in md
     assert "F:1" in md
 
@@ -171,7 +171,7 @@ def test_render_assignment_page_stats(tmp_path, schema_378):
 def test_render_assignment_page_item_analysis_embed(tmp_path, schema_378):
     """When entry.analysis is set, exam page emits ![[...]] transclusion line."""
     matrix = tmp_path / "matrix.csv"
-    matrix.write_text("student_id,Q1,Q2,total\n895444082,2,2,40\n", encoding="utf-8")
+    matrix.write_text("student_id,Q1,Q2,total\n040100020,2,2,40\n", encoding="utf-8")
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",
                           link="classes/378-478/exams/exam1_su26/GRADING_NOTE",
                           analysis="classes/378-478/exams/exam1_su26/ITEM_ANALYSIS",
@@ -191,11 +191,11 @@ def test_render_assignment_page_lab_per_criterion(tmp_path, schema_378):
     # Extra column: participation
     scores.write_text(
         "last,first,sid,version,score,status,participation\n"
-        "Brown,Stephanie,895444082,,55,Graded,10\n",
+        "Kane,Kate,040100020,,55,Graded,10\n",
         encoding="utf-8",
     )
     entry = RegistryEntry(short_name="lab1", scores_path=scores, kind="lab")
-    rows = [{"student_id": "895444082", "display_name": "Stephanie Brown",
+    rows = [{"student_id": "040100020", "display_name": "Kate Kane",
              "raw_scores": json.dumps({"lab1": 55.0})}]
     md = render_assignment_page(entry, schema_378, rows)
     assert "Per-criterion breakdown" in md
@@ -208,11 +208,11 @@ def test_render_assignment_page_lab_no_extra_columns(tmp_path, schema_378):
     scores = tmp_path / "lab1_scores.csv"
     scores.write_text(
         "last,first,sid,version,score,status\n"
-        "Brown,Stephanie,895444082,,55,Graded\n",
+        "Kane,Kate,040100020,,55,Graded\n",
         encoding="utf-8",
     )
     entry = RegistryEntry(short_name="lab1", scores_path=scores, kind="lab")
-    rows = [{"student_id": "895444082", "display_name": "Stephanie Brown",
+    rows = [{"student_id": "040100020", "display_name": "Kate Kane",
              "raw_scores": json.dumps({"lab1": 55.0})}]
     md = render_assignment_page(entry, schema_378, rows)
     assert "Per-criterion breakdown" not in md
@@ -224,12 +224,12 @@ def test_render_assignment_page_two_forms(tmp_path, schema_378):
     """Two breakdown matrices render two labeled grids; reconcile covers both forms."""
     matrix_a = tmp_path / "item_scores_A.csv"
     matrix_a.write_text(
-        "student_id,Q1,Q2,total\n895444082,20,20,40\n",
+        "student_id,Q1,Q2,total\n040100020,20,20,40\n",
         encoding="utf-8",
     )
     matrix_b = tmp_path / "item_scores_B.csv"
     matrix_b.write_text(
-        "student_id,Q1,Q2,Q3,total\n406974877,0,0,0,0\n",
+        "student_id,Q1,Q2,Q3,total\n040100010,0,0,0,0\n",
         encoding="utf-8",
     )
     entry = RegistryEntry(
@@ -238,7 +238,7 @@ def test_render_assignment_page_two_forms(tmp_path, schema_378):
         breakdown=(matrix_a, matrix_b),
         kind="exam",
     )
-    rows = _exam_rows()  # 895444082 → 40.0, 406974877 → 0.0
+    rows = _exam_rows()  # 040100020 → 40.0, 040100010 → 0.0
     md = render_assignment_page(entry, schema_378, rows)
     # Both form-labeled grids appear
     assert "Form A" in md
@@ -259,33 +259,33 @@ def test_render_assignment_page_two_forms(tmp_path, schema_378):
 def test_reconcile_mismatch_vs_reconciling_routing(tmp_path, schema_378):
     """A value mismatch lands in mismatches; a no-show (recorded/no grid row) lands
     in reconciling; the two buckets are independent."""
-    # 895444082: grid says 41, recorded says 40 → value mismatch
-    # 406974877: recorded 0.0 but absent from matrix → reconciling item (no-show)
+    # 040100020: grid says 41, recorded says 40 → value mismatch
+    # 040100010: recorded 0.0 but absent from matrix → reconciling item (no-show)
     matrix = tmp_path / "item_scores_A.csv"
     matrix.write_text(
-        "student_id,Q1,Q2,total\n895444082,20,21,41\n",
+        "student_id,Q1,Q2,total\n040100020,20,21,41\n",
         encoding="utf-8",
     )
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",
                           breakdown=(matrix,), kind="exam")
     result = reconcile_assignment(entry, _exam_rows())
-    # 895444082 grid 41 ≠ recorded 40 → mismatches
-    assert any("895444082" in m and "41" in m for m in result["mismatches"])
-    # 406974877 in recorded but not in grid → reconciling
-    assert any("406974877" in r and "recorded but no grid row" in r for r in result["reconciling"])
+    # 040100020 grid 41 ≠ recorded 40 → mismatches
+    assert any("040100020" in m and "41" in m for m in result["mismatches"])
+    # 040100010 in recorded but not in grid → reconciling
+    assert any("040100010" in r and "recorded but no grid row" in r for r in result["reconciling"])
     # Sanity: buckets don't bleed
-    assert not any("406974877" in m for m in result["mismatches"])
-    assert not any("895444082" in r for r in result["reconciling"])
+    assert not any("040100010" in m for m in result["mismatches"])
+    assert not any("040100020" in r for r in result["reconciling"])
 
 
 def test_render_page_only_reconciling_items_uses_note_not_danger(tmp_path, schema_378):
     """When there are only reconciling items (no value mismatches), the page emits
     the [!note] callout and NO [!danger] callout."""
-    # 895444082: grid total matches recorded (40 = 40) — balanced
-    # 406974877: recorded 0.0 but absent from matrix — reconciling item only
+    # 040100020: grid total matches recorded (40 = 40) — balanced
+    # 040100010: recorded 0.0 but absent from matrix — reconciling item only
     matrix = tmp_path / "item_scores_A.csv"
     matrix.write_text(
-        "student_id,Q1,Q2,total\n895444082,20,20,40\n",
+        "student_id,Q1,Q2,total\n040100020,20,20,40\n",
         encoding="utf-8",
     )
     entry = RegistryEntry(short_name="exam1", scores_path=tmp_path / "x.csv",

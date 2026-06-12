@@ -12,7 +12,7 @@ through the same recipe.
 
 Recipe:
   - Strip non-digit characters, but recognize the legitimate `<letter><8 digits>`
-    CSULB form (e.g. `C40100020`) — the letter is a Campus Solutions prefix
+    CSULB form (e.g. `C02962436`) — the letter is a Campus Solutions prefix
     and the 8 digits are the student ID with leading zero already stripped.
   - Zero-pad to 9 digits.
   - Flag malformed input (zero-digit, non-9-digit final after pad-stripping,
@@ -38,9 +38,9 @@ def normalize_student_id(raw: str) -> tuple[str, list[str]]:
     ('040100001', [])
     >>> normalize_student_id("40100001")            # Excel-truncated zero
     ('040100001', [])
-    >>> normalize_student_id("C40100020")           # CSULB letter-prefix form
-    ('040100020', [])
-    >>> normalize_student_id("401002")[1]
+    >>> normalize_student_id("C02962436")           # CSULB letter-prefix form
+    ('002962436', [])
+    >>> normalize_student_id("424657")[1]
     ['malformed_id_6d']
     >>> normalize_student_id("")
     ('000000000', ['malformed_id_0d'])

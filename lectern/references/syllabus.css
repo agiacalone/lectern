@@ -1,0 +1,304 @@
+/* ═══════════════════════════════════════════════════════════════════
+   CECS Syllabus — Swiss / grid theme
+   Screen + print. Pairs with README.md (pandoc gfm → standalone HTML).
+   Type:  Bricolage Grotesque (display) · Hanken Grotesk (body) ·
+          Spline Sans Mono (labels, numerals)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600&display=swap');
+
+:root {
+  --ink:        #14130f;   /* near-black */
+  --paper:      #faf8f3;   /* warm off-white */
+  --muted:      #6c675d;   /* secondary text */
+  --rule:       #14130f;   /* strong rules */
+  --hair:       #ddd8cb;   /* hairline grid lines */
+  --accent:     #e8401f;   /* swiss vermilion */
+  --accent-ink: #b22f12;   /* darker accent for text on paper */
+  --panel:      #f2efe6;   /* subtle panel fill */
+
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body:    'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono:    'Spline Sans Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-body);
+  font-size: 16.5px;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+  /* faint grid atmosphere — degrades to flat paper on print */
+  background-image:
+    linear-gradient(var(--hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+  background-size: 100% 2.6rem, 2.6rem 100%;
+  background-position: -1px -1px;
+  margin: 0;
+  padding: 0;
+  counter-reset: sec;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* page container */
+body > * { max-width: 50rem; margin-left: auto; margin-right: auto; }
+body {
+  padding: 3.5rem 1.5rem 5rem;
+}
+/* re-establish the container width inside the padded body */
+body { }
+main, .container { max-width: 50rem; margin: 0 auto; }
+
+/* ── Masthead ─────────────────────────────────────────────── */
+h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.3rem, 6vw, 3.7rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.6rem;
+  padding-top: 1.4rem;
+  border-top: 6px solid var(--ink);
+  text-wrap: balance;
+}
+
+/* subtitle — the blockquote immediately after the H1 */
+h1 + blockquote {
+  border: none;
+  margin: 0 0 2.4rem;
+  padding: 0;
+}
+h1 + blockquote p {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin: 0;
+}
+
+/* lead paragraph (first paragraph after subtitle) */
+h1 + blockquote + p {
+  font-size: 1.18rem;
+  line-height: 1.5;
+  color: var(--ink);
+  font-weight: 500;
+  margin: 0 0 1.8rem;
+  max-width: 42rem;
+}
+
+/* ── Jump-to nav ──────────────────────────────────────────── */
+h1 + blockquote + p + p {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  padding: 0.7rem 0;
+  margin: 0 0 3rem;
+  line-height: 2.1;
+}
+h1 + blockquote + p + p strong { color: var(--ink); }
+h1 + blockquote + p + p a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: none;
+  white-space: nowrap;
+}
+h1 + blockquote + p + p a:hover { color: var(--accent-ink); }
+
+/* ── Numbered section headers (the grid rhythm) ───────────── */
+h2 {
+  counter-increment: sec;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.65rem;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin: 3.4rem 0 1.3rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--rule);
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+}
+h2::before {
+  content: counter(sec, decimal-leading-zero) " /";
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  flex: none;
+  transform: translateY(-0.15em);
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.12rem;
+  letter-spacing: -0.005em;
+  margin: 2rem 0 0.7rem;
+  color: var(--ink);
+}
+h3::before {
+  content: "▪";
+  color: var(--accent);
+  margin-right: 0.5rem;
+  font-size: 0.8em;
+  vertical-align: 0.08em;
+}
+
+p, li { color: var(--ink); }
+strong { font-weight: 700; }
+
+a {
+  color: var(--accent-ink);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: border-color 0.15s, color 0.15s;
+}
+a:hover { border-bottom-color: var(--accent); }
+
+ul { padding-left: 1.2rem; }
+li { margin: 0.3rem 0; }
+li::marker { color: var(--accent); }
+
+/* ── Tables ───────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2rem 0 1.8rem;
+  font-size: 0.96rem;
+  font-variant-numeric: tabular-nums;
+  background: var(--paper);
+}
+thead th {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 2px solid var(--rule);
+}
+tbody td {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--hair);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: 2px solid var(--rule); }
+/* first column reads as a label */
+tbody td:first-child { font-weight: 600; }
+/* Total / emphasis row */
+tbody tr:has(td strong) { background: var(--panel); }
+
+/* ── GitHub-style alert callouts (pandoc emits div.note/.tip/...) ── */
+.note, .tip, .important, .warning, .caution {
+  margin: 1.4rem 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid var(--muted);
+  background: var(--panel);
+  border-radius: 0 3px 3px 0;
+}
+.note    { border-left-color: #3b6ea5; }
+.tip     { border-left-color: #2e7d4f; }
+.important { border-left-color: var(--accent); }
+.warning { border-left-color: #c98a1b; }
+.caution { border-left-color: #c0392b; }
+.note > .title, .tip > .title, .important > .title,
+.warning > .title, .caution > .title {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+.note > .title    { color: #3b6ea5; }
+.tip > .title     { color: #2e7d4f; }
+.important > .title { color: var(--accent-ink); }
+.warning > .title { color: #a8740f; }
+.caution > .title { color: #a5281c; }
+.note > .title p, .tip > .title p, .important > .title p,
+.warning > .title p, .caution > .title p { margin: 0; }
+.note > p:last-child, .tip > p:last-child, .important > p:last-child,
+.warning > p:last-child, .caution > p:last-child { margin-bottom: 0; }
+
+/* ── Collapsible (resources) ──────────────────────────────── */
+details {
+  margin: 1.4rem 0;
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  background: var(--paper);
+}
+summary {
+  cursor: pointer;
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  background: var(--panel);
+  border-radius: 4px;
+}
+details[open] summary { border-bottom: 1px solid var(--hair); border-radius: 4px 4px 0 0; }
+details > :not(summary) { padding-left: 1.1rem; padding-right: 1.1rem; }
+details > *:last-child { padding-bottom: 1rem; }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--panel);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+/* ── Serial footer (visible-but-unexplained build hash) ───── */
+footer.serial {
+  max-width: 50rem;
+  margin: 3rem auto 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--hair);
+  font-family: 'Spline Sans Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ── Print: paper-true, clean, accent preserved ───────────── */
+@media print {
+  @page { size: letter; margin: 0.7in 0.75in; }
+  html, body {
+    background: #fff;
+    background-image: none;
+    font-size: 10.5pt;
+    line-height: 1.4;
+    padding: 0;
+  }
+  body > *, main, .container { max-width: 100%; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h1 { font-size: 24pt; padding-top: 0.5rem; }
+  h1 + blockquote + p + p { /* jump-to nav — useless on paper */ display: none; }
+  h2 { font-size: 14pt; margin-top: 1.4rem; break-after: avoid; page-break-after: avoid; }
+  h3 { break-after: avoid; page-break-after: avoid; }
+  table, .note, .tip, .important, .warning, .caution, details, tr, li {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  details { border: 1px solid var(--hair); }
+  details summary { background: var(--panel); }
+  details:not([open]) { /* expand collapsibles when printing */ }
+  details > *:not(summary) { display: revert !important; }
+  a { color: var(--ink); border-bottom: none; }
+}

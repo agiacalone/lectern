@@ -89,7 +89,7 @@ def test_build_roster_prefills_student_id(tmp_path):
     tex = tmp_path / "exam.tex"
     shutil.copy(FIX / "dummy_exam.tex", tex)
     roster = tmp_path / "roster.csv"
-    roster.write_text("name,student_id\nJane Smith,040100021\n")
+    roster.write_text("name,student_id\nJane Smith,040100024\n")
     cfg = ExamBuildConfig(source=tex, roster=roster)
     build_roster(cfg)
     with (tmp_path / "exam_serials.csv").open() as f:
@@ -98,7 +98,7 @@ def test_build_roster_prefills_student_id(tmp_path):
     with pdfplumber.open(student_pdf) as f:
         text = f.pages[0].extract_text() or ""
     assert "Jane Smith" in text, f"name not on page: {text!r}"
-    assert "040100021" in text, f"student_id not on page: {text!r}"
+    assert "040100024" in text, f"student_id not on page: {text!r}"
     assert "VERIFY YOUR NAME AND STUDENT ID" in text
 
 
