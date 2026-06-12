@@ -9,7 +9,7 @@ and confirms they match. Closes the forensic loop on per-student exam IDs:
   - this verifier confirms the printed ID actually hashes from the printed
     Serial + the claimed student name (catches swaps, forgery, mis-prints)
 
-See docs/design/per-student-exam-id-design Part 1 §Verification.
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design Part 1 §Verification.
 """
 from __future__ import annotations
 

@@ -95,7 +95,7 @@ term: {term}
 term-name: CHANGE ME
 year: 2026
 semester-code: {term[:2]}
-instructor: CHANGE ME
+instructor: Anthony Giacalone
 start: 2026-01-01            # first day of instruction (ISO date)
 end: 2026-05-01             # last day of instruction
 finals-week-start: 2026-05-04

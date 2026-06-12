@@ -1,6 +1,6 @@
 """JSONSchema validator for the per-section archive bundle manifest.yaml.
 
-Every archive bundle at <vault-root>/classes/<course>/archives/<term>-<section>/
+Every archive bundle at <vault>/classes/<course>/archives/<term>-<section>/
 ships with a manifest.yaml that records what was archived, when, with what
 serials/headcounts/grade distribution. This module:
 
@@ -12,7 +12,7 @@ serials/headcounts/grade distribution. This module:
 Optional fields are permissive (allow null/missing) so partial-bundle states
 still validate while the term archive accumulates artifacts over the semester.
 
-See docs/design/per-student-exam-id-design Part 2 for the
+See <vault>/plans/specs/2026-05-13-per-student-exam-id-design Part 2 for the
 full doctrine.
 """
 from __future__ import annotations

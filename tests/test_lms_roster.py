@@ -26,10 +26,10 @@ def test_parse_real_478_04_xls():
     assert len(rows) == 15
     by_id = {r["ID"]: r for r in rows}
     assert "040100001" in by_id
-    alderman = by_id["040100001"]
-    assert alderman["Name"] == "Alderman,Jake P"
+    wayne = by_id["040100001"]
+    assert wayne["Name"] == "Wayne,Bruce T"
     assert by_id["040100002"]["Status Note"] == "Withdrawn"
-    assert by_id["040100012"]["Status Note"] == "Withdrawn"
+    assert by_id["040100011"]["Status Note"] == "Withdrawn"
 
 
 def test_parse_minimal_xls():
@@ -47,16 +47,16 @@ def test_normalize_478_04():
     norm = normalize_to_roster_csv(raw, course="CECS 478", section="04",
                                     class_number="12548", term="sp26")
     by_id = {r.student_id: r for r in norm}
-    alderman = by_id["040100001"]
-    assert alderman.lms_name == "Alderman,Jake P"
-    assert alderman.display_name == "Jake P Alderman"
-    assert alderman.canonical_name == "jake p alderman"
-    assert alderman.enrollment_status == "enrolled"
-    blackwell = by_id["040100002"]
-    assert blackwell.enrollment_status == "withdrawn"
-    assert blackwell.grade_dt == "2026-04-16"   # ISO conversion verified
-    lopez = by_id["040100012"]
-    assert lopez.enrollment_status == "withdrawn"
+    wayne = by_id["040100001"]
+    assert wayne.lms_name == "Wayne,Bruce T"
+    assert wayne.display_name == "Bruce T Wayne"
+    assert wayne.canonical_name == "bruce t wayne"
+    assert wayne.enrollment_status == "enrolled"
+    kyle = by_id["040100002"]
+    assert kyle.enrollment_status == "withdrawn"
+    assert kyle.grade_dt == "2026-04-16"   # ISO conversion verified
+    montoya = by_id["040100011"]
+    assert montoya.enrollment_status == "withdrawn"
 
 
 def test_normalize_minimal_accents():
@@ -89,9 +89,9 @@ def test_write_roster_csv(tmp_path):
     assert content.split("\n")[0] == "student_id,lms_name,display_name,canonical_name,section,enrollment_status,add_dt,grade_dt,program,academic_level"
     # Sample row presence
     assert "040100001" in content
-    assert "Alderman,Jake P" in content
+    assert "Wayne,Bruce T" in content
     # CSV escaping for the comma-in-name field — quoted
-    assert '"Alderman,Jake P"' in content
+    assert '"Wayne,Bruce T"' in content
 
 
 def test_date_conversion():

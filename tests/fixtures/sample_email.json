@@ -2,7 +2,7 @@
   "id": "msg-123",
   "messageId": ["<abc@fastmail.com>"],
   "from": [{"name": "Alice Example", "email": "alice@example.com"}],
-  "to": [{"name": "Anthony", "email": "anthony.giacalone@csulb.edu"}],
+  "to": [{"name": "Anthony", "email": "agiacalone@fastmail.com"}],
   "subject": "Conference Registration Confirmation",
   "sentAt": "2026-04-18T15:30:00Z",
   "htmlBody": [{"partId": "1"}],

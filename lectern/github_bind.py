@@ -14,7 +14,7 @@ Optional --verify shells out to `gh api users/<u>` for each non-empty username
 to confirm GitHub-side existence.
 
 CLI: pa-github-bind --form CSV | --classroom CSV | --scrape
-                    --roster CSV [--section NN] [--org ExampleDept-CECS]
+                    --roster CSV [--section NN] [--org Giacalone-CECS]
                     [--prefix cecs-478-sp26-04] --out github.csv [--verify]
 """
 from __future__ import annotations
@@ -375,7 +375,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="Normalized roster CSV (from pa-lms-roster-import)")
     p.add_argument("--section", default="",
                    help="Section number (form mode; recorded, doesn't filter)")
-    p.add_argument("--org", default="ExampleDept-CECS", help="GitHub org for scrape mode")
+    p.add_argument("--org", default="Giacalone-CECS", help="GitHub org for scrape mode")
     p.add_argument("--prefix", default="", help="Repo-name prefix for scrape mode")
     p.add_argument("--out", type=Path, required=True, help="Output github.csv path")
     p.add_argument("--verify", action="store_true",

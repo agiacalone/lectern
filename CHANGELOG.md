@@ -7,6 +7,9 @@ All notable changes to lectern are documented here.
 ## [Unreleased]
 
 ### Added
+- **`reg-triage`** — git-history authenticity triage for GitHub Classroom submissions (`init`/`sweep`/`report`/`rhythm`); two-tier audit doc, advisory-only, 100% human review. Ships with synthetic demo fixtures.
+- **`reg-syllabus`** — syllabus generation with a tamper-evident control-number serial (`stamp`/`build`).
+- **`reg-gradescope-stats`** — per-outcome item analysis from Gradescope Export Evaluations.
 - **Gradebook ledger** — `reg-gradebook build` now emits a navigable grades ledger (bookkeeping model: single-entry with source-document reconciliation):
   - **`GRADEBOOK.md`** — a grouped general ledger: components by weight category (Assignments / Midterms / Final) with per-group subtotals → standing; ungraded cells render `·` (never `0`), in-progress `*`; each component header wikilinks its assignment page. Plus a live per-student statement view (DataviewJS).
   - **`assignments/<short>.md`** — a subsidiary ledger per component. Exam pages carry the score roster (n/mean/median/σ + distribution), links + an `![[ITEM_ANALYSIS]]` embed, and a collapsible per-student×question grid **per form** (A/B).
