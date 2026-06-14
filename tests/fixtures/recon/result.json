@@ -1,0 +1,11 @@
+{
+  "schema": 1, "assignment": "spellbreaker", "commit": "abc123",
+  "honor_ok": true,
+  "challenges": {
+    "ward1": {"pass": true,  "points": 10, "max": 10},
+    "ward2": {"pass": false, "points": 0,  "max": 35},
+    "ward3": {"pass": true,  "points": 15, "max": 15},
+    "ward4": {"pass": false, "points": 0,  "max": 10}
+  },
+  "points": 25, "max": 100
+}
