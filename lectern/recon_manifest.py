@@ -9,6 +9,7 @@ class AutogradeSpec:
     workflow: str = "autograde.yml"
     branch: str = "main"
     result_path: str = "grading/result.json"
+    steps: list = field(default_factory=list)  # legacy scrape: [{name,key,points,optional?}]
 
 @dataclass
 class DocSpec:
@@ -38,7 +39,7 @@ def load_manifest(path: Path) -> ReconManifest:
             "manifest missing required field(s): "
             + ", ".join(f"assignment.{m}" for m in missing))
     ag = data.get("autograde")
-    autograde = AutogradeSpec(**{k: ag[k] for k in ("workflow","branch","result_path") if k in ag}) if ag else None
+    autograde = AutogradeSpec(**{k: ag[k] for k in ("workflow","branch","result_path","steps") if k in ag}) if ag else None
     docs = [DocSpec(file=d["file"], label=d["label"],
                     summarize=d.get("summarize", False), points=d.get("points", 0))
             for d in (data.get("docs") or [])]

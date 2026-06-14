@@ -6,7 +6,7 @@ import argparse, tempfile, shutil
 
 from lectern.recon_manifest import load_manifest
 from lectern.recon_discover import discover_repos, RepoRef
-from lectern.recon_autograde import fetch_autograde, AutogradeResult
+from lectern.recon_autograde import fetch_autograde, scrape_autograde, AutogradeResult
 from lectern.recon_git import recon_git
 from lectern.recon_docs import recon_doc
 from lectern.recon_links import repo_links
@@ -24,8 +24,17 @@ def run_recon(*, manifest_path: Path, roster_csv: Path, out_dir: Path,
     m = load_manifest(manifest_path)
     refs = discover_repos(roster_csv, repo_prefix=m.repo_prefix)
     do_clone = clone or (lambda ref, dest: _default_clone(ref, dest, m.org))
-    do_auto = autograde or (lambda ref: fetch_autograde(
-        m.org, ref.repo, m.autograde.result_path, branch=m.autograde.branch) if m.autograde else None)
+
+    def _default_auto(ref: RepoRef) -> AutogradeResult | None:
+        if not m.autograde:
+            return None
+        r = fetch_autograde(m.org, ref.repo, m.autograde.result_path, branch=m.autograde.branch)
+        if r is None and m.autograde.steps:  # legacy fallback: scrape CI step conclusions
+            r = scrape_autograde(m.org, ref.repo, m.autograde.workflow, m.autograde.steps,
+                                 branch=m.autograde.branch)
+        return r
+
+    do_auto = autograde or _default_auto
     doc_path = m.docs[0].file if m.docs else "README.md"
     records: list[RepoRecord] = []
     for ref in refs:

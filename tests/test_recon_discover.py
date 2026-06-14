@@ -10,3 +10,13 @@ def test_discover_builds_repo_refs():
     assert by_id["ChaoticNerd"].repo == "cecs-378-su26-01-lab-01-symmetric-crypto-ChaoticNerd"
     assert by_id["ChaoticNerd"].student == "C. Nerd"
     assert len(refs) == 2
+
+
+def test_discover_uses_canonical_name(tmp_path):
+    from lectern.recon_discover import discover_repos
+    csv_path = tmp_path / "roster.csv"
+    csv_path.write_text("student_id,canonical_name,github_username,source\n"
+                        "028929704,Roman B Bell,RomanB1253,classroom-lab01\n")
+    refs = discover_repos(csv_path, repo_prefix="pre-")
+    assert refs[0].student == "Roman B Bell"
+    assert refs[0].repo == "pre-RomanB1253"

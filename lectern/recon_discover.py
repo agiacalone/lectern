@@ -15,6 +15,7 @@ def discover_repos(roster_csv: Path, *, repo_prefix: str) -> list[RepoRef]:
             gid = (row.get("github_username") or row.get("github_id") or "").strip()
             if not gid:
                 continue
-            name = (row.get("student_name") or row.get("name") or "").strip()
+            name = (row.get("student_name") or row.get("canonical_name")
+                    or row.get("name") or "").strip()
             refs.append(RepoRef(github_id=gid, student=name, repo=f"{repo_prefix}{gid}"))
     return refs
