@@ -1,0 +1,18 @@
+assignment:
+  course: CECS 378
+  section: "01"
+  term: su26
+  name: "Lab 1 — Symmetric Cryptography (Spellbreaker)"
+  org: Giacalone-CECS
+  repo_prefix: "cecs-378-su26-01-lab-01-symmetric-crypto-"
+  total_points: 100
+autograde:
+  workflow: autograde.yml
+  branch: main
+  result_path: grading/result.json
+docs:
+  - { file: student/WRITEUP.md, label: grimoire, summarize: true, points: 30 }
+git:
+  profile: short-project
+report:
+  triage: surface
