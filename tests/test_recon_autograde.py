@@ -40,8 +40,9 @@ def test_fetch_result_missing_returns_none():
     assert fetch_autograde("O", "r", "grading/result.json", gh=fake_gh) is None
 
 
-def test_scrape_autograde_maps_step_conclusions():
-    """Legacy fallback: latest run's job-step conclusions → challenge points."""
+def test_scrape_autograde_parses_log_pass_fail():
+    """Legacy fallback parses the run LOG (PASS/FAIL <key>), NOT jobs-API conclusions,
+    because continue-on-error masks every step conclusion as success."""
     import json
     from lectern.recon_autograde import scrape_autograde
     steps = [
@@ -50,25 +51,42 @@ def test_scrape_autograde_maps_step_conclusions():
         {"name": "Ward III", "key": "ward3", "points": 15},
         {"name": "OMEGA",    "key": "ward4", "points": 10, "optional": True},
     ]
+    fake_log = (
+        "grade\tUNKNOWN STEP\t2026-06-11T06:21:47Z FAIL ward1: oracle rejected the submitted proof\n"
+        "grade\tUNKNOWN STEP\t2026-06-11T06:28:30Z PASS ward2\n"
+        "grade\tUNKNOWN STEP\t2026-06-11T06:28:31Z FAIL ward3: oracle rejected the submitted proof\n"
+        "grade\tUNKNOWN STEP\t2026-06-11T06:28:32Z FAIL ward4: exploit produced no output\n"
+    )
     def fake_gh(args):
         a = " ".join(args)
-        if "/runs?branch=" in a or "/workflows/" in a:
+        if args[:1] == ["api"]:
             return json.dumps({"workflow_runs": [{"id": 999, "head_sha": "deadbeef"}]})
-        if "/runs/999/jobs" in a:
-            return json.dumps({"jobs": [{"steps": [
-                {"name": "Ward I",   "conclusion": "success"},
-                {"name": "Ward II",  "conclusion": "failure"},
-                {"name": "Ward III", "conclusion": "success"},
-                {"name": "OMEGA",    "conclusion": "failure"},
-            ]}]})
+        if args[:2] == ["run", "view"]:
+            return fake_log
         raise RuntimeError("unexpected gh call: " + a)
     r = scrape_autograde("O", "r", "autograde.yml", steps, gh=fake_gh)
     assert r.commit == "deadbeef"
-    assert r.challenges["ward1"].points == 10
-    assert r.challenges["ward2"].points == 0
-    assert r.points == 25          # 10 + 15
+    assert r.challenges["ward2"].points == 35
+    assert r.challenges["ward1"].points == 0
+    assert r.points == 35          # only ward2 passed
     assert r.max == 70
-    assert r.honor_ok is True      # at least one ward passed → flag was present
+    assert r.honor_ok is True      # no "honor flag missing" in log
+
+def test_scrape_autograde_honor_gate_fail():
+    """All wards FAIL with honor-flag-missing → honor_ok False, 0 points."""
+    import json
+    from lectern.recon_autograde import scrape_autograde
+    steps = [{"name": "Ward I", "key": "ward1", "points": 10},
+             {"name": "Ward II", "key": "ward2", "points": 35}]
+    fake_log = ("grade\tx\tFAIL ward1: honor flag missing or incorrect in student/WRITEUP.md\n"
+                "grade\tx\tFAIL ward2: honor flag missing or incorrect in student/WRITEUP.md\n")
+    def fake_gh(args):
+        if args[:1] == ["api"]:
+            return json.dumps({"workflow_runs": [{"id": 1, "head_sha": "abc"}]})
+        return fake_log
+    r = scrape_autograde("O", "r", "autograde.yml", steps, gh=fake_gh)
+    assert r.points == 0
+    assert r.honor_ok is False
 
 def test_scrape_autograde_no_runs_returns_none():
     import json
