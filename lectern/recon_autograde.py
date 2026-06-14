@@ -53,6 +53,54 @@ def fetch_autograde(org: str, repo: str, result_path: str, *,
     return parse_result_json(text)
 
 
+def _default_download(org: str, repo: str, run_id, artifact: str, member: str) -> str | None:
+    """Download a named run artifact and return the text of `member` inside it.
+    Uses `gh run download` (extracts the artifact's files to a temp dir)."""
+    import subprocess, tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory(prefix="recon-art-") as d:
+        proc = subprocess.run(
+            ["gh", "run", "download", str(run_id), "-R", f"{org}/{repo}",
+             "-n", artifact, "-D", d],
+            capture_output=True, text=True)
+        if proc.returncode != 0:
+            return None
+        f = Path(d) / member
+        if not f.exists():  # artifact may store the file flat or nested — search for it
+            hits = list(Path(d).rglob(Path(member).name))
+            if not hits:
+                return None
+            f = hits[0]
+        return f.read_text(encoding="utf-8", errors="replace")
+
+
+def fetch_autograde_artifact(org: str, repo: str, *, workflow: str = "autograde.yml",
+                             branch: str = "main", artifact: str = "grading-result",
+                             member: str = "grading/result.json",
+                             gh: Callable[[list[str]], str] = _default_gh,
+                             download=_default_download) -> AutogradeResult | None:
+    """Read result.json from the latest completed run's CI **artifact** (the durable,
+    Classroom-independent contract home — students cannot delete run artifacts).
+    Returns None if no completed run or the artifact/file is absent."""
+    try:
+        runs_raw = gh(["api",
+                       f"/repos/{org}/{repo}/actions/workflows/{workflow}/runs"
+                       f"?branch={branch}&status=completed&per_page=1"])
+        runs = json.loads(runs_raw).get("workflow_runs") or []
+    except (RuntimeError, ValueError, TypeError):
+        return None
+    if not runs:
+        return None
+    run = runs[0]
+    text = download(org, repo, run.get("id"), artifact, member)
+    if text is None:
+        return None
+    r = parse_result_json(text)
+    if r is not None and not r.commit:
+        r.commit = run.get("head_sha")
+    return r
+
+
 def scrape_autograde(org: str, repo: str, workflow: str, steps: list[dict], *,
                      branch: str = "main",
                      gh: Callable[[list[str]], str] = _default_gh) -> AutogradeResult | None:

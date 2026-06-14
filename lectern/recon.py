@@ -6,7 +6,8 @@ import argparse, tempfile, shutil
 
 from lectern.recon_manifest import load_manifest
 from lectern.recon_discover import discover_repos, RepoRef
-from lectern.recon_autograde import fetch_autograde, scrape_autograde, AutogradeResult
+from lectern.recon_autograde import (fetch_autograde, fetch_autograde_artifact,
+                                     scrape_autograde, AutogradeResult)
 from lectern.recon_git import recon_git
 from lectern.recon_docs import recon_doc
 from lectern.recon_links import repo_links
@@ -28,8 +29,15 @@ def run_recon(*, manifest_path: Path, roster_csv: Path, out_dir: Path,
     def _default_auto(ref: RepoRef) -> AutogradeResult | None:
         if not m.autograde:
             return None
-        r = fetch_autograde(m.org, ref.repo, m.autograde.result_path, branch=m.autograde.branch)
-        if r is None and m.autograde.steps:  # legacy fallback: scrape CI step conclusions
+        # 1. preferred: the durable CI run-artifact contract (result.json)
+        r = fetch_autograde_artifact(
+            m.org, ref.repo, workflow=m.autograde.workflow, branch=m.autograde.branch,
+            artifact=m.autograde.result_artifact, member=m.autograde.result_path)
+        # 2. fallback: result.json committed in-repo (labs that publish that way)
+        if r is None:
+            r = fetch_autograde(m.org, ref.repo, m.autograde.result_path, branch=m.autograde.branch)
+        # 3. legacy fallback: parse the run log's PASS/FAIL lines
+        if r is None and m.autograde.steps:
             r = scrape_autograde(m.org, ref.repo, m.autograde.workflow, m.autograde.steps,
                                  branch=m.autograde.branch)
         return r

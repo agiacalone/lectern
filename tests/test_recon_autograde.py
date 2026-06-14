@@ -94,3 +94,27 @@ def test_scrape_autograde_no_runs_returns_none():
     def fake_gh(args):
         return json.dumps({"workflow_runs": []})
     assert scrape_autograde("O", "r", "autograde.yml", [{"name":"Ward I","key":"w1","points":10}], gh=fake_gh) is None
+
+
+def test_fetch_autograde_artifact_reads_result_json():
+    import json
+    from lectern.recon_autograde import fetch_autograde_artifact
+    result = json.dumps({"schema":1,"honor_ok":True,
+        "challenges":{"ward1":{"pass":True,"points":10,"max":10}},"points":10,"max":100})
+    def fake_gh(args):
+        return json.dumps({"workflow_runs":[{"id":555,"head_sha":"cafef00d"}]})
+    seen = {}
+    def fake_dl(org, repo, run_id, artifact, member):
+        seen.update(run_id=run_id, artifact=artifact)
+        return result
+    r = fetch_autograde_artifact("O","r", gh=fake_gh, download=fake_dl)
+    assert r.points == 10
+    assert r.commit == "cafef00d"      # falls back to run head_sha
+    assert seen["run_id"] == 555 and seen["artifact"] == "grading-result"
+
+def test_fetch_autograde_artifact_missing_returns_none():
+    import json
+    from lectern.recon_autograde import fetch_autograde_artifact
+    def fake_gh(args): return json.dumps({"workflow_runs":[{"id":1,"head_sha":"x"}]})
+    def fake_dl(*a): return None       # artifact absent
+    assert fetch_autograde_artifact("O","r", gh=fake_gh, download=fake_dl) is None
