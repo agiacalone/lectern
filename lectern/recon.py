@@ -40,11 +40,18 @@ def run_recon(*, manifest_path: Path, roster_csv: Path, out_dir: Path,
     for ref in refs:
         tmp = Path(tempfile.mkdtemp(prefix="recon-"))
         try:
-            do_clone(ref, tmp / "repo")
+            try:
+                do_clone(ref, tmp / "repo")
+                cloned = True
+            except Exception:
+                cloned = False  # no submission / private-no-access — record as empty
             repo = tmp / "repo"
-            ag = do_auto(ref)
-            git = recon_git(repo, profile=m.git_profile) if repo.exists() else None
-            docs = {d.label: recon_doc(repo / d.file, label=d.label) for d in m.docs}
+            if cloned and repo.exists():
+                ag = do_auto(ref)
+                git = recon_git(repo, profile=m.git_profile)
+                docs = {d.label: recon_doc(repo / d.file, label=d.label) for d in m.docs}
+            else:
+                ag, git, docs = None, None, {d.label: recon_doc(repo / d.file, label=d.label) for d in m.docs}
             commit = ag.commit if ag else None
             links = repo_links(org=m.org, repo=ref.repo, grading_commit=commit, doc_path=doc_path)
             records.append(RepoRecord(github_id=ref.github_id, student=ref.student,
