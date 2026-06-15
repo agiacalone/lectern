@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-VENV_PYTHON = "/home/anthony/.local/share/personal-assistant/venv/bin/python"
+# the interpreter running the tests — portable across dev machines and CI
+VENV_PYTHON = sys.executable
 FIXTURE_DIR = Path("tests/fixtures/qbank")
 
 
