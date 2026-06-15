@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from lectern.exam_serial import canonical_name, source_serial_from_tex, student_serial
-from vaultkit import slugify
+from lectern._text import slugify
 
 
 # ----- dataclasses ---------------------------------------------------------
