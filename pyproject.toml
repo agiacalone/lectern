@@ -3,7 +3,7 @@ name = "lectern"
 version = "0.1.0"
 description = "Course/teaching operations skill (the Registrar) — terms, gradebooks, exams, ISA, archives"
 requires-python = ">=3.11"
-dependencies = ["pyyaml>=6", "jsonschema>=4", "vaultkit"]
+dependencies = ["pyyaml>=6", "jsonschema>=4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-mock>=3.12", "responses>=0.24"]
