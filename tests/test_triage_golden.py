@@ -324,8 +324,14 @@ def _normalize(s: str) -> str:
     """Mask volatile content and collapse trailing whitespace for stable golden compare."""
     s = re.sub(r'`[0-9a-f]{7,40}`', '`SHA`', s)
     s = re.sub(r'\b[0-9a-f]{7,40}\b', 'SHA', s)
-    today_pat = re.compile(r'\d{4}-\d{2}-\d{2}')
-    s = today_pat.sub('DATE', s)
+    # Mask ISO dates and any trailing time-of-day + timezone offset. The offset
+    # is stamped from the runner's local zone (e.g. -07:00 here, Z on a UTC CI
+    # box) for tz-naive fixture commits, so leaving it in makes the golden
+    # machine-dependent. Collapse the whole datetime to one DATE token.
+    iso_pat = re.compile(
+        r'\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?'
+    )
+    s = iso_pat.sub('DATE', s)
     return "\n".join(line.rstrip() for line in s.strip().splitlines())
 
 
