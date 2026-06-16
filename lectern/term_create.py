@@ -102,7 +102,8 @@ def _manifest(spec: dict, sec: dict, vault: Path, created: list, skipped: list) 
     path = (vault / "classes" / cdir / "archives"
             / f"{term}-{sec['section']}" / "manifest.yaml")
     man = default_manifest(sec["course"], term, str(sec["section"]), spec["instructor"])
-    man["class_number"] = sec["class-number"]
+    _cn = sec["class-number"]
+    man["class_number"] = None if _cn is None else str(_cn)
     man["headcount"]["enrolled"] = sec["enrolled"]
     man["schedule"]["meets"] = sec["meets"]
     man["schedule"]["room"] = sec["room"]

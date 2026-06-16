@@ -75,7 +75,7 @@ def test_create_materializes_everything(tmp_path):
     # manifest skeletons
     man = yaml.safe_load((V / "classes" / "326" / "archives" / "fa26-01" / "manifest.yaml").read_text())
     assert man["headcount"]["enrolled"] == 45
-    assert str(man["class_number"]) == "1116"
+    assert man["class_number"] == "1116"   # manifest schema requires string, not int
     # MOC wiring (326 has a MOC; 378-478 MOC absent -> skipped silently)
     moc = (V / "notes" / "MOC-cecs-326.md").read_text()
     assert "326-01-fa26" in moc
