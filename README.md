@@ -5,7 +5,7 @@
 
 **The Registrar** — a 100% open-source teaching-operations toolkit for university instructors.
 
-Lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, LMS roster/grade import, and end-of-term archival. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
+Lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, campus-LMS (Canvas) roster/grade import, and end-of-term archival. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
 
 ---
 
