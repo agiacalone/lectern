@@ -1,14 +1,39 @@
-# lectern
+# Lectern
+
+> *Trivia:* **Lectern** comes from the Latin *legere*, "to read" — the medieval reading-desk a
+> lector stood at to read scripture aloud to the hall. Fitting for the tool you run your courses from.
 
 **The Registrar** — a 100% open-source teaching-operations toolkit for university instructors.
 
-lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, LMS roster/grade import, and end-of-term archival. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
+Lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, LMS roster/grade import, and end-of-term archival. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
+
+---
+
+## Part of a self-hosted LMS — Lectern · Scriptorium · Oracle
+
+**Lectern · Scriptorium · Oracle** together form a **self-hosted, open-format learning-management
+system (LMS)** for university CS courses — faculty-owned, no vendor lock-in, spanning the full course
+lifecycle: **administration** (Lectern) · **content** (Scriptorium) · **grading** (Oracle). It covers
+what a commercial LMS does, but in plain version-controllable formats you own end to end.
+
+**Modular by design:** adopt one tool or all three. Each stands alone, owns one stage of the course
+lifecycle, and interoperates through open plain-text formats (Markdown · CSV · YAML · LaTeX) and
+stable CLI contracts — no shared database, no monolith, no lock-in. Each tool is also operable two
+ways: driven by an AI agent (Claude Code skill) *or* run directly by a human via its CLI.
+
+| Tool | Role | Repo |
+|---|---|---|
+| **[Lectern](https://github.com/agiacalone/lectern)** — the Registrar | Course **administration** — terms, sections, gradebook, exam build/verify, Classroom binding, archival. | `agiacalone/lectern` |
+| **[Scriptorium](https://github.com/agiacalone/scriptorium)** — the workshop | Course **content** — lecture notes, Cornell handouts, quizzes, slides, question banks. | `agiacalone/scriptorium` |
+| **[Oracle](https://github.com/agiacalone/oracle)** — the secret box | **Grading** — a verify-by-proof oracle service + a sandboxed code-runner (gradebox). | `agiacalone/oracle` |
+
+*You are here: **Lectern**.*
 
 ---
 
 ## Why open formats
 
-> **lectern is built entirely on open, plain-text, version-controllable file formats.**
+> **Lectern is built entirely on open, plain-text, version-controllable file formats.**
 
 | Format | What it carries |
 |---|---|
@@ -24,7 +49,7 @@ There are no proprietary formats in this pipeline — no `.docx`, no `.xlsx`, no
 - **Scriptable** — plain CSV and YAML mean any tool (Python, awk, shell) can read or transform the data
 - **Durable** — a plain-text LaTeX exam authored today is reproducible decades from now, with no license or cloud account required
 
-This is a deliberate design principle, not an accident. Proprietary LMS gradebooks, locked PDF workflows, and cloud-only tooling create single points of failure and make reproducibility (essential for grade appeals, accreditation evidence, and academic-integrity investigations) fragile. lectern's answer is: every artifact that matters lives in a format you can open with a text editor.
+This is a deliberate design principle, not an accident. Proprietary LMS gradebooks, locked PDF workflows, and cloud-only tooling create single points of failure and make reproducibility (essential for grade appeals, accreditation evidence, and academic-integrity investigations) fragile. Lectern's answer is: every artifact that matters lives in a format you can open with a text editor.
 
 ---
 
@@ -41,8 +66,8 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 | `reg-gradescope-stats` | `gradescope_stats` | Per-outcome **item analysis** from Gradescope *Export Evaluations* — per-distractor stats joined to the grading-note `form·Qn·slot` keys; flags dead distractors, over-key distractors, and the miskey alarm. Emits `ITEM_ANALYSIS.md`, a self-contained newspaper/agate **broadsheet**, and a per-student×question `item_scores` matrix. |
 | `reg-exam-build` | `exam_build` | Assemble exam PDFs — single-source `.tex` mode or pack-mode `.yaml` manifest (multi-form A/B/C, per-student individualized, Gradescope products). See below. |
 | `reg-exam-verify` | `exam_verify` | Verify a student exam serial against the register. Confirms which form and which student a paper belongs to. |
-| `reg-lms-grades-import` | `lms_grades` | Normalize a Canvas `grades.csv` export to lectern's canonical format. |
-| `reg-lms-roster-import` | `lms_roster` | Normalize a faculty-center enrollment roster (`.xls`/`.xlsx`) to lectern's canonical format. |
+| `reg-lms-grades-import` | `lms_grades` | Normalize a Canvas `grades.csv` export to Lectern's canonical format. |
+| `reg-lms-roster-import` | `lms_roster` | Normalize a faculty-center enrollment roster (`.xls`/`.xlsx`) to Lectern's canonical format. |
 | `reg-classroom-roster-seed` | `classroom_seed` | Pre-seed a GitHub Classroom roster from a normalized roster CSV, using the 9-digit student ID as the identifier. |
 | `reg-github-bind` | `github_bind` | Bind student GitHub usernames to roster entries — from a Google Form CSV, a GitHub Classroom roster CSV, or org-scrape mode. |
 | `reg-isa-publish` | `isa_publish` | Publish ISA grading artifacts (exam keys, rubrics, print stacks) to a shared Drive folder via rclone or service-account backend. Hash-based idempotency: unchanged files are skipped. |
@@ -208,7 +233,7 @@ reg-exam-build exam.build.yaml
 
 ## How this maps to standardized course-repository infrastructure
 
-lectern addresses several standardized-infrastructure concerns directly:
+Lectern addresses several standardized-infrastructure concerns directly:
 
 **Naming conventions.** The install convention for course repos follows `[dept]-[num]-[type]-[name]` (e.g., `cecs-378-lab-spellbreaker`). `reg-github-bind` and `reg-classroom-roster-seed` use the same structured naming to bind student repos to roster entries.
 
@@ -229,7 +254,7 @@ lectern addresses several standardized-infrastructure concerns directly:
 | [docs/README.md](docs/README.md) | Documentation index |
 | [docs/design/exam-system.md](docs/design/exam-system.md) | Multi-form exam system design: A/B variants, individualized builds, Gradescope products, defensibility |
 | [docs/design/exam-tex-format.md](docs/design/exam-tex-format.md) | House `.tex` format: header block, answer key toggle, per-student serials, color conventions, appeals runbook |
-| [docs/gradescope-workflow.md](docs/gradescope-workflow.md) | Using lectern-built exams with Gradescope: region/bubble, A/B Version Sets, roster, identity verification |
+| [docs/gradescope-workflow.md](docs/gradescope-workflow.md) | Using Lectern-built exams with Gradescope: region/bubble, A/B Version Sets, roster, identity verification |
 
 ---
 
