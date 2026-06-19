@@ -156,8 +156,8 @@ examples/
 ## Install & quickstart
 
 ```bash
-git clone https://github.com/agiacalone/lectern-public
-cd lectern-public
+git clone https://github.com/agiacalone/lectern
+cd lectern
 ./install.sh
 # Writes .venv/, installs editable, creates reg-* wrappers in ~/bin.
 ```
