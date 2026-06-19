@@ -5,8 +5,8 @@ lectern is an MIT-licensed open-source project. Contributions are welcome.
 ## Development setup
 
 ```bash
-git clone https://github.com/agiacalone/lectern-public
-cd lectern-public
+git clone https://github.com/agiacalone/lectern
+cd lectern
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
