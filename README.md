@@ -1,7 +1,6 @@
 # Lectern
 
-> *Trivia:* **Lectern** comes from the Latin *legere*, "to read" — the medieval reading-desk a
-> lector stood at to read scripture aloud to the hall. Fitting for the tool you run your courses from.
+> Long before slide decks, a **lectern** was the slanted desk a *lector* leaned on to read aloud to the hall — Latin *legere*, "to read." We kept the name because the work never changed: stand at the front, keep the term running, and make sure every roster, grade, and exam stays something you can open and read by hand years from now — no locked gradebooks, no vendor between you and your students' record.
 
 **The Registrar** — a 100% open-source teaching-operations toolkit for university instructors.
 
