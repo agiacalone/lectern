@@ -17,7 +17,7 @@ def _cleared(bundle_dir: Path, gid: str) -> set[str]:
     jf = bundle_dir / "repos" / f"{gid}.json"
     if not jf.exists():
         return set()
-    ag = (json.loads(jf.read_text()).get("autograde") or {})
+    ag = (json.loads(jf.read_text(encoding="utf-8")).get("autograde") or {})
     return {k for k, c in (ag.get("challenges") or {}).items() if c.get("passed")}
 
 def merge_results(bundle_dir: Path, rubric: Rubric, results_path: Path) -> list[Merged]:

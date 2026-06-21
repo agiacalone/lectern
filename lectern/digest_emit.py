@@ -19,7 +19,7 @@ def emit(bundle_dir: Path, rubric: Rubric, out_tasks: Path) -> int:
     n = 0
     lines = []
     for jf in sorted((bundle_dir / "repos").glob("*.json")):
-        rec = json.loads(jf.read_text())
+        rec = json.loads(jf.read_text(encoding="utf-8"))
         gid = rec["github_id"]
         ag = rec.get("autograde") or {}
         honor_ok = bool(ag.get("honor_ok"))
