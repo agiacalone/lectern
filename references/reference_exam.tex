@@ -234,6 +234,25 @@
 
 \end{enumerate}
 
+% --- Section 1b: True / False ---
+%  House standard: the \textsc{T~/~F.} label keeps the question typed `tf`
+%  (parse_outline_from_tex / _classify), and the (a) True / (b) False choices
+%  MUST be a stacked enumerate — one option per line — so Gradescope's region
+%  detection can find them. Do NOT inline the options. Always (a) True, (b)
+%  False; wrap the correct one in \correctchoice. The inline Answer: line is the
+%  canonical record parse_outline_from_tex reads (keep it "True"/"False").
+\examsection{True / False}
+\begin{enumerate}[resume]
+
+\item \textit{(2 pts)}~\textsc{T~/~F.}~Placeholder true/false claim (replace per exam).
+  \begin{enumerate}[label=(\alph*)]
+    \item \correctchoice{True}
+    \item \wrongchoice{False}
+  \end{enumerate}
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} True} \fi
+
+\end{enumerate}
+
 % --- Section 2: Short Answer (model answer behind \ifanswers) ---
 \examsection{Short Answer}
 \begin{enumerate}[resume]
