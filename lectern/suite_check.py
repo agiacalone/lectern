@@ -1,6 +1,44 @@
 """Verify installed LMS-suite component versions against SUITE.md ranges.
 
 reg-suite-check (a ~/bin wrapper) execs `python -m lectern.suite_check`.
+
+SUITE.md matrix schema
+-----------------------
+The parser reads the first triple-backtick yaml fenced block in SUITE.md.  Expected keys:
+
+    suite: "LMS Suite"
+    release: "v0.1.0-rc1"
+    components:
+      <name>: "<version-spec>"   # one entry per component
+    seam_contracts:
+      <seam>: <int>              # contract-version integer per seam
+
+Version-constraint mini-language (``in_range(version, spec)``)
+--------------------------------------------------------------
+Operators: ``>=``  ``>``  ``<=``  ``<``  ``==``
+
+Comma separates clauses; all clauses must hold (logical AND):
+    ">=0.1.0,<0.2"   -- true when 0.1.0 <= v < 0.2.0
+
+Version strings are normalized to a ``(major, minor, patch)`` tuple:
+- Extra numeric components beyond the third are truncated.
+- Missing components are zero-padded.
+  So ``"0.2"`` → ``(0, 2, 0)`` and ``"0.1.0.4"`` → ``(0, 1, 0)``.
+
+Worked examples::
+
+    in_range("0.1.0", ">=0.1.0,<0.2")  # True  — exactly the lower bound
+    in_range("0.1.9", ">=0.1.0,<0.2")  # True  — within the range
+    in_range("0.2.0", ">=0.1.0,<0.2")  # False — at the excluded upper bound
+
+Absent components
+-----------------
+If a component's version cannot be resolved (directory absent, no version
+file/package.json/pyproject.toml found), ``resolve_version`` returns ``None``.
+``check()`` maps ``None`` → ``CheckResult(skipped=True, ok=True)`` — a missing
+component is **skipped, not a failure**.  This allows Oracle (private, not
+always installed) to be listed in SUITE.md without breaking the check on
+machines where it is not deployed.
 """
 from __future__ import annotations
 
