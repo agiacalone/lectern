@@ -24,3 +24,35 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest -q
+
+  suite-integration:
+    # Opt-in cross-component integration tests (LMS suite). Does NOT gate the
+    # Python matrix above. Oracle is private/absent here — its seam runs from
+    # committed golden fixtures; only the Scriptorium reading-list seam is live.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: lectern
+      - uses: actions/checkout@v4
+        with:
+          repository: agiacalone/scriptorium
+          path: scriptorium
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install lectern
+        run: pip install -e "lectern[dev]"
+      - name: Install scriptorium deps
+        run: npm --prefix scriptorium ci || npm --prefix scriptorium install
+      - name: Run suite integration tests
+        working-directory: lectern
+        env:
+          LECTERN_SCRIPTORIUM_DIR: ${{ github.workspace }}/scriptorium
+        run: python -m pytest -m suite -q
