@@ -1,6 +1,5 @@
 # tests/integration/test_seam_autograde.py
 """Seam B (golden): Oracle result.json -> Lectern AutogradeResult contract."""
-import json
 import pytest
 from lectern.recon_autograde import parse_result_json
 
