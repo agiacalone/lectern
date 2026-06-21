@@ -6,6 +6,9 @@ All notable changes to lectern are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **Declared the `pdfplumber` dependency** that was previously undeclared: added to the `dev` extra (the test suite imports it directly) and to a new optional `verify` extra. `reg-exam-verify` prefers pdfplumber for footer-serial extraction but falls back to the `pdftotext` CLI, so it stays optional at runtime — not a hard dependency.
+
 ### Added
 - **`reg-triage`** — git-history authenticity triage for GitHub Classroom submissions (`init`/`sweep`/`report`/`rhythm`); two-tier audit doc, advisory-only, 100% human review. Ships with synthetic demo fixtures.
 - **`reg-syllabus`** — syllabus generation with a tamper-evident control-number serial (`stamp`/`build`).
@@ -19,6 +22,7 @@ All notable changes to lectern are documented here.
   - New module `lectern.gradebook_ledger`.
 
 ### Changed
+- **`reg-exam-build` print layout — one combined PDF per exam, not one file per student.** New manifest key `print_layout: single | per-form` (default **`single`**). In `single`, the per-student serialized copies are merged into a single `<exam-slug>_combined.pdf` for the whole roster (all forms, canonical-name order) — the printable deliverable is exactly one file; the per-student copies become build intermediates under `build/.parts/` (still referenced by `register.csv`'s `output_pdf`, so `reg-exam-verify` and one-off reprints work). `print_layout: per-form` restores the prior behavior (per-form `<id>_combined.pdf` stacks, loose per-student PDFs in `build/`). The grading note's appeals command points at `build/.parts/` under `single`.
 - `reg-gradebook build` no longer emits the legacy standalone `gradebook.md` cockpit — the new `GRADEBOOK.md` ledger supersedes it. (`render_view` is retained for the legacy Canvas→vault `import` path; the class-note cockpit reads `gradebook.csv` directly and is unaffected.)
 - `reg-gradescope-stats`: per-outcome **item analysis** from Gradescope *Export Evaluations*. Joins each rubric-item column back to the exam's `form·Qn·slot` keys in the grading note, computing per-question difficulty (p-value) and per-distractor selection counts.
   - Flags **non-functioning distractors** (chosen by 0), **distractors more popular than the key**, and a **miskey alarm** (a credited item applied yet the question mean is 0 → rubric point value misset in Gradescope).

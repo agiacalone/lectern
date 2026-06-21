@@ -282,6 +282,8 @@ def _manifest(tmp_path, **over):
         lines.append("roster: roster4.csv")
         lines.append(f"assign: {over.get('assign', 'alternating')}")
     lines.append(f"gradescope: {over.get('gradescope', 'none')}")
+    if over.get("print_layout"):
+        lines.append(f"print_layout: {over['print_layout']}")
     man = tmp_path / "exam.build.yaml"
     man.write_text("\n".join(lines) + "\n")
     return man
@@ -378,6 +380,59 @@ def test_run_register_sorted_by_canonical_name(tmp_path):
     res = run(m, tmp_path)
     canon = [row["canonical_name"] for row in csv.DictReader(res.register_csv.open())]
     assert canon == sorted(canon)
+
+
+@needs_latex
+def test_single_layout_is_default_one_combined_pdf(tmp_path):
+    """Default print_layout=single: ONE combined PDF across all forms, no
+    per-form A_combined/B_combined, per-student copies tucked under build/.parts/."""
+    from lectern.exam_pack import _pdf_page_count
+
+    m = load_manifest(_manifest(tmp_path, two_forms=True, individualized=True))
+    assert m.print_layout == "single"
+    res = run(m, tmp_path)
+
+    combos = sorted(res.build_dir.glob("*_combined.pdf"))
+    assert len(combos) == 1, f"expected exactly one combined PDF, got {[p.name for p in combos]}"
+    assert res.combined_pdf == combos[0]
+    assert not (res.build_dir / "A_combined.pdf").exists()
+    assert not (res.build_dir / "B_combined.pdf").exists()
+
+    # per-student copies are intermediates under .parts/, not loose in build/
+    parts = res.build_dir / ".parts"
+    assert parts.is_dir()
+    student_pdfs = list(parts.glob("*.pdf"))
+    assert len(student_pdfs) == 4
+    assert not list(res.build_dir.glob("A_*_*.pdf")), "loose per-student PDFs leaked into build/"
+
+    # combined page count == sum of the per-student copies (all four merged)
+    assert _pdf_page_count(res.combined_pdf) == sum(_pdf_page_count(p) for p in student_pdfs)
+
+    # register is the index INTO the combined PDF: output_pdf points at .parts/, roster order
+    rows = list(csv.DictReader(res.register_csv.open()))
+    assert len(rows) == 4
+    assert all(r["output_pdf"].startswith(".parts/") for r in rows)
+    assert [r["canonical_name"] for r in rows] == sorted(r["canonical_name"] for r in rows)
+
+
+@needs_latex
+def test_per_form_layout_restores_legacy_stacks(tmp_path):
+    """print_layout=per-form keeps the old behavior: one combined stack per form,
+    per-student PDFs loose in build/, no single combined, no .parts/."""
+    m = load_manifest(_manifest(tmp_path, two_forms=True, individualized=True,
+                                print_layout="per-form"))
+    assert m.print_layout == "per-form"
+    res = run(m, tmp_path)
+    assert (res.build_dir / "A_combined.pdf").exists()
+    assert (res.build_dir / "B_combined.pdf").exists()
+    assert res.combined_pdf is None
+    assert not (res.build_dir / ".parts").exists()
+
+
+def test_load_manifest_rejects_bad_print_layout(tmp_path):
+    man = _manifest(tmp_path, two_forms=True, individualized=True, print_layout="bogus")
+    with pytest.raises(SystemExit):
+        load_manifest(man)
 
 
 @needs_latex
