@@ -13,6 +13,7 @@ class DocRecon:
     sources: int = 0
     word_count: int = 0
     raw_path: str = ""
+    body: str = ""
 
 _FM = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
@@ -35,4 +36,4 @@ def recon_doc(path: Path, *, label: str) -> DocRecon:
     sources = len(src) if isinstance(src, list) else len(re.findall(r"https?://", body))
     return DocRecon(label=label, present=True, frontmatter=fm if isinstance(fm, dict) else {},
                     sections=[s.strip() for s in sections], sources=sources,
-                    word_count=len(body.split()), raw_path=str(p))
+                    word_count=len(body.split()), raw_path=str(p), body=body.strip())
