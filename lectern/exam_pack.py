@@ -359,11 +359,12 @@ def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root) -> 
     ]
     for fid in forms:
         parts.append(f"## Form {fid}\n" + _grading_note_table(per_form_outline[fid]) + "\n")
-    verify_dir = "build/.parts/" if manifest.print_layout == "single" else "build/"
+    # verify dir is always build/ — register.csv's output_pdf carries the
+    # .parts/ prefix in single layout, so it resolves relative to build/.
     parts.append(
         "## Appeals\n"
         "Each paper's footer `Serial · ID` resolves to one student + form via "
-        f"`reg-exam-verify --register build/register.csv --dir {verify_dir}`.\n"
+        "`reg-exam-verify --register build/register.csv --dir build/`.\n"
     )
     out.write_text("\n".join(parts), encoding="utf-8")
     return out

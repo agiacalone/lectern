@@ -413,6 +413,8 @@ def test_single_layout_is_default_one_combined_pdf(tmp_path):
     assert len(rows) == 4
     assert all(r["output_pdf"].startswith(".parts/") for r in rows)
     assert [r["canonical_name"] for r in rows] == sorted(r["canonical_name"] for r in rows)
+    # output_pdf must resolve relative to build/ (what reg-exam-verify --dir build/ does)
+    assert all((res.build_dir / r["output_pdf"]).is_file() for r in rows)
 
 
 @needs_latex
