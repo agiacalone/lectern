@@ -24,7 +24,8 @@ def record_to_dict(r: RepoRecord) -> dict:
             "all_failed": r.autograde.all_failed,
             "challenges": {k: asdict(c) for k, c in r.autograde.challenges.items()}},
         "git": None if r.git is None else asdict(r.git),
-        "docs": {k: asdict(v) for k, v in r.docs.items()},
+        "docs": {k: {kk: vv for kk, vv in asdict(v).items() if kk != "body"}
+                 for k, v in r.docs.items()},
     }
 
 def record_from_dict(d: dict) -> RepoRecord:
