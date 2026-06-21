@@ -31,7 +31,7 @@ results. The fan-out (subagents / Claude Code) is the pluggable middle.
 ## 3. Data flow
 
 ```
-reg-lab-recon ──► bundle/ (cohort.csv, repos/<id>.json incl. writeup raw text)
+reg-lab-recon ──► bundle/ (cohort.csv, repos/<id>.json, writeups/<id>.md)
                       │
    rubric.yaml ──►  reg-lab-digest emit
                       │
@@ -70,7 +70,7 @@ cap: 30                        # total incl. bonus is capped here
 ```
 
 `requires_cleared` names an **autograde** key (from the recon manifest's
-`autograde.steps`). On merge, a section whose ward was not cleared is forced to 0
+`autograde.challenges`). On merge, a section whose ward was not cleared is forced to 0
 — the partial-ward rule is enforced deterministically, never trusted to the model.
 Module `lectern.digest_rubric` parses + validates this (max ≥ 0, keys unique,
 Σmax of core sections == total, bonus capped by `cap`).
