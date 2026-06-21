@@ -55,7 +55,8 @@ _NEW_COLS = ["writeup_score", "writeup_comment", "writeup_flags"]
 
 def apply_to_cohort(bundle_dir: Path, merged: list[Merged]) -> None:
     path = Path(bundle_dir) / "cohort.csv"
-    rows = list(csv.DictReader(path.open()))
+    with path.open(newline="") as fh:
+        rows = list(csv.DictReader(fh))
     fields = list(rows[0].keys()) if rows else ["github_id"]
     for c in _NEW_COLS:
         if c not in fields:
