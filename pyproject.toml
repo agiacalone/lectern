@@ -20,3 +20,6 @@ include = ["lectern*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Put the repo root on sys.path so test modules can cross-import shared fixtures
+# via `from tests.test_x import ...` under bare `pytest` (CI), not only `python -m pytest`.
+pythonpath = ["."]
