@@ -38,5 +38,6 @@ make_wrapper reg-gradescope-stats      lectern.gradescope_stats
 make_wrapper reg-syllabus              lectern.syllabus
 make_wrapper reg-triage                lectern.triage
 make_wrapper reg-lab-recon             lectern.recon
+make_wrapper reg-lab-digest            lectern.lab_digest
 
 echo "lectern installed. reg-* wrappers in $BIN."
