@@ -1,0 +1,113 @@
+# Spellbreaker (Lab 1) — machine-readable grimoire rubric
+# Human-readable source: classes/378-478/labs/378-spellbreaker/spellbreaker_lab_grading_rubric.md
+# Anchor philosophy: mechanism-over-outcome — "the ward leaked X which let me do Y" earns full;
+#   "I ran the attack" earns near-zero.  Anchors derive from the markdown rubric's Strong descriptions.
+
+lab: "Lab 1 — Symmetric Cryptography (Spellbreaker)"
+total: 30
+comment_max_chars: 140
+cap: 30
+
+sections:
+  - key: ward1
+    label: "Ward I — The Wisp (ECB detection)"
+    max: 5
+    requires_cleared: ward1
+    anchors:
+      strong: >-
+        Names the ECB determinism mechanism precisely (identical plaintext blocks
+        → identical ciphertext, no IV/chaining), explains feeding repeated blocks
+        and spotting the repeat, and names the real-world failure class (ECB
+        penguin / lack of semantic security / CWE-327).
+      adequate: >-
+        Correctly identifies ECB as the problem and mentions block-repeat
+        detection, but the causal chain (why repetition appears, what it
+        enables) is partial or slightly off.
+      weak: >-
+        Restates the prompt ("I spotted a pattern"), conflates ECB with another
+        mode, or merely says the attack worked without explaining the mechanism.
+      missing: >-
+        Blank, or no entry despite the student having cleared Ward I.
+
+  - key: ward2
+    label: "Ward II — The Rune Golem (ECB byte-at-a-time)"
+    max: 10
+    requires_cleared: ward2
+    anchors:
+      strong: >-
+        Explains the block-size probe (growing prefix until ciphertext length
+        jumps by one block), then the byte-at-a-time recovery: align the unknown
+        byte at a block boundary with a known prefix, brute-force ≤256 guesses
+        by matching the target block, slide one byte at a time to recover the
+        whole secret; names a concrete real-world instance (ECB-mode token/cookie
+        leakage or equivalent).
+      adequate: >-
+        Describes the recovery idea at a high level (prefix alignment +
+        brute-force) but omits the block-size probe, glosses the sliding
+        mechanism, or gives only a vague real-world reference.
+      weak: >-
+        Says "I guessed bytes one at a time" without explaining the boundary
+        alignment, or conflates this attack with another ECB weakness.
+      missing: >-
+        Blank, or no entry despite the student having cleared Ward II.
+
+  - key: ward3
+    label: "Ward III — The Mirror Knight (CBC bit-flipping)"
+    max: 9
+    requires_cleared: ward3
+    anchors:
+      strong: >-
+        Identifies the specific ciphertext byte(s) in block C[i-1] altered, the
+        resulting controlled change in P[i], and explains CBC malleability:
+        P[i] = D(C[i]) XOR C[i-1], so flipping a bit in C[i-1] flips the same
+        bit in P[i] without the key; names unauthenticated-CBC malleability as
+        the real-world failure (cookie/IV tampering, encrypt-without-MAC class).
+      adequate: >-
+        Correctly attributes the attack to XOR malleability in CBC and shows
+        the forge worked, but the byte-level specifics (which block, which
+        byte, XOR delta) are thin or the real-world example is absent.
+      weak: >-
+        Says "I flipped bits" without explaining the CBC XOR relationship, or
+        confuses IV tampering with a different mode.
+      missing: >-
+        Blank, or no entry despite the student having cleared Ward III.
+
+  - key: craft
+    label: "Sources + craft"
+    max: 6
+    # no requires_cleared — craft is always in scope
+    anchors:
+      strong: >-
+        At least one real, relevant source cited (textbook section, OWASP,
+        CVE, paper, or blog) with enough context to show relevance; overall
+        writeup shows "how not that" depth — clear prose, well-commented
+        exploit code referenced or quoted, honest first-person voice.
+      adequate: >-
+        Source(s) cited but only a bare URL with no relevance context, OR prose
+        is clear but lacks depth on mechanism; craft is competent but thin.
+      weak: >-
+        No sources, or a bare link dump; prose restates prompts; "I did X"
+        throughout with no explanation of the underlying concept.
+      missing: >-
+        No sources at all and the prose shows no independent technical depth.
+
+bonus:
+  - key: omega
+    label: "OMEGA WARD — CBC padding oracle (bonus)"
+    max: 4
+    requires_cleared: ward4
+    anchors:
+      strong: >-
+        Explains the leaked-bit cascade: one padding-valid/invalid bit recovers
+        the last byte of a block; iterating recovers the whole block, then chains
+        across blocks; names POODLE and/or Lucky 13 with the right cause
+        (padding-oracle / MAC-then-encrypt timing).
+      adequate: >-
+        Describes the padding-oracle concept (valid vs invalid → bit leak) but
+        the block-chaining iteration or the real-world case (POODLE/Lucky 13)
+        is absent or vague.
+      weak: >-
+        Mentions "padding oracle" or "padding error" as a signal but does not
+        explain how that bit leaks byte values.
+      missing: >-
+        No OMEGA entry (student did not attempt Ward IV; not penalized).
