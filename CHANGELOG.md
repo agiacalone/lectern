@@ -6,8 +6,14 @@ All notable changes to lectern are documented here.
 
 ## [Unreleased]
 
+### Security
+- **Vendored `slugify`, dropped the `vaultkit` dependency** — the name `vaultkit` on PyPI is an unrelated third-party SDK, so depending on it was a dependency-confusion risk. The one helper used (`slugify`) is now inlined in `lectern/_text.py`, making the public distribution self-contained with no private/ambiguous dependency.
+
 ### Fixed
 - **Declared the `pdfplumber` dependency** that was previously undeclared: added to the `dev` extra (the test suite imports it directly) and to a new optional `verify` extra. `reg-exam-verify` prefers pdfplumber for footer-serial extraction but falls back to the `pdftotext` CLI, so it stays optional at runtime — not a hard dependency.
+- **`reg-exam-build` single layout — grading-note verify path.** The grading note's appeals command pointed `reg-exam-verify` at `build/.parts/`, double-counting the `.parts/` prefix the register's `output_pdf` already carries, so every paper reported "missing." Verify dir is `build/` in both print layouts now (with a regression test).
+- **`reg-term-create` — stringify `class_number` in the emitted manifest.** YAML parses a bare numeric CRN as an int, which failed `manifest_schema`'s `string | null` validation; the class number is now emitted as a string. Surfaced on the Su26 378-01 maiden voyage.
+- **Test config — `pythonpath = ["."]`.** The digest test modules cross-import shared fixtures via `from tests.test_x import …`, which resolved under `python -m pytest` (repo root on `sys.path`) but not under CI's bare `pytest -q`. The repo root is now on `sys.path` via pytest config so both invocations collect cleanly.
 
 ### Added
 - **`reg-lab-digest`** — Layer-2 **writeup digest** (the advisory complement to the autograder). `emit` reads a recon bundle + a structured rubric YAML and writes a per-repo grading work-list + output JSON-Schema; the LLM grading runs in the **harness via a documented contract** (no API dependency in lectern); `merge` validates the graded results and writes advisory writeup scores + one-line rationale comments into the cohort sheet. Deterministic guardrails enforced in code, never trusted to the model: partial-ward zeroing from the autograde truth, authoritative total recompute (`min(cap, Σ)`), confidence/abstain gating. **Never writes the gradebook** — promotion stays a separate human-confirmed step. Ships the Spellbreaker rubric (`templates/spellbreaker.rubric.yaml`) + the grader-prompt contract; first validated end-to-end on a real CECS 378 Lab 1 cohort. New modules `lectern.digest_{rubric,schema,emit,merge}` + `lectern.lab_digest`.
@@ -24,6 +30,7 @@ All notable changes to lectern are documented here.
   - New module `lectern.gradebook_ledger`.
 
 ### Changed
+- **BREAKING — `reg-term-create` materializes term specs + semester notes under `classes/semesters/`.** Term input specs and the semester rollup note moved from the `classes/` root to `classes/semesters/<term>.{md,spec.yaml}`. Existing specs at the old path must be moved to the new location.
 - **`reg-exam-build` print layout — one combined PDF per exam, not one file per student.** New manifest key `print_layout: single | per-form` (default **`single`**). In `single`, the per-student serialized copies are merged into a single `<exam-slug>_combined.pdf` for the whole roster (all forms, canonical-name order) — the printable deliverable is exactly one file; the per-student copies become build intermediates under `build/.parts/` (still referenced by `register.csv`'s `output_pdf`, so `reg-exam-verify` and one-off reprints work). `print_layout: per-form` restores the prior behavior (per-form `<id>_combined.pdf` stacks, loose per-student PDFs in `build/`). `reg-exam-verify --dir build/` works unchanged in both layouts (the register's `output_pdf` carries the `.parts/` prefix in `single`).
 - `reg-gradebook build` no longer emits the legacy standalone `gradebook.md` cockpit — the new `GRADEBOOK.md` ledger supersedes it. (`render_view` is retained for the legacy Canvas→vault `import` path; the class-note cockpit reads `gradebook.csv` directly and is unaffected.)
 - `reg-gradescope-stats`: per-outcome **item analysis** from Gradescope *Export Evaluations*. Joins each rubric-item column back to the exam's `form·Qn·slot` keys in the grading note, computing per-question difficulty (p-value) and per-distractor selection counts.
