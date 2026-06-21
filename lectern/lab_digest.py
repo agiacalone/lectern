@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
         n = emit(a.bundle, rubric, a.out)
         print(f"digest: {n} task(s) to grade -> {a.out}")
         return 0
-    merged = merge_results(a.bundle, rubric, a.results)
+    merged = list(merge_results(a.bundle, rubric, a.results))
     apply_to_cohort(a.bundle, merged)
     scored = sum(1 for x in merged if x.score is not None)
     held = sum(1 for x in merged if x.score is None)
