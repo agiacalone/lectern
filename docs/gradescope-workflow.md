@@ -28,8 +28,10 @@ Set `gradescope: region` or `gradescope: bubble` in `exam.build.yaml`, then run
 `reg-exam-build exam.build.yaml`. Outputs land in two directories next to the manifest:
 
 - **`build/`** — the printable exams: per-form blank `<id>.pdf`, key `<id>_key.pdf`,
-  per-student serialized PDFs, per-form `<id>_combined.pdf` print stacks, and
-  `register.csv` (which student got which form and what serial).
+  one `<exam-slug>_combined.pdf` (the single print deliverable — every student, all
+  forms, roster order; per-student copies kept under `build/.parts/`), and
+  `register.csv` (which student got which form and what serial). *(Set
+  `print_layout: per-form` for the legacy per-form `<id>_combined.pdf` stacks.)*
 - **`gradescope/`** — the import products covered in this document.
 - **`GRADING_NOTE.md`** — the grading note (next to the manifest). One Markdown
   file per exam: exam identity, the Gradescope setup steps, and a per-form
@@ -176,8 +178,11 @@ for accented names.
 
 ## 6. Print and distribute
 
-- Print `build/<form>_combined.pdf` per form (duplex-ready, even-page padded).
-  For A/B, print both stacks.
+- Print the single `build/<exam-slug>_combined.pdf` (duplex-ready, even-page padded;
+  every student's copy, all forms, in roster order) — one file, one print job. Hand
+  out down the roster; each paper's visible form label + footer serial keep it
+  self-identifying. *(Legacy `print_layout: per-form`: print `build/<form>_combined.pdf`
+  per form and distribute alternating by seat.)*
 - Distribute **alternating by seat** (A/B/A/B...) for adjacency separation.
 - **Collect each form into its own pile** after the exam so each scans into its
   own Gradescope version. The footer serial distinguishes forms — if a paper ends

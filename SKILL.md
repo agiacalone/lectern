@@ -150,8 +150,8 @@ points: 50                # optional total, for the outline aid / cross-check
 |---|---|---|
 | 1 | false | `build/A.pdf` + `build/A_key.pdf` — equivalent to legacy `.tex` mode |
 | 2+ | false | Per-form `<id>.pdf` + `<id>_key.pdf`; no per-student outputs |
-| 1 | true | Per-student serialized PDFs + `A_combined.pdf` + `build/register.csv` |
-| 2+ | true | The above per form; one `register.csv` (roster split across forms), sorted by `canonical_name` |
+| 1 | true | One `<exam-slug>_combined.pdf` print PDF (per-student copies under `build/.parts/`) + `build/register.csv` |
+| 2+ | true | One combined print PDF across all forms (roster order) + one `register.csv` (roster split across forms), sorted by `canonical_name`. `print_layout: per-form` → legacy per-form stacks. |
 
 `build/register.csv` columns: `name, form, canonical_name, source_serial, student_serial, output_pdf`.
 

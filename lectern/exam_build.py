@@ -392,6 +392,8 @@ def main(argv: list[str] | None = None) -> int:
         result = exam_pack.run(manifest, args.source.parent)
         print(f"  forms: {', '.join(result.forms)}")
         print(f"  + build/  ({result.student_pdf_count} student PDF(s))")
+        if result.combined_pdf:
+            print(f"  + build/{result.combined_pdf.name}  (single print PDF, roster order)")
         if result.register_csv:
             base = args.source.resolve().parent
             try:
