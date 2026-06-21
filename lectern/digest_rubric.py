@@ -17,6 +17,9 @@ class Rubric:
     sections: list[Section]; bonus: list[Section]; cap: int
 
 def _section(d: dict) -> Section:
+    for _k in ("key", "max"):
+        if _k not in d:
+            sys.exit(f"digest_rubric: section missing required key '{_k}': {d!r}")
     return Section(key=str(d["key"]), label=str(d.get("label", d["key"])),
                    max=int(d["max"]), anchors=dict(d.get("anchors") or {}),
                    requires_cleared=(str(d["requires_cleared"]) if d.get("requires_cleared") else None))
