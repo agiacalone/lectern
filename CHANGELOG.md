@@ -6,6 +6,9 @@ All notable changes to lectern are documented here.
 
 ## [Unreleased]
 
+### Changed
+- **True/False exam questions now use stacked `(a) True / (b) False` choices** — the house standard documented in `references/reference_exam.tex` and `docs/design/exam-tex-format.md`. The previous inline `\textsc{T~/~F.}` form listed no answer options on their own lines, so Gradescope's region detection could not find them. The `\textsc{T~/~F.}` label and inline `Answer:` reveal are retained, so questions stay typed `tf` and `parse_outline_from_tex` still emits `True`/`False` in `_outline.csv` — no code change, purely an authoring-convention fix.
+
 ### Security
 - **Vendored `slugify`, dropped the `vaultkit` dependency** — the name `vaultkit` on PyPI is an unrelated third-party SDK, so depending on it was a dependency-confusion risk. The one helper used (`slugify`) is now inlined in `lectern/_text.py`, making the public distribution self-contained with no private/ambiguous dependency.
 

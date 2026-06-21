@@ -201,6 +201,33 @@ answer record that `parse_outline_from_tex` reads to generate `_outline.csv`.
 
 ---
 
+## True/False question structure — stacked choices
+
+True/False items are typed `tf` by the `\textsc{T~/~F.}` label (which `_classify`
+matches before the MC test, so the question stays `tf` even though it carries an
+`(\alph*)` choice list). **The two options must be a stacked `enumerate` — one
+option per line, always `(a) True` then `(b) False` — never inlined.** Gradescope's
+region detection only finds answer choices that sit on their own lines; an inline
+`T / F` with no listed options is invisible to it.
+
+```latex
+% name: Worm propagation (T/F)
+\item \textit{(2 pts)}~\textsc{T~/~F.}~A worm can propagate across a network with no host program and no user action.
+  \begin{enumerate}[label=(\alph*)]
+    \item \correctchoice{True}
+    \item \wrongchoice{False}
+  \end{enumerate}
+  \ifanswers \textcolor{keyred}{\textbf{Answer:} True} \fi
+```
+
+Wrap the correct option in `\correctchoice` (green in the key) and the other in
+`\wrongchoice`. Keep the inline `\textbf{Answer:} True`/`False` reveal — that line,
+not the choice list, is what `parse_outline_from_tex` reads for the `_outline.csv`
+answer column, so it stays the word `True`/`False` (not a letter). Directions
+should tell students to "circle the correct option, (a) True or (b) False."
+
+---
+
 ## SA question structure — Gradescope-additive rubrics
 
 Every short-answer question in the **key** carries a Gradescope-compatible additive
