@@ -23,6 +23,8 @@ testpaths = ["tests"]
 # Put the repo root on sys.path so test modules can cross-import shared fixtures
 # via `from tests.test_x import ...` under bare `pytest` (CI), not only `python -m pytest`.
 pythonpath = ["."]
+# suite tests are opt-in only; run with: python -m pytest -m suite
+addopts = "-m 'not suite'"
 markers = [
     "suite: cross-component LMS-suite integration tests (opt-in: pytest -m suite)",
 ]
