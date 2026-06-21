@@ -19,10 +19,11 @@ from pathlib import Path
 
 import yaml
 from lectern.exam_serial import canonical_name
-from lectern.exam_build import ExamBuildConfig, build_variant, build_roster
+from lectern.exam_build import ExamBuildConfig, build_variant, build_roster, _concat_pdfs
 
 _VALID_ASSIGN = {"alternating", "seeded-random", "every-form"}
 _VALID_GRADESCOPE = {"region", "bubble", "none"}
+_VALID_PRINT_LAYOUT = {"single", "per-form"}
 
 
 # ---------------------------------------------------------------------------
@@ -48,6 +49,7 @@ class ExamManifest:
     assign_seed: str | None = None
     gradescope: str = "none"             # region | bubble | none
     points: int | None = None
+    print_layout: str = "single"         # single | per-form
 
 
 @dataclass
@@ -68,6 +70,7 @@ class PackResult:
     register_csv: Path | None
     student_pdf_count: int
     grading_note: Path | None = None
+    combined_pdf: Path | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -121,11 +124,16 @@ def load_manifest(path: Path) -> ExamManifest:
     if gradescope not in _VALID_GRADESCOPE:
         raise SystemExit(f"exam_pack: gradescope must be one of {sorted(_VALID_GRADESCOPE)}")
 
+    print_layout = str(data.get("print_layout", "single"))
+    if print_layout not in _VALID_PRINT_LAYOUT:
+        raise SystemExit(f"exam_pack: print_layout must be one of {sorted(_VALID_PRINT_LAYOUT)}")
+
     return ExamManifest(
         course=str(data["course"]), term=str(data["term"]), exam=str(data["exam"]),
         forms=forms, individualized=individualized, roster=roster_path,
         assign=assign, assign_seed=(str(assign_seed) if assign_seed else None),
         gradescope=gradescope, points=data.get("points"),
+        print_layout=print_layout,
     )
 
 
@@ -351,10 +359,11 @@ def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root) -> 
     ]
     for fid in forms:
         parts.append(f"## Form {fid}\n" + _grading_note_table(per_form_outline[fid]) + "\n")
+    verify_dir = "build/.parts/" if manifest.print_layout == "single" else "build/"
     parts.append(
         "## Appeals\n"
         "Each paper's footer `Serial · ID` resolves to one student + form via "
-        "`reg-exam-verify --register build/register.csv --dir build/`.\n"
+        f"`reg-exam-verify --register build/register.csv --dir {verify_dir}`.\n"
     )
     out.write_text("\n".join(parts), encoding="utf-8")
     return out
@@ -418,12 +427,38 @@ def run(manifest, workdir):
                 w = csv.writer(f); w.writerow(["name", "student_id"])
                 for n in sorted(sub):
                     w.writerow([n, sid_by_name.get(n, "")])
-            build_roster(ExamBuildConfig(source=form_tex, roster=sub_roster, combined=True))
+            # per-form combined stack only in legacy per-form layout; the single
+            # layout merges across all forms after the loop (see below).
+            build_roster(ExamBuildConfig(
+                source=form_tex, roster=sub_roster,
+                combined=(manifest.print_layout == "per-form"),
+            ))
             for srow in csv.DictReader((build_dir / f"{form.id}_serials.csv").open()):
                 srow["form"] = form.id
                 register_rows.append(srow)
                 student_pdf_count += 1
             sub_roster.unlink(missing_ok=True)
+
+    # print_layout: single — one combined PDF for the whole roster (all forms),
+    # in roster (canonical-name) order. The per-student copies are build
+    # intermediates, tucked under build/.parts/ rather than shipped loose, so the
+    # printable deliverable is exactly one file. (per-form keeps the legacy
+    # <form>_combined.pdf stacks emitted by build_roster above.)
+    combined_pdf: Path | None = None
+    if manifest.individualized and manifest.print_layout == "single" and register_rows:
+        register_rows.sort(key=lambda r: r.get("canonical_name", ""))
+        parts_dir = build_dir / ".parts"
+        parts_dir.mkdir(exist_ok=True)
+        ordered_pdfs: list[Path] = []
+        for row in register_rows:
+            fname = Path(row["output_pdf"]).name
+            dst = parts_dir / fname
+            shutil.move(str(build_dir / fname), str(dst))
+            row["output_pdf"] = f".parts/{fname}"
+            ordered_pdfs.append(dst)
+        combined_pdf = build_dir / f"{workdir.name}_combined.pdf"
+        combined_pdf.unlink(missing_ok=True)
+        _concat_pdfs(ordered_pdfs, combined_pdf)
 
     register_csv = None
     if manifest.individualized:
@@ -458,4 +493,5 @@ def run(manifest, workdir):
         forms=[f.id for f in manifest.forms], build_dir=build_dir,
         gradescope_dir=gs_dir, register_csv=register_csv,
         student_pdf_count=student_pdf_count, grading_note=grading_note,
+        combined_pdf=combined_pdf,
     )

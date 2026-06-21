@@ -88,8 +88,8 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 |---|---|---|
 | 1 | false | `build/A.pdf` + `build/A_key.pdf` |
 | 2+ | false | Per-form `<id>.pdf` + `<id>_key.pdf` |
-| 1 | true | Per-student serialized PDFs + `A_combined.pdf` + `build/register.csv` |
-| 2+ | true | All of the above per form; one `register.csv` covering the full roster split |
+| 1 | true | One `<exam-slug>_combined.pdf` print PDF (per-student copies under `build/.parts/`) + `build/register.csv` |
+| 2+ | true | One combined print PDF across all forms (roster order) + one `register.csv` covering the full roster split. `print_layout: per-form` restores per-form `<id>_combined.pdf` stacks. |
 
 **Per-student tamper-evident serials:** every individualized copy carries a unique 8-hex footer ID computed from `SHA-256(source_serial + ":" + canonical_name(student_name))[:8]`. The footer on every page reads `Serial XXXXXXXX · ID YYYYYYYY`, making every printed copy self-authenticating. `reg-exam-verify` re-derives the expected ID from the register and confirms it matches — answering "is this really the paper printed for student X?" without relying on the register as ground truth.
 
@@ -165,8 +165,14 @@ cd lectern
 Or into any Python 3.11+ environment:
 
 ```bash
-pip install -e .
+pip install -e .            # core
+pip install -e '.[verify]'  # + pdfplumber, for reg-exam-verify (else falls back to pdftotext)
+pip install -e '.[dev]'     # + test deps (pytest, pdfplumber, …)
 ```
+
+**External tools** the exam pipeline shells out to: `pdflatex` (TeX Live), and
+`pdfunite` **or** `qpdf` for combining PDFs, plus `pdftotext`/`pdfinfo`
+(poppler-utils) — install poppler + a TeX distribution via your package manager.
 
 Test the install:
 

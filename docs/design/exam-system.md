@@ -85,8 +85,17 @@ The four cells of the matrix, each reusing existing tested code:
 |---|---|---|---|
 | 1 | false | `build/A.pdf` + `build/A_key.pdf` | `build_variant` |
 | 2+ | false | Per-form `<id>.pdf` + `<id>_key.pdf` | `build_variant` × N |
-| 1 | true | Per-student stack + register + combined | `build_roster` |
-| 2+ | true | Roster split by assignment policy; one serialized copy per student; per-form combined stacks; one `register.csv` with a `form` column | `build_roster` × N (per assigned sub-roster) |
+| 1 | true | Per-student copies + register + one combined print PDF | `build_roster` |
+| 2+ | true | Roster split by assignment policy; one serialized copy per student; one combined print PDF across all forms (or per-form stacks under `print_layout: per-form`); one `register.csv` with a `form` column | `build_roster` × N (per assigned sub-roster) |
+
+**Print layout (`print_layout`, default `single`).** In the default `single`
+layout the per-student copies are merged into **one** combined PDF for the whole
+roster, in canonical-name (roster) order — the printable deliverable is exactly one
+file. The per-student copies are build intermediates, kept under `build/.parts/`
+(referenced from `register.csv`'s `output_pdf`) so `reg-exam-verify` and one-off
+reprints still work, but they are not shipped loose. Set `print_layout: per-form` to
+restore the legacy behavior: a `<form>_combined.pdf` stack per form, with the
+per-student copies loose in `build/`.
 
 ---
 
@@ -116,6 +125,10 @@ assign_seed: "fa26m1"       # required when assign: seeded-random; recorded in t
 
 gradescope: region          # region | bubble | none (default none)
 points: 50                  # optional total, for outline cross-check
+print_layout: single        # single | per-form (default single):
+                            #   single   — one combined PDF, all students/all forms,
+                            #              roster order; per-student copies under build/.parts/
+                            #   per-form — legacy <form>_combined.pdf stacks, loose per-student PDFs
 ```
 
 ### Validation rules (fail fast, before any compile)
@@ -126,6 +139,7 @@ points: 50                  # optional total, for outline cross-check
 | `individualized: true` requires `roster` present with a `name` column | reuses `_read_roster` error |
 | `individualized: true` requires each form `.tex` to have per-student macros | prefixed with form ID |
 | `assign: seeded-random` requires `assign_seed` | hard error |
+| `print_layout` not in {`single`, `per-form`} | hard error |
 | `gradescope: bubble` with non-MC items detected | warning (still emits MC rows) |
 
 All validation runs before any compilation. No partial output is written on error.
@@ -281,9 +295,11 @@ exams/<exam-slug>/
   roster.csv                   # enrolled students — committed (or gitignored per policy)
   build/                       # derived artifacts — gitignored
     A.pdf  A_key.pdf  B.pdf  B_key.pdf
-    cecs378-midterm1-fa26-A_doe-jane_YYYYYYYY.pdf   # individualized copies
-    A_combined.pdf  B_combined.pdf                  # per-form print stacks
-    register.csv                                     # name, form, serials, output_pdf
+    <exam-slug>_combined.pdf                         # THE print deliverable: all
+                                                     #   students, all forms, roster order
+    .parts/                                          # per-student copies (build
+      A_doe-jane_YYYYYYYY.pdf  ...                   #   intermediates; verify/reprint)
+    register.csv                                     # name, form, serials, output_pdf (.parts/…)
   gradescope/                  # Gradescope import products — gitignored
     A_template.pdf  A_answer_key.pdf  A_outline.csv
     B_template.pdf  B_answer_key.pdf  B_outline.csv
