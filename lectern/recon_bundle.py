@@ -10,6 +10,12 @@ def write_bundle(records: list[RepoRecord], out_dir: Path, *,
     for r in records:
         (out / "repos" / f"{r.github_id}.json").write_text(
             json.dumps(record_to_dict(r), indent=2, sort_keys=True))
+    wdir = out / "writeups"
+    for r in records:
+        doc = next((d for d in r.docs.values() if d.present and d.body), None)
+        if doc:
+            wdir.mkdir(parents=True, exist_ok=True)
+            (wdir / f"{r.github_id}.md").write_text(doc.body, encoding="utf-8")
     _write_cohort_csv(records, out / "cohort.csv")
     _write_facts_md(records, out / "FACTS.md", lab_name=lab_name, total_points=total_points)
     (out / "bundle.json").write_text(json.dumps(
