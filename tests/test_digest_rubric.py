@@ -40,3 +40,8 @@ def test_rejects_negative_max(tmp_path):
     bad = GOOD.replace("max: 6", "max: -1")
     with pytest.raises(SystemExit):
         load_rubric(_write(tmp_path, bad))
+
+def test_rejects_section_missing_max(tmp_path):
+    bad = GOOD.replace("key: ward1, label: \"Ward I\", max: 5,", "key: ward1, label: \"Ward I\",")
+    with pytest.raises(SystemExit):
+        load_rubric(_write(tmp_path, bad))
