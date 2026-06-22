@@ -1075,3 +1075,17 @@ git commit -S -m "docs(lab-report): changelog, skill, readme, design mirror"
 **Placeholder scan:** no TBD/TODO; every code step shows real code; commands have expected output.
 
 **Type consistency:** `ReportManifest` fields are used identically across Tasks 1/5/6/7/8/9; `recommend()` returns `Recommendations` consumed in Task 6; `render_feedback_md`/`deliver` signatures match Task 8 usage; cohort row keys (`points`, `writeup_score`, `proposed`, `honor_ok`, `writeup_flags`) are normalized the same way in `report_render._read_cohort` and `feedback_deliver.main`.
+
+---
+
+## Implementation deviations (discovered during execution, 2026-06-21)
+
+The code blocks above are the design intent; these corrections were made (and tested) during implementation:
+
+1. **`report_charts.histogram`** — the bin comprehension's conditional must be parenthesized: `... if ((lo <= v <= hi) if last else (lo <= v < hi))`. The unparenthesized `if ... if ... else` form is a `SyntaxError`.
+2. **`feedback_sanitize.JARGON`** — dropped tokens that collide with legitimate crypto vocabulary (`oracle` → "padding oracle", `digest` → "message digest") and ordinary verbs (`review`, `flag`). Final list: `honor-gate`, `triage`, `advisory`, `screening`, `abstain`, `needs-human-read`, `partial-ward`. Cross-student leakage is caught separately by name.
+3. **`report_render` stats** — the distribution counts **all enrolled rows** (the cohort, including a non-submission's `0`), not an `honor_ok`/`points`-filtered subset; otherwise `n`/mean diverge from the recon (`n=25`, mean `82.6`). Honor-fail/zero routing happens only in the recommendations buckets.
+4. **`test_lab_report_cli`** — the dispatch stub uses `lambda argv: called.update(...) or 0` (not `setdefault(...) or 0`, which returns the list and breaks the `== 0` assertion).
+5. **Required `student_comment`** — making the field required in the strict digest schema required updating the existing fixtures in `test_digest_schema.py`, `test_digest_merge.py`, and `test_lab_digest_cli.py`.
+
+All 364 tests pass (334 baseline + 30 new).
