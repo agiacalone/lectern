@@ -10,13 +10,21 @@ Files in this directory:
 |------|---------|
 | `term.spec.yaml` | Term-spec fed to `reg-term-create` |
 | `roster.csv` | 10 synthetic students (`0401001xx` IDs) |
-| `exam1.tex` | Illustrative Exam 1 source (50 pts; fresh demo questions) |
-| `exam.build.yaml` | Pack-mode manifest for `reg-exam-build` |
+| `cecs-378-su26-01-syllabus-20001/` | Synthetic syllabus repo for `reg-syllabus` (source + stamped + rendered HTML) |
+| `exam1.tex` | Illustrative Exam 1 source (60 pts; 5 MC + 5 T/F + 3 SA; fresh demo questions) |
+| `exam.build.yaml` | Pack-mode manifest for `reg-exam-build` (`gradescope: region`) |
+| `cecs-378-question-bank.md` | Synthetic exam-source question bank for `reg-qbank` |
+| `exam_reading_lists.yaml` | Manifest for `reg-exam-readinglist` |
+| `lectures/` | Scriptorium lecture-main(s) consumed by `reg-exam-readinglist` |
 | `canvas_grades_raw.csv` | Synthetic Canvas export (raw format) |
 | `gradebook-schema.yaml` | Column/weight schema for `reg-gradebook` |
 | `gradebook.csv` | Sample consolidated gradebook (pre-built output) |
 | `archive-snippet/manifest.yaml` | What `reg-term-archive` writes at end-of-term |
 | `build/` | Exam PDFs produced by `reg-exam-build exam.build.yaml` |
+| `gradescope/` | Gradescope region products: templates, answer keys, `A_outline.csv`, roster |
+| `GRADING_NOTE.md` | Per-form answer-key + rubric crib emitted by the `gradescope:` build |
+| `gradescope-stats/` | Synthetic Gradescope evaluations + `reg-gradescope-stats` item analysis |
+| `exam1/products/` | Per-exam reading-list study guide from `reg-exam-readinglist` |
 | `gradebook-out/` | `gradebook.csv` + `gradebook.md` from `reg-gradebook import` |
 
 ---
@@ -86,13 +94,13 @@ reg-exam-build exam1.tex
 **Output:**
 
 ```
-  source serial: AD7D24AB
+  source serial: C0162D5D
   + exam1.pdf
   + exam1_key.pdf
 ```
 
 The source serial is a deterministic hash of the `.tex` content.  Both PDFs carry it
-in the footer (`Serial AD7D24AB`).  The key PDF has a red banner:
+in the footer (`Serial C0162D5D`).  The key PDF has a red banner:
 `★  ANSWER KEY  ---  NOT FOR DISTRIBUTION  ★`.
 
 ### 4. Pack mode — individualized per-student build
@@ -114,7 +122,8 @@ forms:
 individualized: true
 roster: roster.csv
 assign: alternating
-points: 50
+points: 60
+gradescope: region
 ```
 
 **Output:**
@@ -122,27 +131,34 @@ points: 50
 ```
   forms: A
   + build/  (10 student PDF(s))
+  + build/cecs-378-demo_combined.pdf  (single print PDF, roster order)
   + build/register.csv
+  + gradescope/  (region)
 ```
+
+The `gradescope: region` target also writes a `gradescope/` folder (per-form
+`A_template.pdf`, `A_answer_key.pdf`, `A_outline.csv`, `gradescope_roster.csv`)
+plus a human-readable `GRADING_NOTE.md` crib next to the manifest. See
+[Gradescope workflow](../../docs/gradescope-workflow.md).
 
 Each student receives a PDF with their name and ID pre-printed on the identity block.
 The footer carries both the source serial and a per-student serial
-(`Serial AD7D24AB · ID <student-serial>`).
+(`Serial C0162D5D · ID <student-serial>`).
 
 **`build/register.csv` (produced — actual output from this build):**
 
 ```
 name,form,canonical_name,source_serial,student_serial,output_pdf
-Alice Nakamura,A,alice nakamura,AD7D24AB,3D3754D3,A_alice-nakamura_3D3754D3.pdf
-Bob Okonkwo,A,bob okonkwo,AD7D24AB,36765CD0,A_bob-okonkwo_36765CD0.pdf
-Carmen Delgado,A,carmen delgado,AD7D24AB,62311DE6,A_carmen-delgado_62311DE6.pdf
-Devon Hartley,A,devon hartley,AD7D24AB,8A8843B5,A_devon-hartley_8A8843B5.pdf
-Elena Vasquez,A,elena vasquez,AD7D24AB,B20BBD3C,A_elena-vasquez_B20BBD3C.pdf
-Frank Osei,A,frank osei,AD7D24AB,FA87600E,A_frank-osei_FA87600E.pdf
-Grace Lindqvist,A,grace lindqvist,AD7D24AB,65A5224D,A_grace-lindqvist_65A5224D.pdf
-Hiro Tanaka,A,hiro tanaka,AD7D24AB,2FAA375A,A_hiro-tanaka_2FAA375A.pdf
-Ines Moreau,A,ines moreau,AD7D24AB,BF94EC30,A_ines-moreau_BF94EC30.pdf
-James Kowalczyk,A,james kowalczyk,AD7D24AB,50634313,A_james-kowalczyk_50634313.pdf
+Alice Nakamura,A,alice nakamura,C0162D5D,B4CAD278,.parts/A_alice-nakamura_B4CAD278.pdf
+Bob Okonkwo,A,bob okonkwo,C0162D5D,591F93BC,.parts/A_bob-okonkwo_591F93BC.pdf
+Carmen Delgado,A,carmen delgado,C0162D5D,6D46E263,.parts/A_carmen-delgado_6D46E263.pdf
+Devon Hartley,A,devon hartley,C0162D5D,0E198195,.parts/A_devon-hartley_0E198195.pdf
+Elena Vasquez,A,elena vasquez,C0162D5D,3CA532BA,.parts/A_elena-vasquez_3CA532BA.pdf
+Frank Osei,A,frank osei,C0162D5D,46D9B97F,.parts/A_frank-osei_46D9B97F.pdf
+Grace Lindqvist,A,grace lindqvist,C0162D5D,DE77C0EA,.parts/A_grace-lindqvist_DE77C0EA.pdf
+Hiro Tanaka,A,hiro tanaka,C0162D5D,FEA593F6,.parts/A_hiro-tanaka_FEA593F6.pdf
+Ines Moreau,A,ines moreau,C0162D5D,CDDBED64,.parts/A_ines-moreau_CDDBED64.pdf
+James Kowalczyk,A,james kowalczyk,C0162D5D,C42728F0,.parts/A_james-kowalczyk_C42728F0.pdf
 ```
 
 `build/A_combined.pdf` is the full class print stack (alphabetical by canonical name),
@@ -165,7 +181,7 @@ you know which paper belongs to which variant.
 #### Grade-appeals: verify a submitted paper
 
 ```sh
-reg-exam-verify --serial AD7D24AB --student-serial 3D3754D3 --register build/register.csv
+reg-exam-verify --serial C0162D5D --student-serial 3D3754D3 --register build/register.csv
 ```
 
 Returns the student name and form, confirming the paper is authentic and unaltered.
@@ -350,23 +366,129 @@ Walks every `classes/*/archives/su26-*/` directory and validates all bundles:
 
 ---
 
+## Stage F — Companion tools
+
+These commands round out the term, all runnable against this demo directory.
+
+### 11. Syllabus — stamp + build (`reg-syllabus`)
+
+The syllabus lives in its own GitHub Classroom repo (named
+`cecs-378-su26-01-syllabus-20001`). `stamp` injects a tamper-evident
+control-number serial; `build` renders the HTML + a Canvas-RCE-safe variant.
+
+```sh
+reg-syllabus stamp cecs-378-su26-01-syllabus-20001 --vault-root /path/to/vault
+reg-syllabus build  cecs-378-su26-01-syllabus-20001
+```
+
+```
+stamped cecs-378-su26-01-syllabus-20001: serial F6F1264A
+built: syllabus.html, syllabus_canvas.html
+```
+
+`stamp` writes `serial: F6F1264A` into the syllabus frontmatter + a footer line,
+and appends a row to `<vault>/notes/syllabus-serial-register.md`. `build` emits
+`syllabus.html` (full styling) and `syllabus_canvas.html` (inline-only, safe to
+paste into a Canvas page).
+
+### 12. Question bank — validate + emit (`reg-qbank`)
+
+`cecs-378-question-bank.md` is the exam-source bank: one bare-mapping YAML record
+per fenced ```` ```yaml ```` block (`mc` / `tf` / `fib` / `code`; non-`fib` types
+carry a `none` outcome).
+
+```sh
+reg-qbank validate cecs-378-question-bank.md      # → OK — 4 question(s) valid.
+reg-qbank emit cecs-378-question-bank.md          # canonical summary (or --json)
+```
+
+### 13. Exam reading list (`reg-exam-readinglist`)
+
+Consolidates the topics an exam covers into a single study guide, driving the
+**Scriptorium** CLI (the Lectern→Scriptorium seam). Reads `exam_reading_lists.yaml`
+and the lecture-main(s) under `lectures/`.
+
+```sh
+reg-exam-readinglist --manifest exam_reading_lists.yaml --no-pdf
+```
+
+```
+  ✓ exam1: exam1/products/exam1_reading_list.md
+```
+
+### 14. Item analysis (`reg-gradescope-stats`)
+
+After grading in Gradescope, export the per-question evaluations and run a
+per-distractor item analysis.
+
+```sh
+reg-gradescope-stats \
+    --eval-dir gradescope-stats/evals \
+    --grading-note gradescope-stats/GRADING_NOTE.md \
+    --out-dir gradescope-stats/out \
+    --course "CECS 378" --term su26 --section 01 --exam "Exam 1"
+```
+
+```
+→ gradescope-stats/out : item_analysis.json, ITEM_ANALYSIS.md, item_analysis.html, item_scores_A.csv (10 questions, 1 forms)
+```
+
+`ITEM_ANALYSIS.md` reports per-question difficulty (*p*), per-distractor selection
+counts, and flags **dead** distractors (chosen by nobody) and possible **miskeys**
+(a distractor chosen more than the key).
+
+> **Known format gap.** `reg-exam-build` emits a *summary-table* `GRADING_NOTE.md`
+> (`| Q | Name | Pts | Type | Answer | Rubric |`), but `reg-gradescope-stats`
+> consumes the richer *per-question* form (`#### <Form>·Q<n> · <name> · <pts> · <TYPE>`
+> with `| Pts | Key | Rubric item |` tables). They do not yet match, so this stage
+> uses a hand-authored stats-compatible note at `gradescope-stats/GRADING_NOTE.md`.
+> Bridging the two formats is a tracked follow-up.
+
+---
+
+## Commands requiring live infrastructure
+
+These lectern commands are part of the workflow but need external systems, so they
+are documented here rather than run in this self-contained demo:
+
+- **`reg-classroom-roster-seed`** — pre-seed a GitHub Classroom roster from the
+  normalized roster CSV (needs a Classroom org).
+- **`reg-github-bind`** — bind student GitHub usernames to roster entries from a
+  Google Form / Classroom roster / org scrape (needs GitHub).
+- **`reg-c50-classroom-add`** — Classroom-50 successor wiring (needs the Classroom-50 org).
+- **`reg-isa-publish`** — publish ISA grading artifacts (keys, rubrics, print stacks)
+  to a shared Drive folder via rclone / service account (needs Google Drive).
+- **`reg-triage`** — git-history authenticity triage over a lab's student-repo
+  population: `sweep` → FLAG/REVIEW/PASS, `report` → two-tier audit (needs cloned
+  student repos / an org to scrape).
+- **`reg-term-finalize`** — reconcile grade distributions, flip section statuses to
+  finalized, roll up enrollment-weighted aggregates (needs the populated vault term tree).
+
+---
+
 ## Exam question topics covered
 
-The 8 illustrative questions in `exam1.tex` cover:
+The 13 illustrative questions in `exam1.tex` (60 pts: 5 MC + 5 T/F + 3 SA) cover:
 
-| # | Topic | Points |
-|---|-------|--------|
-| 1 | Symmetric vs. asymmetric key definition | 4 |
-| 2 | Hash function collision resistance | 4 |
-| 3 | RSA encryption (public key use) | 4 |
-| 4 | Stack buffer overflow — saved return address | 4 |
-| 5 | Principle of least privilege | 4 |
-| 6 | Hybrid encryption rationale (short answer) | 10 |
-| 7 | Buffer overflow mitigations: canary, NX, ASLR (short answer) | 10 |
-| 8 | DAC vs. MAC access control models (short answer) | 10 |
+| # | Type | Topic | Points |
+|---|------|-------|--------|
+| 1 | MC | Symmetric-key cipher definition | 4 |
+| 2 | MC | Hash function collision resistance | 4 |
+| 3 | MC | RSA encryption (recipient public key) | 4 |
+| 4 | MC | Stack buffer overflow — saved return address | 4 |
+| 5 | MC | Principle of least privilege | 4 |
+| 6 | T/F | AES is a symmetric cipher | 2 |
+| 7 | T/F | Hash maps to a fixed-length output | 2 |
+| 8 | T/F | RSA confidentiality uses the recipient's public key | 2 |
+| 9 | T/F | NX stack does not by itself stop ROP | 2 |
+| 10 | T/F | Least privilege limits blast radius | 2 |
+| 11 | SA | Hybrid encryption rationale | 10 |
+| 12 | SA | Buffer overflow mitigations: canary, NX, ASLR | 10 |
+| 13 | SA | DAC vs. MAC access control models | 10 |
 
-These are **illustrative demo questions** written for this example — they do not
-reproduce any live exam bank.
+T/F questions use the stacked `(a) True / (b) False` house standard so Gradescope's
+region detection finds the choices. These are **illustrative demo questions** written
+for this example — they do not reproduce any live exam bank.
 
 ---
 
@@ -375,7 +497,10 @@ reproduce any live exam bank.
 - All student names and IDs in this demo are **entirely synthetic**.
   IDs are in the `040100101`–`040100110` range (no overlap with any real CSULB student
   ID space, which is in the `02xxxxxxx` range).
-- `exam1.tex` contains fresh questions written for this demo; it does not
-  reproduce any live or past CECS 378 exam.
+- `exam1.tex`, `cecs-378-question-bank.md`, the syllabus, and the
+  `gradescope-stats/` evaluations all contain fresh synthetic content written for
+  this demo; none reproduce any live or past CECS 378 material, grades, or roster.
+- The `@student.csulb.edu` emails in the synthetic Gradescope export are fabricated
+  for the demo students and resolve to no real accounts.
 - No internal infrastructure hostnames, real email addresses, real course sections,
   or real Drive paths appear in any demo file.
