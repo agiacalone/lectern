@@ -38,7 +38,11 @@ def _standing(rows, manifest):
 
 def render_report(bundle_dir, cohort_csv, manifest, *, standing_csv=None):
     rows = _read_cohort(cohort_csv)
-    enrolled = [r for r in rows if r["honor_ok"] and r["points"] > 0] or rows
+    # cohort.csv is the enrolled population (withdrawn/dropped excluded upstream by
+    # recon). All enrolled count in the distribution — including a non-submission's
+    # 0, which is a real enrolled score, not an exclusion. Honor-fail/zero routing
+    # happens only in the recommendations (edge cases), never in the stats.
+    enrolled = rows
     proposed = [r["proposed"] for r in enrolled]
     n = len(enrolled)
     mean = statistics.mean(proposed) if proposed else 0
