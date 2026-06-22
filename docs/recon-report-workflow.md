@@ -1,5 +1,11 @@
 # reg-lab-recon — Layer 2 report synthesis
 
+> **Superseded (see `docs/design/lab-report.md`).** The canonical instructor `REPORT.md`
+> is now produced deterministically by **`reg-lab-report render`** (lectern Layer 3),
+> which consumes the recon bundle + the digest-merged cohort. This agent-driven
+> synthesis workflow is retained for ad-hoc/exploratory narrative passes, but the
+> reproducible report is the tool. Feedback delivery to students is `reg-lab-report deliver`.
+
 Layer 1 (`reg-lab-recon`) produces a deterministic **facts bundle**. Layer 2 turns it into the
 dual-purpose `REPORT.md` via subagent fan-out. No new Python — this is a Claude workflow.
 

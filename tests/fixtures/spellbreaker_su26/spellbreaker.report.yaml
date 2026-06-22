@@ -1,0 +1,19 @@
+# Report manifest for CECS 378 Lab 1 — Symmetric Cryptography (Spellbreaker).
+# Consumed by `reg-lab-report render` / `deliver`.
+course: CECS 378
+section: '01'
+term: su26
+lab: 'Lab 1 — Symmetric Cryptography (Spellbreaker)'
+org: Giacalone-CECS
+repo_prefix: cecs-378-su26-01-lab-01-symmetric-crypto
+auto_max: 70          # wards (autograder)
+writeup_max: 30       # grimoire (writeup)
+bump_band: 1.0        # %-points below a letter cut to flag as an upward-adjustment candidate
+feedback_branch: feedback
+feedback_pr: 1
+wards:
+  - {key: ward1, label: 'Ward I — ECB detection'}
+  - {key: ward2, label: 'Ward II — byte-at-a-time'}
+  - {key: ward3, label: 'Ward III — CBC bit-flipping'}
+  - {key: ward4, label: 'OMEGA — padding oracle'}
+letter_cuts: {A: 90, B: 80, C: 70, D: 60, F: 0}

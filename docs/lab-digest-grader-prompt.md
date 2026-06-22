@@ -26,10 +26,11 @@ Each task object has this shape:
     "honor_ok":  true
   },
   "rubric": {
-    "lab":               "Lab 1 — Symmetric Cryptography (Spellbreaker)",
-    "total":             30,
-    "comment_max_chars": 140,
-    "cap":               30,
+    "lab":                       "Lab 1 — Symmetric Cryptography (Spellbreaker)",
+    "total":                     30,
+    "comment_max_chars":         140,
+    "student_comment_max_chars": 600,
+    "cap":                       30,
     "sections": [
       {
         "key":               "ward1",
@@ -59,8 +60,8 @@ Each task object has this shape:
 ```
 
 **Skip rule:** if `skip: true`, do **not** call the model.  Write a result with
-`abstain: true`, `confidence: "low"`, all section scores 0, `comment: ""`, and
-`total: 0`.  Merge will handle it.
+`abstain: true`, `confidence: "low"`, all section scores 0, `comment: ""`,
+`student_comment: ""`, and `total: 0`.  Merge will handle it.
 
 ---
 
@@ -130,10 +131,11 @@ Emit **one JSON object per line** to **`digest_results.jsonl`**, conforming to
   "bonus": {
     "omega": 0
   },
-  "total":      0,
-  "comment":    "string — ≤ comment_max_chars (140 for Spellbreaker)",
-  "confidence": "high | medium | low",
-  "abstain":    false
+  "total":          0,
+  "comment":        "string — ≤ comment_max_chars (140); INTERNAL instructor note",
+  "student_comment":"string — ≤ student_comment_max_chars (600); STUDENT-FACING prose",
+  "confidence":     "high | medium | low",
+  "abstain":        false
 }
 ```
 
@@ -147,9 +149,21 @@ Rules:
   `min(cap, sum(sections) + sum(bonus))`.  Provide your arithmetic anyway; a
   mismatch is flagged as `digest:total-drift` but does not block the merge.
 - `comment` must be ≤ `comment_max_chars`; `merge` truncates at that boundary.
-  Write one terse sentence per weak section (e.g. "Ward II: explains outcome
-  only, no byte-alignment mechanism; craft: no sources cited.").
-- When `abstain: true`, set `confidence: "low"` and all numeric fields to 0.
+  This is the **internal instructor note** — terse shorthand, one sentence per
+  weak section (e.g. "Ward II: explains outcome only, no byte-alignment
+  mechanism; craft: no sources cited.").
+- `student_comment` must be ≤ `student_comment_max_chars`. This is the
+  **student-facing** feedback that gets delivered verbatim to the student's
+  repo. Write it accordingly:
+  - Constructive and mechanism-focused; speak to the student in second person.
+  - The lab's in-world vocabulary (wards, grimoire, OMEGA, sins) is fine.
+  - **No cross-student comparison** and **no internal jargon** (triage verdicts,
+    "honor-gate", grader/tool names, advisory framing) — `merge` runs a
+    sanitize lint and **withholds** any `student_comment` that leaks these.
+  - **Never penalize honest AI disclosure.** A student who discloses LLM use
+    transparently is following policy, not cheating.
+- When `abstain: true`, set `confidence: "low"`, all numeric fields to 0, and
+  `student_comment: ""` (it will be withheld regardless).
 
 ---
 
@@ -177,6 +191,7 @@ Rules:
   "bonus":    { "omega": 0 },
   "total":    30,
   "comment":  "All sections strong; mechanism-causal chain present throughout. Omega not attempted.",
+  "student_comment": "Excellent work — every ward explained at the mechanism level, with the CBC bit-flip equation and concrete real-world classes. Strong, well-sourced grimoire. OMEGA wasn't attempted; give the padding oracle a try next time.",
   "confidence": "high",
   "abstain":  false
 }
@@ -209,7 +224,9 @@ Before writing a result line, confirm:
 - [ ] All core section keys present in `sections` (check against rubric).
 - [ ] All bonus keys present in `bonus` (even if 0).
 - [ ] Each score ≤ section.max.
-- [ ] `comment` length ≤ `comment_max_chars`.
+- [ ] `comment` length ≤ `comment_max_chars` (internal note).
+- [ ] `student_comment` ≤ `student_comment_max_chars`; student-facing, no internal
+      jargon, no cross-student names, AI disclosure not penalized.
 - [ ] `confidence` set; `abstain` set.
 - [ ] If `skip: true` on the task → `abstain: true`, all zeros, `confidence: "low"`.
 - [ ] Output line is valid JSON (no trailing commas, no Python-style `True`/`None`).
