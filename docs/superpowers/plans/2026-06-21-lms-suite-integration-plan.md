@@ -706,6 +706,9 @@ git commit -S -m "test(suite): seam — version compatibility matrix check"
   4. **Seam C — Question-bank gap** — the two divergent formats side by side (link the two fixtures), the `sa`-type coverage difference, why it diverged, impact, and the tracked closure plan; reference the strict-xfail guard.
   5. **Release coupling** — link `SUITE.md` + `reg-suite-check`; explain the contract-version integers.
   6. **Running the integration test** — `pytest -m suite`, the skip-gating, `regen.sh`.
+  7. **`SUITE.md` format + version-spec grammar (`suite_check` as a parser)** — document `suite_check.py` as the parser it is: the `SUITE.md` matrix schema (`components`/`seam_contracts` keys), and the **version-constraint mini-language** it parses — operators `>=`, `>`, `<=`, `<`, `==`; comma = logical AND of clauses; versions normalized to a `(major, minor, patch)` semver tuple (extra/missing components truncated/zero-padded); a component absent on disk resolves to `None` → SKIP (not fail). Give the accepted grammar and 2–3 worked `in_range` examples.
+
+- [ ] **Step 1b: Document `suite_check.py` as a parser (module docstring)** — expand the module docstring in `lectern/suite_check.py` to state, in one compact block, the same version-constraint grammar (operators, comma=AND, semver-tuple normalization, absent→None→SKIP) so the parser is self-documenting at the source. Docs-only change; run `python -m pytest tests/test_suite_check.py -q` after to confirm no behavior change.
 
 - [ ] **Step 2: Add a cross-link in `README.md`** — in the suite/overview section, add: `See [docs/design/lms-suite-integration.md](docs/design/lms-suite-integration.md) for how Lectern, Scriptorium, and Oracle integrate.`
 
