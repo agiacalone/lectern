@@ -8,6 +8,10 @@ All notable changes to lectern are documented here.
 
 ### Changed
 - **True/False exam questions now use stacked `(a) True / (b) False` choices** — the house standard documented in `references/reference_exam.tex` and `docs/design/exam-tex-format.md`. The previous inline `\textsc{T~/~F.}` form listed no answer options on their own lines, so Gradescope's region detection could not find them. The `\textsc{T~/~F.}` label and inline `Answer:` reveal are retained, so questions stay typed `tf` and `parse_outline_from_tex` still emits `True`/`False` in `_outline.csv` — no code change, purely an authoring-convention fix.
+- **Refreshed the `examples/cecs-378-demo` worked example** to cover the current command surface. The demo exam gains a stacked-T/F section and a `gradescope: region` build (emitting `gradescope/` + `GRADING_NOTE.md`), and the README adds runnable stages for `reg-syllabus` (stamp + build), `reg-qbank` (validate + emit), `reg-exam-readinglist` (Lectern→Scriptorium seam), and `reg-gradescope-stats` (item analysis), plus a documented "requires live infrastructure" section for the Classroom / ISA-publish / triage / term-finalize verbs.
+
+### Known gaps
+- **`reg-exam-build` GRADING_NOTE.md ≠ `reg-gradescope-stats` input format.** The build emits a summary-table grading note (`| Q | Name | Pts | Type | Answer | Rubric |`); `reg-gradescope-stats` parses the richer per-question form (`#### <Form>·Q<n> · … · <TYPE>` + `| Pts | Key | Rubric item |`). The demo's gradescope-stats stage uses a hand-authored stats-compatible note; bridging the two is a tracked follow-up.
 
 ### Security
 - **Vendored `slugify`, dropped the `vaultkit` dependency** — the name `vaultkit` on PyPI is an unrelated third-party SDK, so depending on it was a dependency-confusion risk. The one helper used (`slugify`) is now inlined in `lectern/_text.py`, making the public distribution self-contained with no private/ambiguous dependency.
