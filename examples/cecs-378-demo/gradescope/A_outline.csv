@@ -1,0 +1,14 @@
+q_num,points,type,answer
+1,4,mc,b
+2,4,mc,c
+3,4,mc,d
+4,4,mc,c
+5,4,mc,d
+6,2,tf,False
+7,2,tf,True
+8,2,tf,False
+9,2,tf,False
+10,2,tf,True
+11,10,mc,
+12,10,mc,
+13,10,mc,
