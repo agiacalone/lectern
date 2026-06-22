@@ -236,7 +236,7 @@ git commit -S -m "feat(lab-report): agate chart primitives"
 # tests/test_feedback_sanitize.py
 from lectern.feedback_sanitize import lint_student_comment
 
-NAMES = ["Basil Karlo", "Alfreda Pennyworth", "gh-user-06"]
+NAMES = ["Basil Karlo", "Barbara Gordon", "bwayne"]
 
 def test_clean_passes():
     assert lint_student_comment(
@@ -540,8 +540,8 @@ def _cohort(tmp_path):
         w = csv.writer(f)
         w.writerow(["github_id","student","points","honor_ok","triage_bucket",
                     "writeup_score","writeup_comment","student_comment","writeup_flags"])
-        w.writerow(["gh-user-06","Selina Kyle","70","True","PASS","30","precise","Full clear.",""])
-        w.writerow(["gh-user-04","Stephanie Brown","0","False","REVIEW","0","","","" ])
+        w.writerow(["bwayne","Selina Kyle","70","True","PASS","30","precise","Full clear.",""])
+        w.writerow(["flawton","James Gordon","0","False","REVIEW","0","","","" ])
     return str(p)
 
 def test_render_has_sections(tmp_path):
@@ -554,7 +554,7 @@ def test_proposed_is_auto_plus_writeup(tmp_path):
     out = render_report(str(tmp_path), _cohort(tmp_path), M)
     assert "100" in out          # Arya 70+30
     # non-submission routed to edge cases, not confirm
-    assert "Stephanie Brown" in out
+    assert "James Gordon" in out
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -698,7 +698,7 @@ M = ReportManifest("CECS 378","01","su26","Lab 1","Giacalone-CECS",
 
 def test_log_has_frontmatter_and_entries():
     out = render_feedback_log([
-        {"github_id":"gh-user-06","student":"Selina Kyle","auto":70,"writeup":30,"total":100,
+        {"github_id":"bwayne","student":"Selina Kyle","auto":70,"writeup":30,"total":100,
          "student_comment":"Full clear.","posted":True,"signed":True,"pr_state":"CLOSED"}], M)
     assert out.startswith("---") and "type: feedback-log" in out
     assert "visibility: private" in out
@@ -767,7 +767,7 @@ M = ReportManifest("CECS 378","01","su26","Lab 1","Giacalone-CECS",
                    "cecs-378-su26-01-lab-01-symmetric-crypto",70,30,[],{}, 1.0, "feedback", 1)
 
 def row(**k):
-    base = dict(github_id="gh-user-06", student="Selina Kyle", points=70,
+    base = dict(github_id="bwayne", student="Selina Kyle", points=70,
                 writeup_score=30, student_comment="Full clear.", honor_ok=True)
     base.update(k); return base
 
@@ -780,18 +780,18 @@ def test_dry_run_makes_no_calls(tmp_path):
     fake = lambda *a, **k: calls.append(a) or type("R",(),{"stdout":"","returncode":0})()
     entries = deliver([row()], M, str(tmp_path), execute=False, gh=fake, git=fake)
     assert calls == []                      # nothing remote in dry-run
-    assert entries[0]["github_id"] == "gh-user-06" and entries[0]["posted"] is False
+    assert entries[0]["github_id"] == "bwayne" and entries[0]["posted"] is False
 
 def test_non_submission_gets_neutral_note(tmp_path):
-    md = render_feedback_md(row(github_id="gh-user-04", student="Stephanie Brown",
+    md = render_feedback_md(row(github_id="flawton", student="James Gordon",
                                 points=0, writeup_score=0, student_comment="", honor_ok=False), M)
     assert "No submission" in md and "0 / 100" in md
 
 def test_only_filter(tmp_path):
     fake = lambda *a, **k: type("R",(),{"stdout":"OPEN","returncode":0})()
-    entries = deliver([row(), row(github_id="gh-user-09", student="John B")], M, str(tmp_path),
-                      execute=False, only=["gh-user-09"], gh=fake, git=fake)
-    assert [e["github_id"] for e in entries] == ["gh-user-09"]
+    entries = deliver([row(), row(github_id="skyle", student="John B")], M, str(tmp_path),
+                      execute=False, only=["skyle"], gh=fake, git=fake)
+    assert [e["github_id"] for e in entries] == ["skyle"]
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1089,3 +1089,12 @@ The code blocks above are the design intent; these corrections were made (and te
 5. **Required `student_comment`** — making the field required in the strict digest schema required updating the existing fixtures in `test_digest_schema.py`, `test_digest_merge.py`, and `test_lab_digest_cli.py`.
 
 All 364 tests pass (334 baseline + 30 new).
+
+## Post-implementation addition — merge feedback → main (2026-06-22)
+
+Added after the first live run: a `FEEDBACK.md` committed only to the `feedback` branch is invisible on the student's repo home, so `deliver` now merges `feedback` into the default branch (`main`) as a final, signed step.
+
+- **`report_manifest`** — new `default_branch: str = "main"` field (+ `default_branch:` key parse).
+- **`feedback_deliver`** — full clone (both branches) + `checkout feedback` replaces the single-branch clone; new `_merge_to_main()` runs after the PR closes, **independently of feedback-branch idempotency** (the file can be on `feedback` yet missing from `main` — the exact production case). Signed merge commit; signing enforced on the merge too. **Unrelated-history fallback:** a repo whose `main`/`feedback` share no common ancestor (`git merge` → "refusing to merge unrelated histories") gets the file landed directly on `main` via a signed commit. Idempotency on main probes `git show main:FEEDBACK.md` (not the worktree, so it stays mock-testable). New `--no-merge-main` flag; entries carry `main_state` (`merged`/`added`/`unchanged`/`-`), surfaced in `FEEDBACK_LOG.md`.
+
+Fixtures stay on the Batman synthetic cohort — no real student data in the repo. (Shipped as a follow-up PR after the original Layer-3 PR merged; the stale golden REPORT fixture was regenerated in the same PR.)

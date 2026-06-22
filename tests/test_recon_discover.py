@@ -16,7 +16,7 @@ def test_discover_uses_canonical_name(tmp_path):
     from lectern.recon_discover import discover_repos
     csv_path = tmp_path / "roster.csv"
     csv_path.write_text("student_id,canonical_name,github_username,source\n"
-                        "418749197,Alfreda Pennyworth,gh-user-18,classroom-lab01\n")
+                        "040100203,Barbara Gordon,lucfox,classroom-lab01\n")
     refs = discover_repos(csv_path, repo_prefix="pre-")
-    assert refs[0].student == "Alfreda Pennyworth"
-    assert refs[0].repo == "pre-gh-user-18"
+    assert refs[0].student == "Barbara Gordon"
+    assert refs[0].repo == "pre-lucfox"

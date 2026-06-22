@@ -7,7 +7,7 @@ M = ReportManifest("CECS 378", "01", "su26", "Lab 1", "Giacalone-CECS",
 
 def test_log_has_frontmatter_and_entries():
     out = render_feedback_log([
-        {"github_id": "gh-user-06", "student": "Selina Kyle", "auto": 70, "writeup": 30,
+        {"github_id": "bwayne", "student": "Selina Kyle", "auto": 70, "writeup": 30,
          "total": 100, "student_comment": "Full clear.", "posted": True, "signed": True,
          "pr_state": "CLOSED"}], M)
     assert out.startswith("---") and "type: feedback-log" in out
