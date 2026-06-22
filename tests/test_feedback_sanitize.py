@@ -1,6 +1,6 @@
 from lectern.feedback_sanitize import lint_student_comment
 
-NAMES = ["Basil Karlo", "Alfreda Pennyworth", "gh-user-06"]
+NAMES = ["Basil Karlo", "Barbara Gordon", "bwayne"]
 
 
 def test_clean_passes():

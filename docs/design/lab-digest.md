@@ -82,7 +82,7 @@ Module `lectern.digest_rubric` parses + validates this (max ≥ 0, keys unique,
 For each repo record in the bundle, write one task object:
 
 ```json
-{ "github_id": "gh-user-06",
+{ "github_id": "bwayne",
   "student": "Selina Kyle",
   "writeup_text": "<full WRITEUP.md body, frontmatter stripped>",
   "autograde": { "points": 70, "cleared": ["ward1","ward2","ward3","ward4"], "honor_ok": true },

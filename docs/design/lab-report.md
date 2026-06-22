@@ -48,6 +48,7 @@ manual artifacts this product reproduces and the golden reference for tests.
 | Student-facing comment | **Extend the digest contract** | Add `student_comment` to the digest output schema/grader-prompt — one grading pass yields internal `comment` + sanitized student prose. Judgment stays in the existing LLM boundary; lectern only assembles. |
 | Sanitization safety | **Deterministic lint, withhold on fail** | A merge-time lint scans `student_comment` for internal tokens (triage words, "honor-gate", grader-tool names, other students' names) → flag + withhold from delivery. Internal `comment` is never sent to students. |
 | Delivery safety | **Dry-run default · signing mandatory · idempotent** | Outward-facing + hard-to-reverse. `--execute` required to push; refuses unsigned; skips unchanged repos; auto-logs a verbatim record. |
+| Default-branch visibility | **Merge `feedback` → `main` after the PR closes** | A `FEEDBACK.md` that lives only on the `feedback` branch is invisible on the student's repo home. `deliver` merges it onto the default branch with a **signed** merge commit (signing enforced on the merge too). Classroom repos whose `main`/`feedback` share **no common ancestor** can't be merged — `deliver` lands the file directly on `main` with a signed commit instead. Idempotent independently of the feedback branch (probes `git show main:FEEDBACK.md`); `--no-merge-main` opts out. |
 
 ## 3. Architecture & data flow
 
@@ -59,7 +60,8 @@ gradebook       ┘        (read-only)
 REPORT inputs ─┐
 digest         ─┼─►  reg-lab-report deliver ─►  per-repo feedback branch (signed FEEDBACK.md)
 report manifest ┘        (--dry-run default;     feedback PR #1 closed
-                          --execute to push)     FEEDBACK_LOG.md + provenance (verbatim record)
+                          --execute to push)     feedback → main (signed merge; shows on default branch)
+                                                 FEEDBACK_LOG.md + provenance (verbatim record)
 ```
 
 `render` is a pure function of `(bundle, digest_results/cohort, standing, manifest)`.

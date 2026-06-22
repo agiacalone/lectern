@@ -15,8 +15,8 @@ def _cohort(tmp_path):
         w = csv.writer(f)
         w.writerow(["github_id", "student", "points", "honor_ok", "triage_bucket",
                     "writeup_score", "writeup_comment", "student_comment", "writeup_flags"])
-        w.writerow(["gh-user-06", "Selina Kyle", "70", "True", "PASS", "30", "precise", "Full clear.", ""])
-        w.writerow(["gh-user-04", "Stephanie Brown", "0", "False", "REVIEW", "0", "", "", ""])
+        w.writerow(["bwayne", "Selina Kyle", "70", "True", "PASS", "30", "precise", "Full clear.", ""])
+        w.writerow(["flawton", "James Gordon", "0", "False", "REVIEW", "0", "", "", ""])
     return str(p)
 
 
@@ -30,4 +30,4 @@ def test_render_has_sections(tmp_path):
 def test_proposed_is_auto_plus_writeup(tmp_path):
     out = render_report(str(tmp_path), _cohort(tmp_path), M)
     assert "100" in out          # Arya 70+30
-    assert "Stephanie Brown" in out    # non-submission still listed
+    assert "James Gordon" in out    # non-submission still listed
