@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from lectern.digest_rubric import Rubric
 from lectern.digest_schema import validate_result
+from lectern.feedback_sanitize import lint_student_comment
 
 @dataclass
 class Merged:
@@ -12,6 +13,17 @@ class Merged:
     score: int | None
     comment: str
     flags: list[str] = field(default_factory=list)
+    student_comment: str = ""
+
+def _cohort_names(bundle_dir: Path) -> list[str]:
+    """github ids + display names across the cohort — used by the sanitize lint."""
+    names: list[str] = []
+    for jf in sorted((bundle_dir / "repos").glob("*.json")):
+        rec = json.loads(jf.read_text(encoding="utf-8"))
+        names.append(rec.get("github_id", ""))
+        if rec.get("student"):
+            names.append(rec["student"])
+    return [n for n in names if n]
 
 def _cleared(bundle_dir: Path, gid: str) -> set[str]:
     jf = bundle_dir / "repos" / f"{gid}.json"
@@ -22,6 +34,7 @@ def _cleared(bundle_dir: Path, gid: str) -> set[str]:
 
 def merge_results(bundle_dir: Path, rubric: Rubric, results_path: Path) -> list[Merged]:
     bundle_dir = Path(bundle_dir)
+    cohort_names = _cohort_names(bundle_dir)
     out: list[Merged] = []
     for line in Path(results_path).read_text().splitlines():
         if not line.strip():
@@ -45,13 +58,21 @@ def merge_results(bundle_dir: Path, rubric: Rubric, results_path: Path) -> list[
         if obj.get("total") != total:
             flags.append("digest:total-drift")
         comment = obj["comment"][:rubric.comment_max_chars]
+        # student-facing comment: withheld on low-confidence/abstain, and on any
+        # sanitize-lint hit (internal jargon / cross-student leakage).
+        sc = (obj.get("student_comment") or "").strip()[:rubric.student_comment_max_chars]
         if obj.get("abstain") or obj.get("confidence") == "low":
-            out.append(Merged(gid, None, comment, flags + ["needs-human-read"]))
+            out.append(Merged(gid, None, comment, flags + ["needs-human-read"], student_comment=""))
         else:
-            out.append(Merged(gid, total, comment, flags))
+            if sc:
+                bad = lint_student_comment(sc, cohort_names=cohort_names)
+                if bad:
+                    flags.append("student-comment:needs-review")
+                    sc = ""
+            out.append(Merged(gid, total, comment, flags, student_comment=sc))
     return out
 
-_NEW_COLS = ["writeup_score", "writeup_comment", "writeup_flags"]
+_NEW_COLS = ["writeup_score", "writeup_comment", "student_comment", "writeup_flags"]
 
 def apply_to_cohort(bundle_dir: Path, merged: list[Merged]) -> None:
     path = Path(bundle_dir) / "cohort.csv"
@@ -66,6 +87,7 @@ def apply_to_cohort(bundle_dir: Path, merged: list[Merged]) -> None:
         m = by_id.get(row["github_id"])
         row["writeup_score"] = "" if (m is None or m.score is None) else str(m.score)
         row["writeup_comment"] = m.comment if m else ""
+        row["student_comment"] = m.student_comment if m else ""
         row["writeup_flags"] = ";".join(m.flags) if m else ""
     with path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")

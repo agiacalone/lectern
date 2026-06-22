@@ -7,7 +7,8 @@ def _rubric(tmp_path): return load_rubric(_write(tmp_path, GOOD))
 def test_valid_result_passes(tmp_path):
     r = _rubric(tmp_path)
     obj = {"github_id":"harleyq","sections":{"ward1":5,"ward2":10,"ward3":9,"craft":6},
-           "bonus":{"omega":4},"total":30,"comment":"strong","confidence":"high","abstain":False}
+           "bonus":{"omega":4},"total":30,"comment":"strong","student_comment":"Excellent full clear.",
+           "confidence":"high","abstain":False}
     assert validate_result(obj, r) == []
 
 def test_missing_field_flagged(tmp_path):

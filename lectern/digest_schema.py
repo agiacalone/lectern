@@ -8,7 +8,8 @@ def result_schema(rubric: Rubric) -> dict:
     bonus_keys = [s.key for s in rubric.bonus]
     return {
         "type": "object",
-        "required": ["github_id", "sections", "total", "comment", "confidence", "abstain"],
+        "required": ["github_id", "sections", "total", "comment", "student_comment",
+                     "confidence", "abstain"],
         "additionalProperties": False,
         "properties": {
             "github_id": {"type": "string", "minLength": 1},
@@ -18,6 +19,7 @@ def result_schema(rubric: Rubric) -> dict:
                       "properties": {k: {"type": "integer", "minimum": 0} for k in bonus_keys}},
             "total": {"type": "integer", "minimum": 0},
             "comment": {"type": "string"},
+            "student_comment": {"type": "string", "maxLength": rubric.student_comment_max_chars},
             "confidence": {"enum": ["high", "medium", "low"]},
             "abstain": {"type": "boolean"},
         },
