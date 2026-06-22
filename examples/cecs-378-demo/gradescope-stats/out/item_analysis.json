@@ -1,0 +1,504 @@
+{
+ "meta": {
+  "course": "CECS 378",
+  "term": "su26",
+  "section": "01",
+  "exam": "Exam 1",
+  "graded": ""
+ },
+ "exam": null,
+ "forms": {
+  "A": [
+   {
+    "n": 1,
+    "name": "Symmetric-key cipher definition",
+    "type": "MC",
+    "pts": 4,
+    "nrows": 10,
+    "p": 0.7,
+    "mean": 2.8,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q1·a",
+      "text": "(a) Uses separate public and private keys",
+      "n": 2,
+      "pct": 20,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q1·b",
+      "text": "(b) Both parties share the same secret key",
+      "n": 7,
+      "pct": 70,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q1·c",
+      "text": "(c) Requires no key; security via obscurity",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     },
+     {
+      "key": "A·Q1·d",
+      "text": "(d) A side effect of digital signature schemes",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     },
+     {
+      "key": "A·Q1·none",
+      "text": "No answer / multiple marks",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Hash collision resistance",
+    "type": "MC",
+    "pts": 4,
+    "nrows": 10,
+    "p": 0.6,
+    "mean": 2.4,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q2·a",
+      "text": "(a) It is computationally hard to find any input that maps to a given hash",
+      "n": 3,
+      "pct": 30,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q2·b",
+      "text": "(b) All inputs produce a hash of the same length",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     },
+     {
+      "key": "A·Q2·c",
+      "text": "(c) It is computationally hard to find two distinct inputs with the same hash",
+      "n": 6,
+      "pct": 60,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q2·d",
+      "text": "(d) Hash computation always takes constant time",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q2·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 3,
+    "name": "RSA encryption key choice",
+    "type": "MC",
+    "pts": 4,
+    "nrows": 10,
+    "p": 0.8,
+    "mean": 3.2,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q3·a",
+      "text": "(a) The sender's private key",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q3·b",
+      "text": "(b) A Diffie-Hellman session key",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     },
+     {
+      "key": "A·Q3·c",
+      "text": "(c) The recipient's private key",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q3·d",
+      "text": "(d) The recipient's public key",
+      "n": 8,
+      "pct": 80,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q3·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Stack buffer overflow target",
+    "type": "MC",
+    "pts": 4,
+    "nrows": 10,
+    "p": 0.7,
+    "mean": 2.8,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q4·a",
+      "text": "(a) The heap allocator header",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q4·b",
+      "text": "(b) Environment variables",
+      "n": 2,
+      "pct": 20,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q4·c",
+      "text": "(c) The saved return address on the stack",
+      "n": 7,
+      "pct": 70,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q4·d",
+      "text": "(d) The syscall dispatch table",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     },
+     {
+      "key": "A·Q4·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Principle of least privilege",
+    "type": "MC",
+    "pts": 4,
+    "nrows": 10,
+    "p": 0.6,
+    "mean": 2.4,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q5·a",
+      "text": "(a) Grant each process the maximum privileges it might ever need",
+      "n": 2,
+      "pct": 20,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q5·b",
+      "text": "(b) Share a single root account across all administrators",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q5·c",
+      "text": "(c) Assign a mandatory label to every subject and object",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q5·d",
+      "text": "(d) Grant only the minimum privileges required for the task",
+      "n": 6,
+      "pct": 60,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q5·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 6,
+    "name": "AES is a symmetric cipher",
+    "type": "TF",
+    "pts": 2,
+    "nrows": 10,
+    "p": 0.8,
+    "mean": 1.6,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q6·true",
+      "text": "True",
+      "n": 2,
+      "pct": 20,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q6·false",
+      "text": "False",
+      "n": 8,
+      "pct": 80,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q6·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Hash maps to fixed-length output",
+    "type": "TF",
+    "pts": 2,
+    "nrows": 10,
+    "p": 0.9,
+    "mean": 1.8,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q7·true",
+      "text": "True",
+      "n": 9,
+      "pct": 90,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q7·false",
+      "text": "False",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q7·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 8,
+    "name": "RSA confidentiality uses recipient public key",
+    "type": "TF",
+    "pts": 2,
+    "nrows": 10,
+    "p": 0.8,
+    "mean": 1.6,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q8·true",
+      "text": "True",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q8·false",
+      "text": "False",
+      "n": 8,
+      "pct": 80,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q8·none",
+      "text": "No answer / multiple marks",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 9,
+    "name": "NX stack does not stop ROP",
+    "type": "TF",
+    "pts": 2,
+    "nrows": 10,
+    "p": 0.6,
+    "mean": 1.2,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q9·true",
+      "text": "True",
+      "n": 3,
+      "pct": 30,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q9·false",
+      "text": "False",
+      "n": 6,
+      "pct": 60,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q9·none",
+      "text": "No answer / multiple marks",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     }
+    ]
+   },
+   {
+    "n": 10,
+    "name": "Least privilege limits blast radius",
+    "type": "TF",
+    "pts": 2,
+    "nrows": 10,
+    "p": 0.9,
+    "mean": 1.8,
+    "miskey": false,
+    "anomalies": [],
+    "distractors": [
+     {
+      "key": "A·Q10·true",
+      "text": "True",
+      "n": 9,
+      "pct": 90,
+      "is_key": true,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q10·false",
+      "text": "False",
+      "n": 1,
+      "pct": 10,
+      "is_key": false,
+      "dead": false,
+      "over_key": false
+     },
+     {
+      "key": "A·Q10·none",
+      "text": "No answer / multiple marks",
+      "n": 0,
+      "pct": 0,
+      "is_key": false,
+      "dead": true,
+      "over_key": false
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+# Manifest for reg-exam-readinglist — generates per-exam study guides by
+# consolidating the topics an exam covers, via the Scriptorium CLI.
+#   reg-exam-readinglist --manifest exam_reading_lists.yaml [--no-pdf]
+course: "CECS 378"
+term: su26
+lectures_dir: lectures
+textbook: "Stallings & Brown, Computer Security: Principles and Practice, 4th ed."
+citation_key: "Stallings"
+exams:
+  - { slug: exam1, name: "Exam 1", topics: [topic_demo] }
