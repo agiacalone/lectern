@@ -97,31 +97,31 @@ OMEGA — padding oracle      ▏██████████████ 13
 
 | Student (Last, First) | Proposed |
 | --- | --: |
-| Bruce Wayne | 14 |
-| Selina Kyle | 100 |
-| Dick Grayson | 100 |
+| Stephanie Brown | 100 |
+| Harvey Bullock | 82 |
+| Cassandra Cain | 100 |
+| Oswald Cobblepot | 87 |
+| Jonathan Crane | 88 |
+| Harvey Dent | 70 |
+| Tim Drake | 79 |
+| Luke Fox | 100 |
+| Lucius Fox | 78 |
+| Victor Fries | 100 |
 | Barbara Gordon | 43 |
 | James Gordon | 0 |
-| Harvey Dent | 70 |
+| Dick Grayson | 100 |
 | Pamela Isley | 90 |
-| Edward Nashton | 84 |
-| Oswald Cobblepot | 87 |
-| Harleen Quinzel | 87 |
-| Jonathan Crane | 88 |
-| Victor Fries | 100 |
-| Kate Kane | 98 |
 | Waylon Jones | 94 |
-| Cassandra Cain | 100 |
-| Tim Drake | 79 |
-| Damian Wayne | 100 |
-| Stephanie Brown | 100 |
-| Luke Fox | 100 |
-| Renee Montoya | 94 |
-| Harvey Bullock | 82 |
-| Lucius Fox | 78 |
-| Roman Sionis | 100 |
-| Floyd Lawton | 87 |
+| Kate Kane | 98 |
 | Basil Karlo | 90 |
+| Selina Kyle | 100 |
+| Floyd Lawton | 87 |
+| Renee Montoya | 94 |
+| Edward Nashton | 84 |
+| Harleen Quinzel | 87 |
+| Roman Sionis | 100 |
+| Damian Wayne | 100 |
+| Bruce Wayne | 14 |
 
 ## Provenance & caveats
 
