@@ -16,7 +16,8 @@ def render_feedback_log(entries, manifest) -> str:
         sig = "signed ✓" if e.get("signed") else "UNSIGNED"
         out.append(f"### {e['student']} — {e['total']}/{grand}")
         out.append(f"*github: `{e['github_id']}` · Auto {e['auto']}/{manifest.auto_max} · "
-                   f"Writeup {e['writeup']}/{manifest.writeup_max} · {sig} · PR {e.get('pr_state', '-')}*")
+                   f"Writeup {e['writeup']}/{manifest.writeup_max} · {sig} · "
+                   f"PR {e.get('pr_state', '-')} · main {e.get('main_state', '-')}*")
         out.append("")
         out.append(f"> {e.get('student_comment') or '_no comment_'}")
         out.append("")

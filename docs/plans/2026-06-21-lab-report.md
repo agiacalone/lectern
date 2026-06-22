@@ -1089,3 +1089,12 @@ The code blocks above are the design intent; these corrections were made (and te
 5. **Required `student_comment`** — making the field required in the strict digest schema required updating the existing fixtures in `test_digest_schema.py`, `test_digest_merge.py`, and `test_lab_digest_cli.py`.
 
 All 364 tests pass (334 baseline + 30 new).
+
+## Post-implementation addition — merge feedback → main (2026-06-22)
+
+Added after the first live run: a `FEEDBACK.md` committed only to the `feedback` branch is invisible on the student's repo home, so `deliver` now merges `feedback` into the default branch (`main`) as a final, signed step.
+
+- **`report_manifest`** — new `default_branch: str = "main"` field (+ `default_branch:` key parse).
+- **`feedback_deliver`** — full clone (both branches) + `checkout feedback` replaces the single-branch clone; new `_merge_to_main()` runs after the PR closes, **independently of feedback-branch idempotency** (the file can be on `feedback` yet missing from `main` — the exact production case). Signed merge commit; signing enforced on the merge too. **Unrelated-history fallback:** a repo whose `main`/`feedback` share no common ancestor (`git merge` → "refusing to merge unrelated histories") gets the file landed directly on `main` via a signed commit. Idempotency on main probes `git show main:FEEDBACK.md` (not the worktree, so it stays mock-testable). New `--no-merge-main` flag; entries carry `main_state` (`merged`/`added`/`unchanged`/`-`), surfaced in `FEEDBACK_LOG.md`.
+
+Fixtures stay on the Batman synthetic cohort — no real student data in the repo. (Shipped as a follow-up PR after the original Layer-3 PR merged; the stale golden REPORT fixture was regenerated in the same PR.)

@@ -11,6 +11,7 @@ writeup_max: 30       # grimoire (writeup)
 bump_band: 1.0        # %-points below a letter cut to flag as an upward-adjustment candidate
 feedback_branch: feedback
 feedback_pr: 1
+default_branch: main   # deliver merges feedback → here so FEEDBACK.md shows on the student's default branch
 wards:
   - {key: ward1, label: 'Ward I — ECB detection'}
   - {key: ward2, label: 'Ward II — byte-at-a-time'}

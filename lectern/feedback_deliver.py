@@ -1,13 +1,25 @@
-"""Deliver sanitized, GPG-signed feedback to each student's repo feedback branch.
+"""Deliver sanitized, GPG-signed feedback to each student's repo.
 
 Outward-facing + hard-to-reverse, so:
   * --dry-run is the DEFAULT (deliver(execute=False)): no remote ops, just a plan.
-  * signing is MANDATORY: refuses to push an unsigned commit.
-  * idempotent: skips repos whose FEEDBACK.md already matches.
+  * signing is MANDATORY: refuses to push an unsigned commit (feedback OR merge).
+  * idempotent: skips repos whose FEEDBACK.md already matches — independently on
+    the feedback branch and on main.
+
+Delivery is two-stage per repo:
+  1. commit FEEDBACK.md to the `feedback` branch + close the Classroom feedback PR;
+  2. merge `feedback` into `main` (default branch) so FEEDBACK.md is visible on the
+     student's default branch. Classroom repos with an unrelated `main`/`feedback`
+     history (no common ancestor) can't be merged, so the file is landed directly
+     on main with a signed commit instead.
+
 All git/gh calls go through injected callbacks (mockable in tests).
 """
 import os
 import subprocess
+
+MERGE_MSG = "Merge feedback branch: add FEEDBACK.md (grade + comments)"
+_ADD_MSG = "Add FEEDBACK.md (grade + comments)"
 
 
 def _sh(*args, **k):
@@ -16,6 +28,14 @@ def _sh(*args, **k):
 
 def _grand(m):
     return m.auto_max + m.writeup_max
+
+
+def _blob(res):
+    return (getattr(res, "stdout", "") or "") + (getattr(res, "stderr", "") or "")
+
+
+def _is_signed(git, dest):
+    return "Good signature" in _blob(git("-C", dest, "log", "-1", "--show-signature"))
 
 
 def render_feedback_md(row, manifest) -> str:
@@ -34,7 +54,39 @@ def render_feedback_md(row, manifest) -> str:
             f"*{manifest.course} · {manifest.term} · §{manifest.section} — graded by Prof. Giacalone*\n")
 
 
-def deliver(cohort, manifest, workdir, *, execute=False, close=True,
+def _merge_to_main(git, dest, manifest, md):
+    """Land FEEDBACK.md on the default branch. Returns a state string.
+
+    Prefers a signed merge of the feedback branch; falls back to a signed direct
+    add when the histories are unrelated (Classroom repos rebuilt main from scratch).
+    Idempotent: a no-op when main already carries the exact file.
+    """
+    branch = manifest.default_branch
+    git("-C", dest, "checkout", branch)
+    probe = git("-C", dest, "show", f"{branch}:FEEDBACK.md")
+    if getattr(probe, "returncode", 0) == 0 and (getattr(probe, "stdout", "") or "") == md:
+        return "unchanged"
+    res = git("-C", dest, "merge", "--no-ff", "--no-edit", "-S",
+              manifest.feedback_branch, "-m", MERGE_MSG)
+    body = _blob(res)
+    unrelated = "unrelated histories" in body or "refusing to merge" in body
+    if getattr(res, "returncode", 0) == 0 and not unrelated:
+        if not _is_signed(git, dest):
+            raise RuntimeError("refusing to push unsigned merge to main")
+        git("-C", dest, "push", "origin", branch)
+        return "merged"
+    # unrelated history: commit the file straight onto main
+    with open(os.path.join(dest, "FEEDBACK.md"), "w") as f:
+        f.write(md)
+    git("-C", dest, "add", "FEEDBACK.md")
+    git("-C", dest, "commit", "-S", "-m", _ADD_MSG)
+    if not _is_signed(git, dest):
+        raise RuntimeError("refusing to push unsigned commit to main")
+    git("-C", dest, "push", "origin", branch)
+    return "added"
+
+
+def deliver(cohort, manifest, workdir, *, execute=False, close=True, merge_main=True,
             only=None, skip=None, gh=_sh, git=_sh):
     rows = [r for r in cohort
             if (not only or r["github_id"] in only) and (not skip or r["github_id"] not in skip)]
@@ -45,11 +97,11 @@ def deliver(cohort, manifest, workdir, *, execute=False, close=True,
         total = r["points"] + r["writeup_score"]
         md = render_feedback_md(r, manifest)
         posted = signed = False
-        pr_state = "-"
+        pr_state, main_state = "-", "-"
         if execute:
             dest = os.path.join(workdir, gid)
-            gh("repo", "clone", repo, dest, "--", "--branch",
-               manifest.feedback_branch, "--single-branch")
+            gh("repo", "clone", repo, dest)          # full clone: both branches present
+            git("-C", dest, "checkout", manifest.feedback_branch)
             fb = os.path.join(dest, "FEEDBACK.md")
             existing = open(fb).read() if os.path.exists(fb) else None
             if existing == md:
@@ -59,9 +111,7 @@ def deliver(cohort, manifest, workdir, *, execute=False, close=True,
                     f.write(md)
                 git("-C", dest, "add", "FEEDBACK.md")
                 git("-C", dest, "commit", "-S", "-m", "Lab feedback and grade breakdown")
-                ver = git("-C", dest, "log", "-1", "--show-signature")
-                blob = (getattr(ver, "stdout", "") or "") + (getattr(ver, "stderr", "") or "")
-                signed = "Good signature" in blob
+                signed = _is_signed(git, dest)
                 if not signed:
                     raise RuntimeError(f"refusing to push unsigned commit for {gid}")
                 git("-C", dest, "push", "origin", manifest.feedback_branch)
@@ -72,10 +122,16 @@ def deliver(cohort, manifest, workdir, *, execute=False, close=True,
                 if close and pr_state == "OPEN":
                     gh("pr", "close", str(manifest.feedback_pr), "--repo", repo)
                     pr_state = "CLOSED"
+            # merge onto main regardless of feedback-branch idempotency: the file may
+            # already be on feedback yet still missing from the student's default branch.
+            if merge_main:
+                main_state = _merge_to_main(git, dest, manifest, md)
+                signed = signed or main_state in ("merged", "added")
         entries.append({"github_id": gid, "student": r["student"], "auto": r["points"],
                         "writeup": r["writeup_score"], "total": total,
                         "student_comment": r.get("student_comment", ""),
-                        "posted": posted, "signed": signed, "pr_state": pr_state})
+                        "posted": posted, "signed": signed,
+                        "pr_state": pr_state, "main_state": main_state})
     return entries
 
 
@@ -91,6 +147,8 @@ def main(argv=None):
     ap.add_argument("--execute", action="store_true",
                     help="perform remote ops (default is dry-run)")
     ap.add_argument("--no-close", action="store_true")
+    ap.add_argument("--no-merge-main", action="store_true",
+                    help="skip merging the feedback branch into main")
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--skip", nargs="*")
     ap.add_argument("--log-out")
@@ -104,7 +162,7 @@ def main(argv=None):
         r["honor_ok"] = str(r.get("honor_ok")).lower() in ("true", "1", "yes")
     os.makedirs(a.workdir, exist_ok=True)
     entries = deliver(rows, m, a.workdir, execute=a.execute, close=not a.no_close,
-                      only=a.only, skip=a.skip)
+                      merge_main=not a.no_merge_main, only=a.only, skip=a.skip)
     if a.log_out:
         with open(a.log_out, "w") as f:
             f.write(render_feedback_log(entries, m) + "\n")
