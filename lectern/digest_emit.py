@@ -7,7 +7,8 @@ from lectern.digest_rubric import Rubric
 from lectern.digest_schema import result_schema
 
 def _rubric_dict(r: Rubric) -> dict:
-    return {"lab": r.lab, "total": r.total, "comment_max_chars": r.comment_max_chars, "cap": r.cap,
+    return {"lab": r.lab, "total": r.total, "comment_max_chars": r.comment_max_chars,
+            "student_comment_max_chars": r.student_comment_max_chars, "cap": r.cap,
             "sections": [asdict(s) for s in r.sections], "bonus": [asdict(s) for s in r.bonus]}
 
 def emit(bundle_dir: Path, rubric: Rubric, out_tasks: Path) -> int:

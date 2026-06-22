@@ -33,10 +33,12 @@ def test_partial_ward_zeroing_and_total_recompute(tmp_path):
     res.write_text("\n".join([
       # Riddler: model WRONGLY credits ward3=9; merge must zero it (ward3 not cleared)
       json.dumps({"github_id":"riddler","sections":{"ward1":4,"ward2":8,"ward3":9,"craft":3},
-                  "bonus":{"omega":4},"total":28,"comment":"ok","confidence":"high","abstain":False}),
+                  "bonus":{"omega":4},"total":28,"comment":"ok","student_comment":"Solid start.",
+                  "confidence":"high","abstain":False}),
       # Harley: clean full
       json.dumps({"github_id":"harleyq","sections":{"ward1":5,"ward2":10,"ward3":9,"craft":6},
-                  "bonus":{"omega":4},"total":34,"comment":"strong","confidence":"high","abstain":False}),
+                  "bonus":{"omega":4},"total":34,"comment":"strong","student_comment":"Excellent work.",
+                  "confidence":"high","abstain":False}),
     ]))
     merged = {m.github_id: m for m in merge_results(b, r, res)}
     # Riddler: ward3 forced 0 -> 4+8+0+3 + omega 4 = 19 (capped at 30)
@@ -49,17 +51,21 @@ def test_low_confidence_withholds_score(tmp_path):
     r = load_rubric(_write(tmp_path, GOOD)); b = _bundle2(tmp_path)
     res = b / "results.jsonl"
     res.write_text(json.dumps({"github_id":"harleyq","sections":{"ward1":5,"ward2":10,"ward3":9,"craft":6},
-                  "bonus":{"omega":0},"total":30,"comment":"unsure","confidence":"low","abstain":False}))
+                  "bonus":{"omega":0},"total":30,"comment":"unsure","student_comment":"Maybe.",
+                  "confidence":"low","abstain":False}))
     merged = {m.github_id: m for m in merge_results(b, r, res)}
     assert merged["harleyq"].score is None and "needs-human-read" in merged["harleyq"].flags
+    assert merged["harleyq"].student_comment == ""  # withheld on low confidence
 
 def test_apply_to_cohort_adds_columns(tmp_path):
     r = load_rubric(_write(tmp_path, GOOD)); b = _bundle2(tmp_path); _cohort(b)
     res = b / "results.jsonl"
     res.write_text(json.dumps({"github_id":"harleyq","sections":{"ward1":5,"ward2":10,"ward3":9,"craft":6},
-                  "bonus":{"omega":4},"total":34,"comment":"strong","confidence":"high","abstain":False}))
+                  "bonus":{"omega":4},"total":34,"comment":"strong","student_comment":"Great clear.",
+                  "confidence":"high","abstain":False}))
     apply_to_cohort(b, merge_results(b, r, res))
     rows = {row["github_id"]: row for row in csv.DictReader((b / "cohort.csv").open())}
     assert rows["harleyq"]["writeup_score"] == "30"
     assert rows["harleyq"]["writeup_comment"] == "strong"
+    assert rows["harleyq"]["student_comment"] == "Great clear."
     assert rows["riddler"]["writeup_score"] == ""  # no result -> blank, untouched

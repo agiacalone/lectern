@@ -15,6 +15,7 @@ class Section:
 class Rubric:
     lab: str; total: int; comment_max_chars: int
     sections: list[Section]; bonus: list[Section]; cap: int
+    student_comment_max_chars: int = 600
 
 def _section(d: dict) -> Section:
     for _k in ("key", "max"):
@@ -45,4 +46,5 @@ def load_rubric(path: Path) -> Rubric:
         sys.exit("digest_rubric: cap must be >= total")
     return Rubric(lab=str(data["lab"]), total=total,
                   comment_max_chars=int(data.get("comment_max_chars", 140)),
-                  sections=sections, bonus=bonus, cap=cap)
+                  sections=sections, bonus=bonus, cap=cap,
+                  student_comment_max_chars=int(data.get("student_comment_max_chars", 600)))
