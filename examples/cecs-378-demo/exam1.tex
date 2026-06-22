@@ -3,10 +3,14 @@
 %
 % Questions are written fresh for demo purposes and do NOT reproduce any
 % live exam bank.  Topics: symmetric/asymmetric crypto, hashing,
-% buffer overflows, access control.
+% buffer overflows, access control.  Three question types are shown:
+% multiple choice, True/False (stacked (a)/(b) house standard), and short answer.
+%
+% Every question carries a `% name:` annotation (and `% rubric:` where useful)
+% so a `gradescope: region` build can emit GRADING_NOTE.md + per-form outline CSVs.
 %
 % Build:
-%   reg-exam-build exam.build.yaml        (pack mode: A/B + roster)
+%   reg-exam-build exam.build.yaml        (pack mode: A/B + roster + gradescope)
 %   reg-exam-build exam1.tex              (legacy single-form mode)
 
 \documentclass[11pt]{article}
@@ -178,7 +182,7 @@
 
 \begin{document}
 
-\metastrip{CECS 378}{Su26}{Exam 1}{50}
+\metastrip{CECS 378}{Su26}{Exam 1}{60}
 \par\vspace{0.4em}
 \begin{center}{\Large\itshape Exam 1 --- Introduction to Computer Security}\end{center}
 \par\vspace{-0.2em}
@@ -197,7 +201,7 @@
 \ifanswers\par\vspace{0.4em}\noindent\colorbox{keyred}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\centering\color{white}\sffamily\bfseries\large $\star$~~ANSWER KEY~~---~~NOT FOR DISTRIBUTION~~$\star$}}\par\vspace{0.4em}\fi
 
 \par\vspace{0.6em}
-\noindent\ding{43}~\textbf{Directions.}~\textit{Write on the exam paper. You may use one 3''$\times$5'' card of notes (both sides, handwritten only). \textbf{No electronic devices of any kind are allowed on your desk during the exam.}}
+\noindent\ding{43}~\textbf{Directions.}~\textit{Write on the exam paper. \textbf{Multiple choice:} circle the single best answer. \textbf{True/False:} circle the correct option, (a)~True or (b)~False. \textbf{Short answer:} write in the space provided. You may use one 3''$\times$5'' card of notes (both sides, handwritten only). \textbf{No electronic devices of any kind are allowed on your desk during the exam.}}
 \par\vspace{0.4em}
 
 % ============================================================
@@ -206,7 +210,7 @@
 \examsection{Section 1 \textnormal{\small --- Multiple Choice (4 pts each, 20 pts total)}}
 \begin{enumerate}
 
-% --- Q1: Symmetric vs. asymmetric ---
+% name: Symmetric-key cipher definition
 \item \textit{(4 pts)}~Which of the following best describes a \textbf{symmetric-key cipher}?
   \begin{enumerate}[label=(\alph*)]
     \item \wrongchoice{The sender encrypts with a public key; the receiver decrypts with a private key.}
@@ -214,12 +218,12 @@
     \item \wrongchoice{No key is required; security relies entirely on algorithm secrecy.}
     \item \wrongchoice{A digital signature is produced as a side effect of encryption.}
   \end{enumerate}
-  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (b).}}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} b}
     Symmetric ciphers (e.g., AES) use a single shared secret for both directions.
     (a) describes asymmetric encryption; (c) is ``security through obscurity,'' which is
     not the symmetric model; (d) conflates encryption with signing.\par\smallskip\fi
 
-% --- Q2: Hash property ---
+% name: Hash collision resistance
 \item \textit{(4 pts)}~A cryptographic hash function is said to be \textbf{collision resistant} if:
   \begin{enumerate}[label=(\alph*)]
     \item \wrongchoice{Given a hash value, it is computationally infeasible to find any input that produces it.}
@@ -227,12 +231,12 @@
     \item \correctchoice{It is computationally infeasible to find two distinct inputs that produce the same hash output.}
     \item \wrongchoice{The hash function runs in constant time regardless of input length.}
   \end{enumerate}
-  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (c).}}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} c}
     Collision resistance means no adversary can efficiently find $x \ne y$ s.t.\ $H(x)=H(y)$.
     (a) is preimage resistance (a different property); (b) is false — hashes compress
     variable-length input to fixed-length output; (d) is unrelated to security.\par\smallskip\fi
 
-% --- Q3: RSA / asymmetric ---
+% name: RSA encryption key choice
 \item \textit{(4 pts)}~In RSA, a message is encrypted for a recipient by using:
   \begin{enumerate}[label=(\alph*)]
     \item \wrongchoice{The sender's private key.}
@@ -240,11 +244,11 @@
     \item \wrongchoice{The recipient's private key.}
     \item \correctchoice{The recipient's public key.}
   \end{enumerate}
-  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (d).}}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} d}
     RSA encryption uses the \emph{recipient's public key}; only the recipient's
     matching private key can decrypt. (a) describes signing, not encryption.\par\smallskip\fi
 
-% --- Q4: Buffer overflow ---
+% name: Stack buffer overflow target
 \item \textit{(4 pts)}~A classic \textbf{stack buffer overflow} typically overwrites which
   memory region to redirect control flow?
   \begin{enumerate}[label=(\alph*)]
@@ -253,12 +257,12 @@
     \item \correctchoice{The saved return address on the stack frame.}
     \item \wrongchoice{The kernel's system-call dispatch table.}
   \end{enumerate}
-  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (c).}}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} c}
     By writing past the end of a stack-allocated buffer, an attacker can overwrite the
     saved return address (and optionally the saved frame pointer) to redirect execution
     to attacker-controlled code or a gadget chain.\par\smallskip\fi
 
-% --- Q5: Access control ---
+% name: Principle of least privilege
 \item \textit{(4 pts)}~The \textbf{principle of least privilege} states that:
   \begin{enumerate}[label=(\alph*)]
     \item \wrongchoice{A subject should be granted the maximum privileges needed for any possible future task.}
@@ -266,7 +270,7 @@
     \item \wrongchoice{Privileges are determined by a mandatory label assigned at object creation time.}
     \item \correctchoice{A subject should be granted only the minimum privileges necessary to perform its current task.}
   \end{enumerate}
-  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer: (d).}}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} d}
     Least privilege limits the damage a compromised process or user can cause.
     (a) violates the principle; (b) is the opposite of good practice;
     (c) describes mandatory access control labels, not least privilege.\par\smallskip\fi
@@ -274,12 +278,75 @@
 \end{enumerate}
 
 % ============================================================
-%  SECTION 2: SHORT ANSWER  (3 questions × 10 pts = 30 pts)
+%  SECTION 2: TRUE / FALSE  (5 questions × 2 pts = 10 pts)
 % ============================================================
-\examsection{Section 2 \textnormal{\small --- Short Answer (10 pts each, 30 pts total)}}
+%  House standard: the \textsc{T~/~F.} label keeps the question typed `tf`,
+%  and the (a) True / (b) False choices are a STACKED enumerate — one option
+%  per line — so Gradescope's region detection can find them.  See
+%  docs/design/exam-tex-format.md (True/False question structure).
+\examsection{Section 2 \textnormal{\small --- True / False (2 pts each, 10 pts total)}}
 \begin{enumerate}[resume]
 
-% --- Q6: Symmetric vs. asymmetric performance ---
+% name: AES is a symmetric cipher (T/F)
+\item \textit{(2 pts)}~\textsc{T~/~F.}~AES is an example of an asymmetric (public-key) cipher.
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{True}
+    \item \correctchoice{False}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} False}
+    AES is a \emph{symmetric} block cipher — one shared secret key.  RSA and ECC are the
+    asymmetric examples.\par\smallskip\fi
+
+% name: Hash maps to fixed-length output (T/F)
+\item \textit{(2 pts)}~\textsc{T~/~F.}~A cryptographic hash function maps an arbitrary-length input to a fixed-length output.
+  \begin{enumerate}[label=(\alph*)]
+    \item \correctchoice{True}
+    \item \wrongchoice{False}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} True}
+    Compression to a fixed-size digest (e.g., 256 bits for SHA-256) regardless of input
+    length is a defining property of a hash function.\par\smallskip\fi
+
+% name: RSA confidentiality uses recipient public key (T/F)
+\item \textit{(2 pts)}~\textsc{T~/~F.}~To send a confidential message with RSA, the sender encrypts it with their own private key.
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{True}
+    \item \correctchoice{False}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} False}
+    Confidentiality uses the \emph{recipient's public} key (only the recipient's private
+    key decrypts).  Encrypting with one's \emph{own private} key is signing, not secrecy.\par\smallskip\fi
+
+% name: NX stack does not stop ROP (T/F)
+\item \textit{(2 pts)}~\textsc{T~/~F.}~A non-executable stack (NX / W$\oplus$X) by itself defeats return-oriented programming (ROP) attacks.
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{True}
+    \item \correctchoice{False}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} False}
+    ROP chains \emph{existing} executable code (gadgets ending in \texttt{ret}), so it needs
+    no injected code and sidesteps NX.  ASLR and CFI are the complementary defenses.\par\smallskip\fi
+
+% name: Least privilege limits blast radius (T/F)
+\item \textit{(2 pts)}~\textsc{T~/~F.}~The principle of least privilege limits the damage a compromised process can cause.
+  \begin{enumerate}[label=(\alph*)]
+    \item \correctchoice{True}
+    \item \wrongchoice{False}
+  \end{enumerate}
+  \ifanswers \par\smallskip\textcolor{keyred}{\textbf{Answer:} True}
+    Granting only the privileges a task currently needs shrinks the blast radius when that
+    process or account is compromised.\par\smallskip\fi
+
+\end{enumerate}
+
+% ============================================================
+%  SECTION 3: SHORT ANSWER  (3 questions × 10 pts = 30 pts)
+% ============================================================
+\examsection{Section 3 \textnormal{\small --- Short Answer (10 pts each, 30 pts total)}}
+\begin{enumerate}[resume]
+
+% name: Hybrid encryption rationale (short answer)
+% rubric: Symmetric is orders of magnitude faster; asymmetric is slow but solves key distribution. Hybrid uses asymmetric once (exchange a session key) then symmetric for bulk. 10 pts; 5–7 for identifying the speed gap + that hybrid exists without full mechanism.
 \item \textit{(10 pts)}~Briefly explain \textbf{why symmetric ciphers are generally used to
   encrypt bulk data} in practice, while asymmetric ciphers are typically used only for
   key exchange or digital signatures.  What fundamental trade-off motivates this hybrid
@@ -304,7 +371,8 @@
     \writelines{7}
   \fi
 
-% --- Q7: Buffer overflow mitigation ---
+% name: Stack buffer overflow mitigations (short answer)
+% rubric: Any two of stack canary / NX (W^X) / ASLR, each named + described, each with one circumvention (canary leak, ROP, address leak/brute-force). 5 pts each.
 \item \textit{(10 pts)}~Name and briefly describe \textbf{two} OS/compiler-level
   mitigations for stack buffer overflow attacks.  For each mitigation, also state
   one way an attacker might attempt to circumvent it.
@@ -336,7 +404,8 @@
     \writelines{9}
   \fi
 
-% --- Q8: Discretionary vs. mandatory access control ---
+% name: DAC vs. MAC access control (short answer)
+% rubric: DAC = owner-controlled (Unix chmod/ACLs); MAC = system-policy-controlled, kernel-enforced (SELinux). (i) who decides + (ii) one example each. 3–4 pts per model without a concrete example.
 \item \textit{(10 pts)}~Compare \textbf{Discretionary Access Control (DAC)} and
   \textbf{Mandatory Access Control (MAC)}.  For each model: (i) who controls access
   decisions, and (ii) give one concrete example of a system or OS feature that uses it.
@@ -372,6 +441,6 @@
 \end{enumerate}
 
 \par\vfill
-\begin{center}\small\textit{End of exam. \quad Total: 50 points.}\end{center}
+\begin{center}\small\textit{End of exam. \quad Total: 60 points.}\end{center}
 
 \end{document}

@@ -26,4 +26,9 @@ roster: roster.csv
 
 assign: alternating   # only one form here, so every student gets Form A
 
-points: 50
+points: 60
+
+# Emit the gradescope/ products (region target): per-form template + answer-key
+# PDFs, *_outline.csv, gradescope_roster.csv, and GRADING_NOTE.md next to this
+# manifest. Drives the reg-gradescope-stats item-analysis stage downstream.
+gradescope: region
