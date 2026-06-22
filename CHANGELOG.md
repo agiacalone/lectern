@@ -6,7 +6,12 @@ All notable changes to lectern are documented here.
 
 ## [Unreleased]
 
+### Added
+- **`reg-lab-report` — lectern Layer 3 (instructor report + feedback delivery).** Two subcommands. `render` consumes the recon bundle + the digest-merged cohort + optional gradebook standing and deterministically produces the canonical instructor `REPORT.md` — distribution stats, Unicode **agate charts** (grade distribution, score histogram, ward-clear funnel), the ➊ grade table, a four-bucket **grading-recommendations** engine (confirm / edge-cases / low-confidence / upward-adjustment candidates), a roster-ordered Canvas entry sheet, and the Part-A-facts / Part-B-advisory firewall. This supersedes the agent-assembled `docs/recon-report-workflow.md` as the REPORT producer. `deliver` posts a sanitized, GPG-signed `FEEDBACK.md` (grade breakdown + student-facing comment) to each repo's `feedback` branch and closes the feedback PR — **`--dry-run` by default**, signing mandatory (refuses unsigned), idempotent, and it emits a verbatim `FEEDBACK_LOG.md` record. Golden-tested against the CECS 378 Su26 Lab 1 (Spellbreaker) cohort.
+- **Sanitization lint (`lectern.feedback_sanitize`).** Deterministic guard that withholds any student-facing comment leaking internal jargon (triage verdicts, honor-gate, advisory framing) or another student's name. Deliberately excludes crypto-colliding words (`oracle`, `digest`) so legitimate feedback isn't censored.
+
 ### Changed
+- **`reg-lab-digest` results now carry a `student_comment`** — a sanitized, student-facing comment alongside the internal terse `comment`. One grading pass yields both; `merge` runs the sanitize lint and withholds the student comment on low-confidence/abstain or any lint hit. Additive, backward-compatible schema change to the Layer-2 contract (the grader-prompt doc documents the new field).
 - **True/False exam questions now use stacked `(a) True / (b) False` choices** — the house standard documented in `references/reference_exam.tex` and `docs/design/exam-tex-format.md`. The previous inline `\textsc{T~/~F.}` form listed no answer options on their own lines, so Gradescope's region detection could not find them. The `\textsc{T~/~F.}` label and inline `Answer:` reveal are retained, so questions stay typed `tf` and `parse_outline_from_tex` still emits `True`/`False` in `_outline.csv` — no code change, purely an authoring-convention fix.
 
 ### Security
