@@ -97,31 +97,31 @@ OMEGA — padding oracle      ▏██████████████ 13
 
 | Student (Last, First) | Proposed |
 | --- | --: |
-| Jervis Tetch | 14 |
-| Selina Kyle | 100 |
-| Edward Nashton | 100 |
-| Alfreda Pennyworth | 43 |
 | Stephanie Brown | 0 |
+| Harvey Bullock | 100 |
+| Cassandra Cain | 87 |
 | Oswald Cobblepot | 70 |
+| Harvey Dent | 100 |
+| Luke Fox | 100 |
+| James Gordon | 100 |
+| Barbara Gordon | 88 |
+| Dick Grayson | 94 |
+| Pamela Isley | 87 |
+| Waylon Jones | 78 |
+| Kate Kane | 94 |
+| Basil Karlo | 90 |
+| Selina Kyle | 100 |
 | Floyd Lawton | 90 |
 | Renee Montoya | 84 |
-| Pamela Isley | 87 |
+| Edward Nashton | 100 |
+| Alfreda Pennyworth | 43 |
 | Harleen Quinzel | 87 |
-| Barbara Gordon | 88 |
-| Harvey Bullock | 100 |
-| Jason Todd | 98 |
-| Kate Kane | 94 |
-| Victoria Zsasz | 100 |
-| Slade Wilson | 79 |
-| Harvey Dent | 100 |
 | Roman Sionis | 100 |
-| Luke Fox | 100 |
-| Dick Grayson | 94 |
+| Jervis Tetch | 14 |
+| Jason Todd | 98 |
 | Bruce Wayne | 82 |
-| Waylon Jones | 78 |
-| James Gordon | 100 |
-| Cassandra Cain | 87 |
-| Basil Karlo | 90 |
+| Slade Wilson | 79 |
+| Victoria Zsasz | 100 |
 
 ## Provenance & caveats
 
