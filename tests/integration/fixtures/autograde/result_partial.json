@@ -1,0 +1,5 @@
+{"schema":1,"assignment":"spellbreaker","commit":"pa2741a","honor_ok":true,
+ "challenges":{"ward1":{"pass":true,"points":10,"max":10},
+               "ward2":{"pass":false,"points":0,"max":35},
+               "ward3":{"pass":true,"points":15,"max":15}},
+ "points":25,"max":60}

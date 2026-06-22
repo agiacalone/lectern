@@ -17,3 +17,6 @@ secrets/
 # Virtual environments
 .venv/
 venv/
+
+# regen.sh intermediate output (golden is the committed artifact)
+tests/integration/fixtures/**/products/

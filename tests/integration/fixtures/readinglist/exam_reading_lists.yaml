@@ -1,0 +1,5 @@
+course: "CECS 378"
+term: su26
+lectures_dir: .
+exams:
+  - { slug: demo_exam, name: "Demo Exam", topics: [topic_demo] }
