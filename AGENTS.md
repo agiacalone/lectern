@@ -23,6 +23,14 @@ Every skill action maps to a `reg-*` CLI command. An agent performing any Lecter
 | Publish ISA grading artifacts to Drive | `reg-isa-publish` | `isa_publish` |
 | Generate and stamp course syllabus | `reg-syllabus` | `syllabus` |
 | Triage GitHub Classroom submission authenticity | `reg-triage` | `triage` |
+| Lab grading L1 — recon the student-repo population | `reg-lab-recon` | `recon` |
+| Lab grading L2 — rubric-driven writeup digest | `reg-lab-digest` | `lab_digest` |
+| Lab grading L3 — instructor report + signed feedback | `reg-lab-report` | `lab_report` |
+| Verify suite version compatibility | `reg-suite-check` | `suite_check` |
+
+`reg-suite-check` (`python -m lectern.suite_check`) parses [SUITE.md](SUITE.md) and verifies installed
+component versions against the compatibility matrix — run in suite-integration CI and locally to gate
+releases. `reg-exam-readinglist` is installed as a standalone `~/bin` wrapper (not by `install.sh`).
 
 ## Grading split
 
@@ -40,3 +48,9 @@ Every skill action maps to a `reg-*` CLI command. An agent performing any Lecter
 ## Skill file
 
 `SKILL.md` — the Claude Code skill definition (frontmatter `name: lectern`). Import via the `lectern` skill name.
+
+## Changelog philosophy
+
+Every change lands its `CHANGELOG.md` entry **in the same commit/PR** — git tells you the diff, the changelog tells you the story. Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), newest-first under `## [Unreleased]`; groups `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` (only those with entries). Entries say **what changed and why**, for humans.
+
+**Regression-citation rule (load-bearing):** when a `Fixed` entry documents a regression, cite the chain — the commit that *introduced* the feature, the one that *broke* it, the *mechanism* of the break, and the *restore* — so the next person diagnoses it from the changelog, not a cold `git log`.
