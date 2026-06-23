@@ -7,8 +7,9 @@ description: Course/teaching operations for a CSULB lecturer — the Registrar. 
 
 Lectern is the operational/records counterpart to `lecture-materials-assistant`
 (which generates lecture content). It owns "the Registrar": the lifecycle and
-records of running courses. Depends on `vaultkit` for vault config + fs helpers.
-All tools are vault-aware via an explicit `--vault-root` argument.
+records of running courses. All tools are vault-aware via an explicit
+`--vault-root` argument — no hard-coded vault paths and no external vault package
+(the one `slugify` helper is vendored into `lectern/_text.py`).
 
 ## Wrappers (reg-*)
 

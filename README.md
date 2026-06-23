@@ -30,7 +30,7 @@ ways: driven by an AI agent (Claude Code skill) *or* run directly by a human via
 
 > **Suite licensing.** Lectern and Scriptorium are open source ([MIT](LICENSE)). **Oracle** — the grading engine — is **licensed, not open**: a **source-available license** (PolyForm Strict 1.0.0), private repo, source provided on licensing. Accredited **educational institutions can license it for free**; commercial and other use is by arrangement. Either way, **contact the author for a license** — [@agiacalone](https://github.com/agiacalone).
 
-See [docs/design/lms-suite-integration.md](docs/design/lms-suite-integration.md) for how Lectern, Scriptorium, and Oracle integrate.
+See [docs/design/lms-suite-integration.md](docs/design/lms-suite-integration.md) for how Lectern, Scriptorium, and Oracle integrate. **Release compatibility:** [SUITE.md](SUITE.md) pins coordinated component/seam-contract versions; run `reg-suite-check` (`python -m lectern.suite_check`) to verify the installed components against that matrix.
 
 ---
 
@@ -152,9 +152,28 @@ examples/
   cecs-378-demo/        worked example: one full CECS 378 semester
 ```
 
+The tree above is the core; the package is ~58 modules grouped by subsystem:
+**term lifecycle** (`term_*`), **exam system** (`exam_*`, `gradescope_stats`), **gradebook**
+(`gradebook_*`), **lab grading** (`recon_*`, `digest_*`, `lab_digest`, `lab_report`, `report_*`,
+`feedback_*`), **assignment triage** (`triage_*`), **ISA/publishing** (`isa_*`, `drive_auth`), and
+utilities (`_text`, `qbank`, `suite_check`, `syllabus_serial`, `student_id`, …).
+
+**Lab-grading is a three-layer pipeline**, each layer deterministic and each feeding the next; none
+writes the gradebook (promotion is a separate, human-confirmed step):
+
+- **Layer 1 — recon** (`reg-lab-recon`): scans the student-repo population, parses CI autograde
+  results (`result.json`), and emits a deterministic recon bundle of *facts*.
+- **Layer 2 — digest** (`reg-lab-digest`): reads the bundle + a rubric YAML, builds a grading
+  work-list, runs LLM grading via the harness contract, and merges results under deterministic
+  guardrails (partial-credit warding, total recompute) → advisory scores + student-facing comments.
+- **Layer 3 — report** (`reg-lab-report`): renders a canonical `REPORT.md` (agate charts, grading
+  recommendations) and delivers signed feedback to each student repo's feedback branch.
+
+See `docs/design/lab-digest.md` and `docs/design/lab-report.md` for the contracts.
+
 **Vault awareness.** Most commands accept `--vault-root <path>` to locate course notes, class notes, and archive bundles relative to a notes root. If you do not use a notes-based workflow, pass explicit `--vault-root .` or use the modules as a library with fully explicit paths. The vault path is never hard-coded.
 
-**Dependencies.** Python 3.11+. `pyyaml`, `jsonschema`, `vaultkit` (the companion path/slug/frontmatter utilities package). LaTeX toolchain (`pdflatex`, `pdfunite` or `qpdf`) for exam builds. `rclone` or a service-account credential for ISA publish.
+**Dependencies.** Python 3.11+. `pyyaml`, `jsonschema`. LaTeX toolchain (`pdflatex`, `pdfunite` or `qpdf`) for exam builds. `rclone` or a service-account credential for ISA publish. *Optional for `reg-exam-verify`:* `pdfplumber` (else falls back to the `pdftotext` CLI). The former `vaultkit` dependency was removed — the one helper used (`slugify`) is vendored into `lectern/_text.py` (the PyPI name `vaultkit` is an unrelated third-party package, so depending on it was a dependency-confusion risk).
 
 ---
 
