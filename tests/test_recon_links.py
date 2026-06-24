@@ -2,9 +2,9 @@ from lectern.recon_links import repo_links
 
 def test_repo_links_full():
     L = repo_links(org="Giacalone-CECS",
-                   repo="cecs-378-su26-01-lab-01-symmetric-crypto-ChaoticNerd",
+                   repo="cecs-378-su26-01-lab-01-symmetric-crypto-riddle-me-this",
                    grading_commit="abc123", doc_path="student/WRITEUP.md")
-    base = "https://github.com/Giacalone-CECS/cecs-378-su26-01-lab-01-symmetric-crypto-ChaoticNerd"
+    base = "https://github.com/Giacalone-CECS/cecs-378-su26-01-lab-01-symmetric-crypto-riddle-me-this"
     assert L["repo"] == base
     assert L["docs"] == f"{base}/blob/abc123/student/WRITEUP.md"
     assert L["feedback_pr"] == f"{base}/pull/1"

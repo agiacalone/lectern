@@ -5,8 +5,8 @@ from lectern.recon_docs import DocRecon
 
 def _rec():
     return RepoRecord(
-        github_id="ChaoticNerd", student="C. Nerd",
-        repo="cecs-378-...-ChaoticNerd", grading_commit="abc123",
+        github_id="riddle-me-this", student="Edward Nashton",
+        repo="cecs-378-...-riddle-me-this", grading_commit="abc123",
         autograde=AutogradeResult(honor_ok=True, points=25, max=100,
             challenges={"ward1": Challenge("ward1", True, 10, 10)}, commit="abc123"),
         git=GitRecon(commits=14, spread_days=6.0),
@@ -20,7 +20,7 @@ def test_record_round_trips():
     assert d["git"]["commits"] == 14
     assert d["links"]["feedback_pr"].endswith("/pull/1")
     back = record_from_dict(d)
-    assert back.github_id == "ChaoticNerd"
+    assert back.github_id == "riddle-me-this"
     assert back.autograde.points == 25
     assert back.docs["grimoire"].sources == 3
     assert back.links["repo"] == "https://github.com/o/r"

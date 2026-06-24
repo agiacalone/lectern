@@ -91,7 +91,7 @@ def test_load_manifest_seeded_random_requires_seed(tmp_path):
         load_manifest(man)
 
 
-NAMES = ["Ada Lovelace", "Alan Turing", "Grace Hopper", "Maria Goeppert Mayer"]
+NAMES = ["Barbara Gordon", "Lucius Fox", "Kate Kane", "Pamela Isley"]
 
 
 def test_assign_alternating_balanced_and_sorted():
@@ -221,14 +221,14 @@ def test_emit_bubble_products_schema(tmp_path):
 
 def test_emit_gradescope_roster_columns(tmp_path):
     roster = tmp_path / "roster.csv"
-    roster.write_text("name,student_id\nAda Lovelace,001\nAlan M Turing,002\n")
+    roster.write_text("name,student_id\nBruce Wayne,001\nDick M Grayson,002\n")
     out = emit_gradescope_roster(roster, tmp_path)
     rows = list(csv.DictReader(out.open()))
     assert list(rows[0].keys()) == ["First Name", "Last Name", "SID", "Email"]
-    assert rows[0]["First Name"] == "Ada"
-    assert rows[0]["Last Name"] == "Lovelace"
-    assert rows[1]["First Name"] == "Alan M"     # all-but-last token = first/middle
-    assert rows[1]["Last Name"] == "Turing"
+    assert rows[0]["First Name"] == "Bruce"
+    assert rows[0]["Last Name"] == "Wayne"
+    assert rows[1]["First Name"] == "Dick M"     # all-but-last token = first/middle
+    assert rows[1]["Last Name"] == "Grayson"
     assert rows[0]["SID"] == "001"
     assert rows[0]["Email"] == ""                # email not carried — left blank
 
@@ -331,10 +331,10 @@ def test_run_individualized_prefills_student_id(tmp_path):
     m = load_manifest(_manifest(tmp_path, individualized=True))
     res = run(m, tmp_path)
     rows = list(csv.DictReader(res.register_csv.open()))
-    ada = next(r for r in rows if r["name"] == "Ada Lovelace")
-    with pdfplumber.open(res.build_dir / ada["output_pdf"]) as f:
+    barbara = next(r for r in rows if r["name"] == "Barbara Gordon")
+    with pdfplumber.open(res.build_dir / barbara["output_pdf"]) as f:
         text = f.pages[0].extract_text() or ""
-    assert "Ada Lovelace" in text, f"name missing: {text!r}"
+    assert "Barbara Gordon" in text, f"name missing: {text!r}"
     assert "000000001" in text, f"student_id missing: {text!r}"
 
 

@@ -19,8 +19,8 @@ def _seed_repo(root: Path, gid: str, with_doc: bool):
 def test_run_recon_end_to_end(tmp_path):
     fix = Path(__file__).parent / "fixtures" / "recon"
     workdir = tmp_path / "clones"; workdir.mkdir()
-    _seed_repo(workdir, "ChaoticNerd", True)
-    _seed_repo(workdir, "alpha-coder", False)
+    _seed_repo(workdir, "riddle-me-this", True)
+    _seed_repo(workdir, "oracle-net", False)
     def fake_clone(ref, dest): import shutil; shutil.copytree(workdir/ref.github_id, dest)
     def fake_autograde(ref): return None  # no CI in this test
     out = tmp_path / "bundle"
@@ -29,5 +29,5 @@ def test_run_recon_end_to_end(tmp_path):
                   clone=fake_clone, autograde=fake_autograde)
     assert n == 2
     assert (out / "cohort.csv").exists()
-    assert (out / "repos" / "ChaoticNerd.json").exists()
+    assert (out / "repos" / "riddle-me-this.json").exists()
     assert (out / "FACTS.md").read_text().count("|") > 10

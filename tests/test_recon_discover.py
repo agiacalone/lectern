@@ -7,8 +7,8 @@ def test_discover_builds_repo_refs():
     refs = discover_repos(FIX, repo_prefix="cecs-378-su26-01-lab-01-symmetric-crypto-")
     assert all(isinstance(r, RepoRef) for r in refs)
     by_id = {r.github_id: r for r in refs}
-    assert by_id["ChaoticNerd"].repo == "cecs-378-su26-01-lab-01-symmetric-crypto-ChaoticNerd"
-    assert by_id["ChaoticNerd"].student == "C. Nerd"
+    assert by_id["riddle-me-this"].repo == "cecs-378-su26-01-lab-01-symmetric-crypto-riddle-me-this"
+    assert by_id["riddle-me-this"].student == "Edward Nashton"
     assert len(refs) == 2
 
 

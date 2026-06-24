@@ -149,16 +149,16 @@ The footer carries both the source serial and a per-student serial
 
 ```
 name,form,canonical_name,source_serial,student_serial,output_pdf
-Alice Nakamura,A,alice nakamura,C0162D5D,B4CAD278,.parts/A_alice-nakamura_B4CAD278.pdf
-Bob Okonkwo,A,bob okonkwo,C0162D5D,591F93BC,.parts/A_bob-okonkwo_591F93BC.pdf
-Carmen Delgado,A,carmen delgado,C0162D5D,6D46E263,.parts/A_carmen-delgado_6D46E263.pdf
-Devon Hartley,A,devon hartley,C0162D5D,0E198195,.parts/A_devon-hartley_0E198195.pdf
-Elena Vasquez,A,elena vasquez,C0162D5D,3CA532BA,.parts/A_elena-vasquez_3CA532BA.pdf
-Frank Osei,A,frank osei,C0162D5D,46D9B97F,.parts/A_frank-osei_46D9B97F.pdf
-Grace Lindqvist,A,grace lindqvist,C0162D5D,DE77C0EA,.parts/A_grace-lindqvist_DE77C0EA.pdf
-Hiro Tanaka,A,hiro tanaka,C0162D5D,FEA593F6,.parts/A_hiro-tanaka_FEA593F6.pdf
-Ines Moreau,A,ines moreau,C0162D5D,CDDBED64,.parts/A_ines-moreau_CDDBED64.pdf
-James Kowalczyk,A,james kowalczyk,C0162D5D,C42728F0,.parts/A_james-kowalczyk_C42728F0.pdf
+Bruce Wayne,A,bruce wayne,C0162D5D,B4CAD278,.parts/A_bruce-wayne_B4CAD278.pdf
+Dick Grayson,A,dick grayson,C0162D5D,591F93BC,.parts/A_dick-grayson_591F93BC.pdf
+Barbara Gordon,A,barbara gordon,C0162D5D,6D46E263,.parts/A_barbara-gordon_6D46E263.pdf
+Selina Kyle,A,selina kyle,C0162D5D,0E198195,.parts/A_selina-kyle_0E198195.pdf
+Oswald Cobblepot,A,oswald cobblepot,C0162D5D,3CA532BA,.parts/A_oswald-cobblepot_3CA532BA.pdf
+Harvey Dent,A,harvey dent,C0162D5D,46D9B97F,.parts/A_harvey-dent_46D9B97F.pdf
+Pamela Isley,A,pamela isley,C0162D5D,DE77C0EA,.parts/A_pamela-isley_DE77C0EA.pdf
+Edward Nashton,A,edward nashton,C0162D5D,FEA593F6,.parts/A_edward-nashton_FEA593F6.pdf
+Kate Kane,A,kate kane,C0162D5D,CDDBED64,.parts/A_kate-kane_CDDBED64.pdf
+Jason Todd,A,jason todd,C0162D5D,C42728F0,.parts/A_jason-todd_C42728F0.pdf
 ```
 
 `build/A_combined.pdf` is the full class print stack (alphabetical by canonical name),
@@ -205,9 +205,9 @@ For this demo, `roster.csv` is already in its normalized form:
 
 ```
 name,student_id
-Alice Nakamura,040100101
-Bob Okonkwo,040100102
-Carmen Delgado,040100103
+Bruce Wayne,040100101
+Dick Grayson,040100102
+Barbara Gordon,040100103
 ...
 ```
 
@@ -263,9 +263,9 @@ their weights (labs 40% / exams 60%) and the letter-grade cut points.
 
 ```
 student_id,display_name,weighted_score,canvas_final_score,canvas_final_grade,letter_grade,grade_source
-040100101,Alice Nakamura,89.47,89.75,B,B,canvas
-040100102,Bob Okonkwo,77.60,79.50,C,C,canvas
-040100103,Carmen Delgado,95.40,95.25,A,A,canvas
+040100101,Bruce Wayne,89.47,89.75,B,B,canvas
+040100102,Dick Grayson,77.60,79.50,C,C,canvas
+040100103,Barbara Gordon,95.40,95.25,A,A,canvas
 ```
 
 `letter_grade` is the truth-of-record: it prefers the Canvas Override Grade when
@@ -276,11 +276,11 @@ set, then the Canvas-computed Final Grade, then the schema-derived cut as fallba
 **Grade distribution for this cohort:**
 
 ```
-A: 2  (Moreau, Delgado)
-B: 3  (Nakamura, Osei, Lindqvist)
-C: 2  (Okonkwo, Tanaka)
-D: 1  (Hartley)
-F: 2  (Vasquez, Kowalczyk)
+A: 2  (Kane, Gordon)
+B: 3  (Wayne, Dent, Isley)
+C: 2  (Grayson, Nashton)
+D: 1  (Kyle)
+F: 2  (Cobblepot, Todd)
 DFW rate: 30%
 ```
 
