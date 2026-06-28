@@ -83,3 +83,27 @@ def test_gid_not_confused_by_backticks_in_comment(tmp_path):
 def test_scoreline_rejects_non_score_lines():
     assert _parse_scoreline("`skyle` · [repo](https://x/y)") is None
     assert _parse_scoreline("ROM 30/33 · IPS 8/8")[0]["label"] == "ROM"
+
+
+def test_head_with_trailing_suffix_parses(tmp_path):
+    # Regression: _HEAD anchored on `**$`, so a head with content after the
+    # closing `**` (e.g. an at-a-glance `· ACE +N/15`) silently failed to match
+    # — the block was skipped and the student vanished from delivery with NO
+    # error. The required `**<total> / <grand>**` must parse regardless of any
+    # trailing suffix.
+    note = (
+        "## Per-student feedback & grades\n\n"
+        "### Harvey Dent — **96 / 100**  ·  ACE +14/15\n"
+        "`hdent` · [repo](https://example.com/hdent)\n"
+        "ROM 33/33 · IPS 8/8 · Screenshots 17/17 · Writeup 38/42 · ACE +14/15\n\n"
+        "_Comments:_ Flawless on the machine slice, generous on the bonus.\n\n"
+        "## Provenance\n"
+    )
+    p = tmp_path / "REPORT.md"
+    p.write_text(note)
+    rows = {r["github_id"]: r for r in parse_feedback_note(str(p))}
+    assert "hdent" in rows, "trailing-suffix head was skipped (the regression)"
+    assert rows["hdent"]["total"] == 96 and rows["hdent"]["grand"] == 100
+    assert rows["hdent"]["graded"] is True
+    assert rows["hdent"]["components"][-1] == {"label": "ACE", "score": 14,
+                                               "max": 15, "ec": True}
