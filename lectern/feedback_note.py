@@ -19,7 +19,10 @@ rows). A leading ``+`` on a component marks extra credit.
 """
 import re
 
-_HEAD = re.compile(r"^###\s+(.+?)\s+—\s+\*\*\s*(.+?)\s*/\s*(\d+)\s*\*\*\s*$")
+# Trailing `(?:\s.*)?$` tolerates an at-a-glance suffix after the closing `**`
+# (e.g. `· ACE +14/15`). Anchoring strictly on `**$` silently skipped such heads,
+# dropping the student from delivery with no error.
+_HEAD = re.compile(r"^###\s+(.+?)\s+—\s+\*\*\s*(.+?)\s*/\s*(\d+)\s*\*\*(?:\s.*)?$")
 _GID = re.compile(r"`([^`]+)`")
 _COMPTOK = re.compile(r"^\s*(.+?)\s+(\+?)(\d+|__|—)\s*/\s*(\d+)\s*$")
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
