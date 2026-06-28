@@ -134,7 +134,14 @@ Bake integrity into the assignment's **construction**, not just the grading.
   last term's work also fails.
 - **Hash / input forcing**: distribute a **custom base artifact** (a different hash than any
   stock/public version) so a solution built against the public version won't apply/validate —
-  students are forced to engage *your* specific input.
+  students are forced to engage *your* specific input. Going further, **significantly diverge**
+  the base from any well-documented original (the "Super Star Trek" technique) so public
+  documentation/solutions don't transfer and students must reverse *your* version.
+- **Per-student individualized artifacts** (the exam per-student-serial pattern applied to labs):
+  stamp each student's starter artifact with a token derived from their identity
+  (`HMAC(class_key, student_id)`) so every student works against a provably **unique** input. The
+  grader **regenerates** the artifact from the bound id and trusts nothing committed in the repo —
+  borrowed work fails structurally (wrong base → no round-trip; embedded identity mismatch).
 - **`dynamic_flag`** (gradebox): per-round random secret defeats hardcoded-output exploits.
 - **Flag, don't deduct.** Hard facts (a diff that contradicts the writeup, a git history) are
   audit-grade evidence; heuristic scores are advisory; **no student is penalized without human
