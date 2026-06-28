@@ -1,10 +1,27 @@
 import os
 
-from lectern.feedback_deliver import render_feedback_md, deliver, MERGE_MSG
+from lectern.feedback_deliver import (render_feedback_md, render_feedback_md_from_note,
+                                       deliver, MERGE_MSG)
 from lectern.report_manifest import ReportManifest
 
 M = ReportManifest("CECS 378", "01", "su26", "Lab 1", "Giacalone-CECS",
                    "cecs-378-su26-01-lab-01-symmetric-crypto", 70, 30, [], {}, 1.0, "feedback", 1)
+
+# Note-authoritative manifest: grand/components come from the note, not auto/writeup.
+MN = ReportManifest("CECS 378", "01", "su26", "Lab 2 — Malware", "Giacalone-CECS",
+                    "cecs-378-su26-01-lab-03-malware", 0, 0, [], {}, 1.0, "feedback", 1)
+
+
+def note_row(**k):
+    base = dict(github_id="skyle", student="Selina Kyle", total=91, grand=100,
+                components=[{"label": "ROM", "score": 30, "max": 33, "ec": False},
+                            {"label": "Writeup", "score": 38, "max": 42, "ec": False},
+                            {"label": "ACE", "score": 0, "max": 15, "ec": True}],
+                comment="You lifted those sprite bytes like a diamond from a locked case — "
+                        "clean, quiet, and gone before the alarm. The offset table purrs.",
+                graded=True)
+    base.update(k)
+    return base
 
 
 def row(**k):
@@ -125,3 +142,44 @@ def test_merge_main_false_leaves_main_untouched(tmp_path):
     assert not any("merge" in c for c in gcalls)
     assert ("git", "-C", str(tmp_path / gid), "checkout", "main") not in gcalls
     assert entries[0]["main_state"] == "-"
+
+
+# --- note-authoritative path (--from-note) ---
+
+def test_from_note_render_has_all_components_and_ec():
+    md = render_feedback_md_from_note(note_row(), MN)
+    assert "Lab 2 — Malware — Feedback" in md and "91 / 100" in md
+    assert "| ROM | 30 / 33 |" in md and "| Writeup | 38 / 42 |" in md
+    assert "| ACE (extra credit) | +0 / 15 |" in md
+    assert "the offset table purrs" in md.lower()
+
+
+def test_from_note_zero_total_gets_non_submission_note():
+    md = render_feedback_md_from_note(
+        note_row(github_id="flawton", student="Floyd Lawton", total=0,
+                 components=[{"label": "ROM", "score": 0, "max": 33, "ec": False}],
+                 comment="You never miss a shot — except this deadline."), MN)
+    assert "No submission" in md and "0 / 100" in md
+
+
+def test_deliver_uses_injected_renderer_and_note_total(tmp_path):
+    # deliver must read total from the note row and render via the from-note renderer
+    entries = deliver([note_row()], MN, str(tmp_path), execute=False,
+                      render=render_feedback_md_from_note, gh=lambda *a, **k: None,
+                      git=lambda *a, **k: None)
+    assert entries[0]["total"] == 91 and entries[0]["grand"] == 100
+    assert entries[0]["components"][0]["label"] == "ROM"
+    assert "offset table purrs" in entries[0]["student_comment"]
+
+
+def test_deliver_from_note_executes_signed(tmp_path):
+    gid = "skyle"
+    os.makedirs(tmp_path / gid)
+    gcalls = []
+    git = make_git(gcalls)
+    gh = make_gh([])
+    entries = deliver([note_row()], MN, str(tmp_path), execute=True,
+                      render=render_feedback_md_from_note, git=git, gh=gh)
+    # writes FEEDBACK.md to the malware repo's feedback branch, signed
+    assert any(c[:4] == ("git", "-C", str(tmp_path / gid), "commit") and "-S" in c for c in gcalls)
+    assert entries[0]["posted"] is True and entries[0]["main_state"] == "merged"
