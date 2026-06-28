@@ -92,6 +92,17 @@ coverage = edit the manifest's `topics` and re-run. (First built for CECS 326,
 per-topic lecture reading lists are still produced by the lecture-materials
 `reading-list` artifact.)
 
+## Authoring assignments
+
+Author every coding assignment with its **graders' contract** included — a student-facing spec
+(README + fixed deliverable paths + optional `solution.yaml`), an ISA rubric and/or grading
+skill, and an automated grading path wherever a deliverable is machine-checkable. Choose the
+grading mechanism per deliverable: **gradebox** (sandbox / runnable code / deterministic
+artifacts), the **oracle** (verify-by-proof; document the `/verify` receiving-end contract +
+course-token CI wiring), or **manual** (subjective). Keep one point split across README, course
+`CLAUDE.md`, Classroom issues, and the rubric. Bake integrity in via forcing-functions/canaries
+and flag-don't-deduct. Full procedure: [`docs/assignment-authoring.md`](docs/assignment-authoring.md).
+
 ## Teaching workflow
 
 See the project README for term-end/mid-term rituals.
