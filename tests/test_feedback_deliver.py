@@ -204,3 +204,22 @@ def test_default_gh_git_callbacks_prepend_binary(monkeypatch):
     sig = inspect.signature(fd.deliver)
     assert sig.parameters["gh"].default is fd._gh, "deliver default gh must wrap the gh binary"
     assert sig.parameters["git"].default is fd._git, "deliver default git must wrap the git binary"
+
+
+def test_execute_skips_unclonable_repo_and_continues(tmp_path):
+    # A non-submission repo that doesn't exist: gh clone returns non-zero (and no
+    # dest dir). deliver must record it as no-repo and CONTINUE to the next repo,
+    # not abort the whole cohort run (the crash hit live on the Lab 2 delivery).
+    import os as _os
+    _os.makedirs(tmp_path / "skyle")
+    def gh(*a, **k):
+        if a[:2] == ("repo", "clone") and str(a[2]).endswith("-bwayne"):
+            return _R("Could not resolve to a Repository", 1)
+        return _R("", 0)
+    gcalls = []
+    git = make_git(gcalls)
+    entries = deliver([row(), row(github_id="skyle", student="Selina Kyle")],
+                      M, str(tmp_path), execute=True, gh=gh, git=git)
+    by = {e["github_id"]: e for e in entries}
+    assert by["bwayne"]["main_state"] == "no-repo" and by["bwayne"]["posted"] is False
+    assert by["skyle"]["posted"] is True   # run continued; next repo delivered

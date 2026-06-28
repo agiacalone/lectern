@@ -132,8 +132,20 @@ def deliver(cohort, manifest, workdir, *, execute=False, close=True, merge_main=
         pr_state, main_state = "-", "-"
         if execute:
             dest = os.path.join(workdir, gid)
-            gh("repo", "clone", repo, dest)          # full clone: both branches present
-            git("-C", dest, "checkout", manifest.feedback_branch)
+            cl = gh("repo", "clone", repo, dest)     # full clone: both branches present
+            co = git("-C", dest, "checkout", manifest.feedback_branch)
+            if getattr(cl, "returncode", 0) != 0 or getattr(co, "returncode", 0) != 0:
+                # repo absent / empty / no feedback branch — typically a
+                # non-submission that never accepted the assignment. Record and
+                # skip; never abort the whole cohort run on one missing repo.
+                entries.append({"github_id": gid, "student": r["student"],
+                                "auto": r.get("points"), "writeup": r.get("writeup_score"),
+                                "total": total, "grand": r.get("grand"),
+                                "components": r.get("components"),
+                                "student_comment": r.get("student_comment") or r.get("comment", ""),
+                                "posted": False, "signed": False,
+                                "pr_state": "-", "main_state": "no-repo"})
+                continue
             fb = os.path.join(dest, "FEEDBACK.md")
             existing = open(fb).read() if os.path.exists(fb) else None
             if existing == md:
