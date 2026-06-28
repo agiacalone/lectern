@@ -17,6 +17,39 @@ class DocRecon:
 
 _FM = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
+
+def resolve_doc_path(repo_root: Path, rel_file: str) -> Path:
+    """Resolve a manifest deliverable path tolerantly within a repo.
+
+    Students name the writeup inconsistently — ``WRITEUP.md``, ``Writeup.md``,
+    ``submission/writeup.md``, ``CECS 378 Lab Writeup.md``. The strict
+    ``repo/<rel_file>`` check marked all of those not-present (a false doc-✗) and
+    dropped them from the writeup snapshot. Resolve in priority order:
+
+      1. exact ``repo/<rel_file>``
+      2. case-insensitive basename match anywhere in the tree (shallowest wins)
+      3. a *single* ``.md`` whose name contains the configured stem (e.g. ``…Writeup.md``)
+
+    Ambiguous (2+ fuzzy candidates) or not-found returns the canonical path, so
+    the caller records ``present=False`` exactly as before. ``.git`` is never searched.
+    """
+    repo_root = Path(repo_root)
+    canonical = repo_root / rel_file
+    if canonical.exists():
+        return canonical
+    target = Path(rel_file).name.lower()
+    stem = Path(rel_file).stem.lower()
+    files = [p for p in repo_root.rglob("*")
+             if p.is_file() and ".git" not in p.relative_to(repo_root).parts]
+    ci = sorted((p for p in files if p.name.lower() == target),
+                key=lambda p: len(p.relative_to(repo_root).parts))
+    if ci:
+        return ci[0]
+    fuzzy = [p for p in files if p.suffix.lower() == ".md" and stem in p.name.lower()]
+    if len(fuzzy) == 1:
+        return fuzzy[0]
+    return canonical
+
 def recon_doc(path: Path, *, label: str) -> DocRecon:
     p = Path(path)
     if not p.exists():
