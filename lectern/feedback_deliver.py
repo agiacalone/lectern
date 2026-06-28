@@ -26,6 +26,14 @@ def _sh(*args, **k):
     return subprocess.run(args, capture_output=True, text=True, **k)
 
 
+def _gh(*a, **k):
+    return _sh("gh", *a, **k)
+
+
+def _git(*a, **k):
+    return _sh("git", *a, **k)
+
+
 def _grand(m):
     return m.auto_max + m.writeup_max
 
@@ -111,7 +119,7 @@ def _merge_to_main(git, dest, manifest, md):
 
 
 def deliver(cohort, manifest, workdir, *, execute=False, close=True, merge_main=True,
-            only=None, skip=None, render=render_feedback_md, gh=_sh, git=_sh):
+            only=None, skip=None, render=render_feedback_md, gh=_gh, git=_git):
     rows = [r for r in cohort
             if (not only or r["github_id"] in only) and (not skip or r["github_id"] not in skip)]
     entries = []

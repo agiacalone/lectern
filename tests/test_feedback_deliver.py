@@ -183,3 +183,24 @@ def test_deliver_from_note_executes_signed(tmp_path):
     # writes FEEDBACK.md to the malware repo's feedback branch, signed
     assert any(c[:4] == ("git", "-C", str(tmp_path / gid), "commit") and "-S" in c for c in gcalls)
     assert entries[0]["posted"] is True and entries[0]["main_state"] == "merged"
+
+
+def test_default_gh_git_callbacks_prepend_binary(monkeypatch):
+    # Regression: deliver()'s default callbacks were bare `_sh`, so `gh("repo",
+    # "clone", …)` shelled out to a program literally named `repo` (FileNotFound)
+    # and `git(...)` to one named `-C`. The --execute path therefore never worked;
+    # tests masked it by always injecting gh=/git= mocks. The defaults must wrap
+    # _sh with the binary name.
+    import inspect, types
+    import lectern.feedback_deliver as fd
+    calls = []
+    monkeypatch.setattr(fd.subprocess, "run",
+                        lambda args, **k: (calls.append(list(args)),
+                                           types.SimpleNamespace(stdout="", stderr="", returncode=0))[1])
+    fd._gh("repo", "clone", "org/r", "/d")
+    fd._git("-C", "/d", "status")
+    assert calls[0][:2] == ["gh", "repo"]
+    assert calls[1][:2] == ["git", "-C"]
+    sig = inspect.signature(fd.deliver)
+    assert sig.parameters["gh"].default is fd._gh, "deliver default gh must wrap the gh binary"
+    assert sig.parameters["git"].default is fd._git, "deliver default git must wrap the git binary"
