@@ -9,7 +9,7 @@ from lectern.recon_discover import discover_repos, RepoRef
 from lectern.recon_autograde import (fetch_autograde, fetch_autograde_artifact,
                                      scrape_autograde, AutogradeResult)
 from lectern.recon_git import recon_git
-from lectern.recon_docs import recon_doc
+from lectern.recon_docs import recon_doc, resolve_doc_path
 from lectern.recon_links import repo_links
 from lectern.recon_record import RepoRecord
 from lectern.recon_bundle import write_bundle
@@ -57,7 +57,7 @@ def run_recon(*, manifest_path: Path, roster_csv: Path, out_dir: Path,
             if cloned and repo.exists():
                 ag = do_auto(ref)
                 git = recon_git(repo, profile=m.git_profile)
-                docs = {d.label: recon_doc(repo / d.file, label=d.label) for d in m.docs}
+                docs = {d.label: recon_doc(resolve_doc_path(repo, d.file), label=d.label) for d in m.docs}
             else:
                 ag, git, docs = None, None, {d.label: recon_doc(repo / d.file, label=d.label) for d in m.docs}
             commit = ag.commit if ag else None
