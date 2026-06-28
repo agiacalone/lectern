@@ -101,7 +101,9 @@ grading mechanism per deliverable: **gradebox** (sandbox / runnable code / deter
 artifacts), the **oracle** (verify-by-proof; document the `/verify` receiving-end contract +
 course-token CI wiring), or **manual** (subjective). Keep one point split across README, course
 `CLAUDE.md`, Classroom issues, and the rubric. Bake integrity in via forcing-functions/canaries
-and flag-don't-deduct. Full procedure: [`docs/assignment-authoring.md`](docs/assignment-authoring.md).
+and flag-don't-deduct. New to this? Start with [`docs/grading-types.md`](docs/grading-types.md)
+— a plain-language, use-case guide to the grading types and which to pick (no security/OS
+background assumed). Full procedure: [`docs/assignment-authoring.md`](docs/assignment-authoring.md).
 
 ## Teaching workflow
 

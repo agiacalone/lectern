@@ -29,6 +29,11 @@ says 20/20/15/20/25 is a defect — reconcile at authoring time, across README, 
 
 ## Step 0 — Choose the grading mechanism
 
+> **New to the grading types, or want the use-cases first?** Read [`docs/grading-types.md`](grading-types.md)
+> — a plain-language decision guide (no security/OS background assumed) that walks the same choice
+> below with worked examples and "use when / don't use when" for each type. The table here is the
+> quick version.
+
 | Mechanism | Use when | What it does |
 |---|---|---|
 | **gradebox** | The deliverable is **runnable code, an exploit, or a deterministic artifact** (a patch, a binary, a parseable file) | Runs untrusted student work in a hardened, ephemeral container → binary tests → score → `gradebook.csv`. See `oracle` repo `docs/gradebox-authoring.md`. |
@@ -197,7 +202,9 @@ Full program design: `oracle` repo
 
 ## See also
 
-- `oracle` repo: `docs/gradebox-authoring.md`, `docs/gradebox.md`, `docs/exploit-verification.md`,
+- [`docs/grading-types.md`](grading-types.md) — plain-language guide to the grading types and which to pick (read first if you're new)
+- `oracle` repo: `docs/grading-model.md` (the engine reference behind the grading types),
+  `docs/gradebox-authoring.md`, `docs/gradebox.md`, `docs/exploit-verification.md`,
   `docs/DEPLOYMENT.md`
 - lectern: `docs/recon-report-workflow.md` (cohort recon), `docs/gradescope-workflow.md`
 - Memories: `feedback_assignment_authoring_grading_contract`, `project_gradebox_sandbox_runner`,
