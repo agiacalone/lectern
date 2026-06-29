@@ -15,6 +15,7 @@
 | Document | Description |
 |---|---|
 | [gradescope-workflow.md](gradescope-workflow.md) | Step-by-step for taking a lectern-built exam into Gradescope: region/bubble setup, A/B Version Sets, roster import, per-student serial identity verification |
+| [canvas-grades-workflow.md](canvas-grades-workflow.md) | Pushing vault grades to Canvas for one assignment via a Canvas-export **template overlay**: id-suffixed assignment match, `--only` targeting, minimal diff, extra-credit handling |
 
 ## Quick pointers
 
