@@ -631,8 +631,10 @@ def _cmd_export_canvas(args: argparse.Namespace) -> int:
     if schema_path is None:
         sys.exit("export-canvas needs --schema or --course to resolve the schema")
     schema = load_schema(schema_path)
-    export_canvas(args.gradebook, schema, args.out)
-    print(f"→ {args.out}")
+    export_canvas(args.gradebook, schema, args.out,
+                  template=getattr(args, "template", None),
+                  only=getattr(args, "only", None))
+    print(f"→ {args.out}" + (f" (overlaid onto {args.template})" if getattr(args, "template", None) else ""))
     return 0
 
 
@@ -744,6 +746,12 @@ def main(argv: list[str] | None = None) -> int:
     pe.add_argument("--schema", type=Path, help="schema yaml (else resolved by --course)")
     pe.add_argument("--course", help="course code (used only to resolve --schema)")
     pe.add_argument("--out", type=Path, required=True)
+    pe.add_argument("--template", type=Path,
+                    help="a Canvas gradebook EXPORT to overlay scores onto, "
+                         "preserving its exact format for clean re-import")
+    pe.add_argument("--only", nargs="*",
+                    help="with --template, restrict the overlay to these component "
+                         "short_names (e.g. lab2); default = all graded components")
     pe.set_defaults(func=_cmd_export_canvas)
 
     pd = sub.add_parser("dfw", help="roll up DFW rate across sections of a term")

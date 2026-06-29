@@ -1,3 +1,4 @@
+import csv
 import json
 from pathlib import Path
 import pytest
@@ -313,3 +314,106 @@ def test_build_writes_ledger_surfaces(tmp_path, schema_378):
     assert (out / "assignments" / "exam1.md").exists()
     gb = (out / "GRADEBOOK.md").read_text()
     assert "Per-student statements" in gb and "exam1" in gb
+
+
+# ── canvas export: template overlay (re-import preserving Canvas's exact format) ─
+
+CANVAS_TEMPLATE = (
+    "Student,ID,SIS User ID,SIS Login ID,Section,"
+    "Lab 1 - Symmetric Cryptography (1767130),Exam 1 (1767127),Current Score\n"
+    ",,,,,Manual Posting,Manual Posting,\n"
+    '"Kane, Kate",101,040100020,kkane,CECS 378 Sec01,55.00,40.00,80.00\n'
+    '"Pennyworth, Alfreda",102,040100010,apenny,CECS 378 Sec01,30.00,0.00,30.00\n'
+)
+
+
+def _gb_overlay(tmp_path):
+    gb = tmp_path / "gradebook.csv"
+    gb.write_text(
+        "student_id,display_name,enrollment_status,raw_scores,standing_score,"
+        "weighted_score,letter_grade,in_progress,graded_cols,total_cols,flags\n"
+        '040100020,Kate Kane,enrolled,"{""lab1"": 60.0, ""exam1"": 45.0}",80.0,80.0,B,true,2,3,\n'
+        '040100010,Alfreda Pennyworth,enrolled,"{""lab1"": 30.0, ""exam1"": 10.0}",0.0,0.0,F,true,2,3,\n',
+        encoding="utf-8")
+    return gb
+
+
+def test_overlay_updates_only_targeted_assignment(tmp_path, schema_378):
+    schema = load_schema(schema_378)
+    gb = _gb_overlay(tmp_path)
+    tmpl = tmp_path / "canvas_export.csv"; tmpl.write_text(CANVAS_TEMPLATE, encoding="utf-8")
+    out = tmp_path / "import.csv"
+    export_canvas(gb, schema, out, template=tmpl, only=["lab1"])
+    rows = list(csv.reader(out.open(encoding="utf-8")))
+    assert rows[0][5] == "Lab 1 - Symmetric Cryptography (1767130)"  # id-suffixed header kept
+    assert rows[1][5] == "Manual Posting"                            # posting row preserved
+    by = {r[2]: r for r in rows[2:]}
+    assert by["040100020"][5] == "60"        # lab1 overlaid (was 55.00)
+    assert by["040100020"][6] == "40.00"     # exam1 NOT in --only → template value kept
+    assert by["040100020"][0] == "Kane, Kate"  # identity preserved
+    assert by["040100010"][5] == "30.00"     # 30.0 == template 30.00 → unchanged, format kept
+
+
+def test_overlay_no_only_updates_all_known(tmp_path, schema_378):
+    schema = load_schema(schema_378)
+    gb = _gb_overlay(tmp_path)
+    tmpl = tmp_path / "t.csv"; tmpl.write_text(CANVAS_TEMPLATE, encoding="utf-8")
+    out = tmp_path / "o.csv"
+    export_canvas(gb, schema, out, template=tmpl)
+    by = {r[2]: r for r in csv.reader(out.open(encoding="utf-8"))}
+    assert by["040100020"][5] == "60" and by["040100020"][6] == "45"   # both overlaid
+
+
+def test_overlay_preserves_unknown_student_and_posting_row(tmp_path, schema_378):
+    schema = load_schema(schema_378)
+    gb = _gb_overlay(tmp_path)
+    tmpl = tmp_path / "t.csv"
+    tmpl.write_text(CANVAS_TEMPLATE +
+        '"Test, Student",999,,,CECS 378 Sec01,12.00,12.00,12.00\n', encoding="utf-8")
+    out = tmp_path / "o.csv"
+    export_canvas(gb, schema, out, template=tmpl, only=["lab1"])
+    rows = list(csv.reader(out.open(encoding="utf-8")))
+    test_row = [r for r in rows if r[0] == "Test, Student"][0]
+    assert test_row[5] == "12.00"   # blank SIS / not in gradebook → untouched
+
+
+def test_overlay_errors_when_no_matching_columns(tmp_path, schema_378):
+    schema = load_schema(schema_378)
+    gb = _gb_overlay(tmp_path)
+    tmpl = tmp_path / "t.csv"; tmpl.write_text(CANVAS_TEMPLATE, encoding="utf-8")
+    out = tmp_path / "o.csv"
+    import pytest
+    with pytest.raises(SystemExit):
+        export_canvas(gb, schema, out, template=tmpl, only=["lab3"])  # not in template
+
+
+def test_cli_export_canvas_template_overlay(tmp_path, schema_378):
+    gb = _gb_overlay(tmp_path)
+    tmpl = tmp_path / "canvas_export.csv"; tmpl.write_text(CANVAS_TEMPLATE, encoding="utf-8")
+    out = tmp_path / "import.csv"
+    rc = gradebook_main([
+        "export-canvas", "--gradebook", str(gb), "--schema", str(schema_378),
+        "--out", str(out), "--template", str(tmpl), "--only", "lab1",
+    ])
+    assert rc == 0
+    by = {r[2]: r for r in csv.reader(out.open(encoding="utf-8"))}
+    assert by["040100020"][5] == "60" and by["040100020"][6] == "40.00"
+
+
+def test_overlay_minimal_diff_keeps_unchanged_cell_formatting(tmp_path, schema_378):
+    # A student whose gradebook lab1 == the template value keeps the template's
+    # exact string (e.g. "60.00"); only genuinely-changed cells are rewritten.
+    schema = load_schema(schema_378)
+    gb = tmp_path / "gradebook.csv"
+    gb.write_text(
+        "student_id,display_name,enrollment_status,raw_scores,standing_score,"
+        "weighted_score,letter_grade,in_progress,graded_cols,total_cols,flags\n"
+        '040100020,Kate Kane,enrolled,"{""lab1"": 55.0}",80.0,80.0,B,true,1,3,\n'    # == template 55.00
+        '040100010,Alfreda Pennyworth,enrolled,"{""lab1"": 42.0}",0.0,0.0,F,true,1,3,\n',  # changed
+        encoding="utf-8")
+    tmpl = tmp_path / "t.csv"; tmpl.write_text(CANVAS_TEMPLATE, encoding="utf-8")
+    out = tmp_path / "o.csv"
+    export_canvas(gb, schema, out, template=tmpl, only=["lab1"])
+    by = {r[2]: r for r in csv.reader(out.open(encoding="utf-8"))}
+    assert by["040100020"][5] == "55.00"   # unchanged → template formatting preserved
+    assert by["040100010"][5] == "42"      # changed (was 30.00) → rewritten

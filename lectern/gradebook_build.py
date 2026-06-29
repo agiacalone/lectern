@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -247,12 +248,104 @@ def build_gradebook(
     return rows
 
 
-def export_canvas(gradebook_csv: Path, schema: GradebookSchema, out: Path) -> None:
-    """Emit a Canvas bulk-upload CSV: 'SIS User ID' + one column per GRADED
-    component (its schema canvas_title), values = raw earned points. A component
-    that no student has graded gets no column (never upload-zeroes ungraded work).
-    A student with no score on an otherwise-graded component gets a blank cell.
+_CANVAS_ID_SUFFIX = re.compile(r"^(.*?)\s*\(\d+\)\s*$")
+
+
+def _fmt_canvas(v) -> str:
+    """Format a numeric score the way Canvas accepts: integers without a trailing
+    `.0`, fractions kept (e.g. 60.0 -> '60', 97.5 -> '97.5')."""
+    try:
+        return f"{float(v):g}"
+    except (TypeError, ValueError):
+        return "" if v is None else str(v)
+
+
+def _overlay_canvas_template(gradebook_csv: Path, schema: GradebookSchema,
+                             template: Path, out: Path, only) -> None:
+    """Overlay vault scores onto a Canvas gradebook EXPORT, preserving its exact
+    shape (identity columns, `Name (assignment_id)` headers, posting/points row).
+    Only assignment columns that map to a schema component — and, if `only` is
+    given, only those short_names — have their cells updated; every other column,
+    the posting row, and any student not in the gradebook are passed through
+    untouched. Match is by SIS User ID. This is the re-import-safe form: Canvas
+    updates the existing assignment (matched by its id-suffixed header) and leaves
+    everything you didn't touch alone.
     """
+    title_to_short = {c["canvas_title"]: c["short_name"] for c in schema.columns}
+    only = set(only) if only else None
+
+    scores: dict[str, dict] = {}
+    with Path(gradebook_csv).open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            scores[pad_student_id(r["student_id"])] = json.loads(r.get("raw_scores") or "{}")
+
+    rows = list(csv.reader(Path(template).open(newline="", encoding="utf-8")))
+    if not rows:
+        sys.exit(f"empty Canvas template: {template}")
+    header = rows[0]
+    if "SIS User ID" not in header:
+        sys.exit(f"Canvas template missing 'SIS User ID' column: {template}")
+    sis_i = header.index("SIS User ID")
+
+    col_short: dict[int, str] = {}
+    for i, h in enumerate(header):
+        m = _CANVAS_ID_SUFFIX.match(h.strip())
+        title = (m.group(1).strip() if m else h.strip())
+        short = title_to_short.get(title)
+        if short and (only is None or short in only):
+            col_short[i] = short
+    if not col_short:
+        sys.exit("no assignment columns in the template match the schema"
+                 + (f" for --only {sorted(only)}" if only else ""))
+
+    out_rows = [header]
+    body = rows[1:]
+    # A leading posting/points row carries no SIS value — preserve it verbatim.
+    if body and (sis_i >= len(body[0]) or not str(body[0][sis_i]).strip()):
+        out_rows.append(body[0]); body = body[1:]
+    for r in body:
+        row = list(r)
+        sid = pad_student_id(r[sis_i]) if sis_i < len(r) else ""
+        raw = scores.get(sid)
+        if raw:
+            for i, short in col_short.items():
+                if i >= len(row) or raw.get(short) is None:
+                    continue
+                new = _fmt_canvas(raw[short])
+                old = str(row[i]).strip()
+                # Minimal diff: keep the template's existing cell (and its exact
+                # formatting) when the value is numerically unchanged; only rewrite
+                # a genuine change, so the import touches just the moved grades.
+                try:
+                    if old != "" and float(old) == float(new):
+                        continue
+                except ValueError:
+                    pass
+                row[i] = new
+        out_rows.append(row)
+
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    with Path(out).open("w", newline="", encoding="utf-8") as fh:
+        csv.writer(fh).writerows(out_rows)
+
+
+def export_canvas(gradebook_csv: Path, schema: GradebookSchema, out: Path,
+                  *, template: Path | None = None, only=None) -> None:
+    """Emit a Canvas bulk-upload CSV.
+
+    Default (no template): 'SIS User ID' + one column per GRADED component (its
+    schema canvas_title), values = raw earned points. A component no student has
+    graded gets no column (never upload-zeroes ungraded work); a student with no
+    score on an otherwise-graded component gets a blank cell.
+
+    With `template` (a Canvas gradebook export): overlay the vault scores onto
+    that export's exact structure so the result re-imports cleanly into the same
+    assignment (id-suffixed header), updating only the targeted cells. `only`
+    restricts the overlay to specific component short_names.
+    """
+    if template is not None:
+        _overlay_canvas_template(gradebook_csv, schema, Path(template), out, only)
+        return
     short_to_title = {c["short_name"]: c["canvas_title"] for c in schema.columns}
     schema_order = [c["short_name"] for c in schema.columns]
 
