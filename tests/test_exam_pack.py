@@ -168,6 +168,35 @@ def test_parse_outline_captures_name_rubric_and_full_fib_answer():
     assert rows[3].type == "fib" and rows[3].answer == "confusion; diffusion"
 
 
+def test_parse_outline_normalizes_letter_prefixed_tf_reveal():
+    # House standard is `Answer: True`, but a source may deviate to `Answer: a (True)`.
+    # The outline answer must still be the verdict WORD (never the letter), and the
+    # per-option breakdown must credit the right verdict slot.
+    tex = (
+        "\\begin{document}\\begin{enumerate}\n"
+        "% name: claim one\n"
+        "\\item \\textit{(2 pts)}~\\textsc{T~/~F.}~Claim one.\n"
+        "  \\begin{enumerate}[label=(\\alph*)]\n"
+        "    \\item \\correctchoice{True}\n"
+        "    \\item \\wrongchoice{False}\n"
+        "  \\end{enumerate}\n"
+        "  \\ifanswers \\textbf{Answer:} a (True) \\fi\n"
+        "% name: claim two\n"
+        "\\item \\textit{(2 pts)}~\\textsc{T~/~F.}~Claim two.\n"
+        "  \\begin{enumerate}[label=(\\alph*)]\n"
+        "    \\item \\wrongchoice{True}\n"
+        "    \\item \\correctchoice{False}\n"
+        "  \\end{enumerate}\n"
+        "  \\ifanswers \\textbf{Answer:} b (False) --- because reasons \\fi\n"
+        "\\end{enumerate}\\end{document}"
+    )
+    rows = parse_outline_from_tex(tex)
+    assert rows[0].type == "tf" and rows[0].answer == "True"      # not "a"
+    assert rows[1].type == "tf" and rows[1].answer == "False"     # not "b"
+    assert ("T", "True", True) in rows[0].options
+    assert ("F", "False", True) in rows[1].options
+
+
 def test_missing_name_errors_with_question_number(tmp_path):
     tex = (
         "\\begin{document}\\begin{enumerate}\n"
@@ -233,12 +262,35 @@ def test_emit_gradescope_roster_columns(tmp_path):
     assert rows[0]["Email"] == ""                # email not carried — left blank
 
 
+def test_build_options_legacy_inline_code():
+    # Legacy code items (pre-2026-06-09) have no \correctchoice enumerate; the
+    # True/False rows must be synthesized from the answer so the key round-trips.
+    from lectern.exam_pack import _build_options
+    block = (r"\textsc{Code.}~Circle \textbf{True} or \textbf{False}: ..."
+             "\n\\begin{lstlisting}\nx = 1\n\\end{lstlisting}\n"
+             r"\ifanswers \textbf{Answer:} False --- amplification multiplies \fi")
+    assert _build_options(block, "code", "False") == [
+        ("true", "True", False), ("false", "False", True)]
+    # Modern items with the enumerate parse their own choices.
+    modern = (r"\begin{enumerate}[label=(\alph*)]\item \correctchoice{True}"
+              r"\item \wrongchoice{False}\end{enumerate}")
+    assert _build_options(modern, "code", "True") == [
+        ("true", "True", True), ("false", "False", False)]
+
+
 def test_emit_grading_note_structure(tmp_path):
+    # Rows carry per-option breakdowns, as parse_outline_from_tex now populates.
     a = [
-        OutlineRow(1, 2, "mc", "a", "CIA — confidentiality", "Correct = a (2 pts)."),
-        OutlineRow(2, 2, "fib", "confusion; diffusion", "FIB — Shannon", "1 pt/blank."),
+        OutlineRow(1, 2, "mc", "a", "CIA — confidentiality", "Correct = a (2 pts).",
+                   options=[("a", "(a) Confidentiality", True),
+                            ("b", "(b) Availability", False)]),
+        OutlineRow(2, 2, "fib", "confusion; diffusion", "FIB — Shannon", "1 pt per blank.",
+                   options=[("b1", 'blank 1 = "confusion"', True),
+                            ("b2", 'blank 2 = "diffusion"', True)]),
     ]
-    b = [OutlineRow(1, 2, "mc", "c", "CIA — availability", "Correct = c (2 pts).")]
+    b = [OutlineRow(1, 2, "mc", "c", "CIA — availability", "Correct = c (2 pts).",
+                    options=[("a", "(a) Confidentiality", False),
+                             ("c", "(c) Availability", True)])]
     man = ExamManifest(course="CECS 378", term="su26", exam="Exam 1",
                        forms=[FormSpec("A", tmp_path / "A.tex"),
                               FormSpec("B", tmp_path / "B.tex")],
@@ -251,11 +303,20 @@ def test_emit_grading_note_structure(tmp_path):
     assert "type: grading-note" in text
     assert "tags: [teaching, cecs-378, exam, gradescope, answer-key, internal]" in text
     assert "## Form A" in text and "## Form B" in text
-    assert "CIA — confidentiality" in text
-    assert "confusion; diffusion" in text          # FIB full answer in table
-    assert "4 pts · 3 questions · 2 forms · 4/exam" in text
+    # rich per-question block: heading + per-option rows with form·Qn·slot keys
+    assert "#### A·Q1 · CIA — confidentiality · 2 pts · MC" in text
+    assert "| +2 | `A·Q1·a` | (a) Confidentiality |" in text   # correct option scored
+    assert "| 0 | `A·Q1·b` | (b) Availability |" in text       # distractor zero-credit
+    assert "`A·Q1·none`" in text                               # no-answer row present
+    # FIB renders one row per blank (not a joined cell) + a Scoring caption
+    assert '| +1 | `A·Q2·b1` | blank 1 = "confusion" |' in text
+    assert '| +1 | `A·Q2·b2` | blank 2 = "diffusion" |' in text
+    assert "*Scoring:* 1 pt per blank." in text
+    # summary uses the PER-FORM question count + form ids
+    assert "4 pts · 2 questions · 2 forms (A/B) · 4 pages/exam" in text
     assert "length = 4 pages" in text
     assert "[!warning] Internal" in text
+    assert "## Post-exam statistics" in text
 
 
 def test_emit_region_products_copies_and_outlines(tmp_path):
