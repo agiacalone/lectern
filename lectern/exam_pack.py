@@ -14,7 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -60,6 +60,10 @@ class OutlineRow:
     answer: str
     name: str = ""
     rubric: str = ""
+    # Per-option breakdown for the Gradescope grading note. Each entry is
+    # (slot, item_text, is_correct): slot is the rubric key suffix
+    # (a/b/c/d for mc, T/F for tf, true/false for code, b1.. for fib).
+    options: list = field(default_factory=list)
 
 
 @dataclass
@@ -201,6 +205,71 @@ def _parse_annotations(tex_content: str) -> dict[int, tuple[str, str]]:
     return out
 
 
+_CHOICE_RE = re.compile(r"\\(correct|wrong)choice\{")
+_DETEX_WRAP = re.compile(r"\\(?:texttt|textbf|textit|emph|textsc|textrm|text|mathrm)\{")
+
+
+def _balanced(s: str, start: int) -> tuple[str, int]:
+    """Given `start` just past an opening brace, return (inner_text, index_past_close)."""
+    depth, j = 1, start
+    while j < len(s) and depth:
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+        j += 1
+    return s[start:j - 1], j
+
+
+def _detex(s: str) -> str:
+    """Best-effort LaTeX -> plain text for grading-note rubric-item display."""
+    prev = None
+    while prev != s:                      # unwrap font/markup macros, balanced
+        prev = s
+        m = _DETEX_WRAP.search(s)
+        if m:
+            inner, after = _balanced(s, m.end())
+            s = s[:m.start()] + inner + s[after:]
+    s = s.replace("$^\\wedge$", "^").replace("\\^{}", "^")
+    s = re.sub(r"\$([^$]*)\$", r"\1", s)  # drop inline-math delimiters
+    for a, b in (("\\textasciitilde", "~"), ("\\textbackslash", "\\"),
+                 ("\\%", "%"), ("\\_", "_"), ("\\&", "&"), ("\\#", "#"),
+                 ("\\$", "$"), ("\\{", "{"), ("\\}", "}"), ("\\,", " "),
+                 ("\\ ", " "), ("\\textperiodcentered", "·"),
+                 ("---", "—"), ("--", "–"), ("~", " ")):
+        s = s.replace(a, b)
+    s = re.sub(r"\\[a-zA-Z]+", "", s)      # strip leftover control words
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _build_options(block: str, qtype: str, answer: str) -> list:
+    """[(slot, item_text, is_correct)] feeding the per-option grading-note table."""
+    if qtype == "fib":
+        blanks = [b.strip() for b in answer.split(";") if b.strip()]
+        return [(f"b{i + 1}", f'blank {i + 1} = "{_detex(v)}"', True)
+                for i, v in enumerate(blanks)]
+    choices = []                          # mc / tf / code — choices in doc order
+    for m in _CHOICE_RE.finditer(block):
+        text, _ = _balanced(block, m.end())
+        choices.append((m.group(1) == "correct", _detex(text)))
+    if not choices and qtype in ("tf", "code"):
+        # Legacy inline "T / F." items (no \correctchoice enumerate) — synthesize
+        # the two verdict rows from the answer so the key still round-trips.
+        ans_true = answer.strip().lower().startswith("t")
+        choices = [(ans_true, "True"), (not ans_true, "False")]
+    opts = []
+    for i, (is_correct, text) in enumerate(choices):
+        if qtype == "tf":
+            slot, item = (text[:1].upper() or "?"), text        # True->T False->F
+        elif qtype == "code":
+            slot, item = text.lower(), text                     # true / false
+        else:
+            slot = chr(ord("a") + i)                            # mc -> a/b/c/d
+            item = f"({slot}) {text}"
+        opts.append((slot, item, is_correct))
+    return opts
+
+
 def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
     body = tex_content.split("\\begin{document}", 1)[-1]
     # Split at every \item, then REGROUP: a question starts at a fragment that
@@ -227,8 +296,21 @@ def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
         qtype = _classify(block)
         ans_m = _ANS_RE.search(block)
         raw = ans_m.group(1).strip() if ans_m else ""
-        # type-aware: FIB keeps all ;-joined blanks; others take first token
-        answer = raw if qtype == "fib" else (raw.split()[0].rstrip(".") if raw else "")
+        # type-aware normalization of the outline answer:
+        #   fib  -> keep all ;-joined blanks
+        #   tf/code -> the verdict WORD True/False, never a letter, regardless of
+        #              whether the reveal reads `True` or the letter-prefixed
+        #              `a (True)` form (house standard is the bare word; this keeps
+        #              `_outline.csv` consistent if a source deviates)
+        #   mc   -> the choice letter (first token)
+        if qtype == "fib":
+            answer = raw
+        elif qtype in ("tf", "code"):
+            low = raw.lower()
+            answer = "True" if "true" in low else "False" if "false" in low else (
+                raw.split()[0].rstrip(".") if raw else "")
+        else:
+            answer = raw.split()[0].rstrip(".") if raw else ""
         name, rubric = annotations.get(q, ("", ""))
         if not name:
             raise SystemExit(f"exam_pack: question {q} is missing a '% name:' annotation")
@@ -238,8 +320,10 @@ def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
                     f"exam_pack: missing rubric annotation on {qtype} question {q}"
                 )
             rubric = f"Correct = {answer} ({int(m_pts.group(1))} pts, all-or-nothing)."
+        options = _build_options(block, qtype, answer)
         rows.append(OutlineRow(q_num=q, points=int(m_pts.group(1)), type=qtype,
-                               answer=answer, name=name, rubric=rubric))
+                               answer=answer, name=name, rubric=rubric,
+                               options=options))
     return rows
 
 
@@ -314,28 +398,46 @@ def _course_tag(course: str) -> str:
     return course.strip().lower().replace(" ", "-")
 
 
-def _grading_note_table(rows) -> str:
-    head = "| Q | Name | Pts | Type | Answer | Rubric |\n| -: | --- | -: | --- | --- | --- |"
-    body = "\n".join(
-        f"| {r.q_num} | {r.name} | {r.points} | {r.type} | {r.answer} | "
-        f"{r.rubric.replace(chr(10), ' ')} |"
-        for r in rows
-    )
-    return head + "\n" + body
+def _grading_note_question(form_id: str, r: OutlineRow) -> str:
+    """One rich per-question block: heading + per-option Gradescope rubric table."""
+    qkey = f"{form_id}·Q{r.q_num}"
+    head = f"#### {qkey} · {r.name} · {r.points} pts · {r.type.upper()}\n"
+    caption = ""
+    if r.type in ("fib", "code") and r.rubric:
+        caption = f"*Scoring:* {r.rubric.replace(chr(10), ' ')}\n\n"
+    lines = ["| Pts | Key | Rubric item (paste into Gradescope) |",
+             "| --: | --- | --- |"]
+    if r.type == "fib":
+        n = len(r.options)
+        per = r.points // n if n and r.points % n == 0 else None
+        for slot, item, _ in r.options:
+            pts = f"+{per}" if per is not None else "·"
+            lines.append(f"| {pts} | `{qkey}·{slot}` | {item} |")
+        if n > 1:
+            lines.append(f"| 0 | `{qkey}·order` | Incorrect order / wrong mapping "
+                         "(right values, wrong blanks) |")
+    else:
+        for slot, item, is_correct in r.options:
+            lines.append(f"| {'+' + str(r.points) if is_correct else '0'} | "
+                         f"`{qkey}·{slot}` | {item} |")
+    lines.append(f"| 0 | `{qkey}·none` | No answer / multiple marks |")
+    return head + "\n" + caption + "\n".join(lines) + "\n"
 
 
 def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root) -> Path:
     exam_root = Path(exam_root)
     out = exam_root / "GRADING_NOTE.md"
     forms = [f.id for f in manifest.forms]
-    total_pts = sum(r.points for r in next(iter(per_form_outline.values())))
-    nq = sum(len(v) for v in per_form_outline.values())
+    first = per_form_outline[forms[0]]
+    total_pts = sum(r.points for r in first)
+    nq = len(first)                       # per-form question count
     pages = per_form_pages.get(forms[0], 0)
     tag = _course_tag(manifest.course)
+    forms_label = f"{len(forms)} form{'s' if len(forms) != 1 else ''} ({'/'.join(forms)})"
 
     fm = (
         "---\n"
-        f"type: grading-note\n"
+        "type: grading-note\n"
         f"tags: [teaching, {tag}, exam, gradescope, answer-key, internal]\n"
         "visibility: private\n"
         "icon: LiClipboardCheck\n"
@@ -345,22 +447,36 @@ def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root) -> 
     parts = [
         fm,
         f"# {manifest.exam} — Gradescope Grading Note ({manifest.course} {manifest.term})\n",
-        "> [!warning] Internal — answer key\n"
-        "> Grader/ISA only. Never student-facing. Serials/register are grader "
-        "infra (see [[project_exam_serial_internal_only]]).\n",
-        f"{total_pts} pts · {nq} questions · {len(forms)} forms · {pages}/exam\n",
+        "> [!warning] Internal — ISA work order\n"
+        "> Grader/ISA only, never student-facing. Enter each question's rubric items "
+        "into Gradescope **verbatim**; grade by matching — your only decision per paper "
+        "is *which item applies*. Keys (`form·Qn·slot`) round-trip to per-distractor "
+        "statistics — keep them intact. Serials/register are grader infra "
+        "(see [[project_exam_serial_internal_only]]).\n",
+        f"{total_pts} pts · {nq} questions · {forms_label} · {pages} pages/exam\n",
         "## Gradescope setup\n"
-        "1. Two assignments — one per form — linked as a **Version Set**.\n"
+        "1. Two assignments (one per form) linked as a **Version Set**.\n"
         "2. Upload `gradescope/<form>_template.pdf` (the BLANK form) as each template.\n"
-        "3. Build the outline: one region per question, points from the table.\n"
-        "4. Enter the key in-UI (Gradescope imports nothing); keep "
-        "`gradescope/<form>_answer_key.pdf` open.\n"
-        f"5. Upload each form's scanned stack to its own version; length = {pages} pages.\n",
+        "3. Per question: draw the region, add **one rubric item per row** (`Pts` + item "
+        "text). Credit is the `+N` rows; `0` rows are no-credit (apply for feedback/stats).\n"
+        f"4. Upload each form's scanned stack to its own version; length = {pages} pages.\n",
+        "> [!note] FIB/code scoring\n"
+        "> `fib`/`code` rows carry a **Scoring** caption — the authoritative rule. For "
+        "multi-blank fills that don't divide evenly, apply the caption (the per-blank rows "
+        "are reference, marked `·`). Add verbose “why-wrong” prose to any Gradescope "
+        "item if you like; keep keys intact.\n",
     ]
     for fid in forms:
-        parts.append(f"## Form {fid}\n" + _grading_note_table(per_form_outline[fid]) + "\n")
-    # verify dir is always build/ — register.csv's output_pdf carries the
-    # .parts/ prefix in single layout, so it resolves relative to build/.
+        blocks = "\n".join(_grading_note_question(fid, r) for r in per_form_outline[fid])
+        parts.append(f"## Form {fid}\n\n" + blocks)
+    parts.append(
+        "<!-- reg-gradescope-stats:link -->\n"
+        "## Post-exam statistics\n"
+        "Per-distractor item analysis from this exam's Gradescope evaluations "
+        "(difficulty, dead distractors, miskey alarm):\n\n"
+        "- [[ITEM_ANALYSIS|Item analysis (Markdown)]]\n"
+        "- `item_analysis.html` — Item Analysis broadsheet (open in a browser)\n"
+    )
     parts.append(
         "## Appeals\n"
         "Each paper's footer `Serial · ID` resolves to one student + form via "

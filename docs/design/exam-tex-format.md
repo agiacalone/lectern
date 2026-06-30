@@ -221,10 +221,15 @@ region detection only finds answer choices that sit on their own lines; an inlin
 ```
 
 Wrap the correct option in `\correctchoice` (green in the key) and the other in
-`\wrongchoice`. Keep the inline `\textbf{Answer:} True`/`False` reveal — that line,
-not the choice list, is what `parse_outline_from_tex` reads for the `_outline.csv`
-answer column, so it stays the word `True`/`False` (not a letter). Directions
-should tell students to "circle the correct option, (a) True or (b) False."
+`\wrongchoice`. Keep the inline `\textbf{Answer:} True`/`False` reveal — the bare
+verdict **word**, not a letter — as the house standard. That line, not the choice
+list, is what `parse_outline_from_tex` reads for the `_outline.csv` answer column.
+The parser **normalizes defensively**: a deviating source that writes the
+letter-prefixed `\textbf{Answer:} a (True)` (or `b (False) --- explanation`) still
+yields the word `True`/`False` in `_outline.csv`, never the letter — so the outline
+stays consistent across exams regardless of reveal style. The same holds for `code`
+verdict items. Directions should tell students to "circle the correct option,
+(a) True or (b) False."
 
 ---
 
