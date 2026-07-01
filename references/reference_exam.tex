@@ -148,9 +148,32 @@
   \repeat
   \par\vspace{4pt}}
 
+% --- Keep each question whole across page breaks (Lectern issue #29) ---
+% A question that starts near the page bottom otherwise splits from its choices.
+% Reserve \qreserve of vertical space at the top of every top-level (question)
+% \item: if that much room isn't left, the whole question is pushed to the next
+% page. Level-2 (choice) items are exempt via the enumerate,2 before-hook, which
+% restores the unwrapped \item. \qreserve is tunable per exam (raise for
+% choice-heavy forms, lower to pack more per page). Complemented by widow/club
+% penalties, a stem<->choices no-break penalty, and \raggedbottom so pages run
+% short rather than stretch to force-fit a question. Parser-safe: the authored
+% "\item ... \textit{(N pts)}" pattern is unchanged, so exam_pack form-splitting
+% (_QSTART_RE / _PTS_RE) is unaffected.
+\newcommand{\qreserve}{5\baselineskip}
+\clubpenalty=10000
+\widowpenalty=10000
+\makeatletter
+\@beginparpenalty=9999   % discourage a page break between a stem and its choice list
+\makeatother
+\raggedbottom
+
 % --- List metrics: editorial proportions, tightened ---
-\setlist[enumerate,1]{leftmargin=2.4em, itemsep=0.45em, topsep=0.45em, parsep=0pt, label=\textbf{\arabic*.}}
-\setlist[enumerate,2]{leftmargin=1.8em, itemsep=0pt, topsep=0.1em, parsep=0pt, label=(\alph*)}
+% before-hook on level 1 wraps \item with \needspace (see issue #29 note above);
+% level 2 restores the plain \item so choices are never space-reserved.
+\setlist[enumerate,1]{leftmargin=2.4em, itemsep=0.45em, topsep=0.45em, parsep=0pt, label=\textbf{\arabic*.},
+  before={\let\qsaveitem\item \renewcommand\item{\needspace{\qreserve}\qsaveitem}}}
+\setlist[enumerate,2]{leftmargin=1.8em, itemsep=0pt, topsep=0.1em, parsep=0pt, label=(\alph*),
+  before={\ifdefined\qsaveitem\let\item\qsaveitem\fi}}
 
 % --- Code block style ---
 \lstset{
