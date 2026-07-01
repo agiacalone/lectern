@@ -261,6 +261,41 @@ answered with a specific slide and date.
 
 ---
 
+## Page-break discipline — questions stay whole
+
+*(Added for issue #29.)* By default the template keeps each question from
+splitting across a page boundary — a stem stranded at the bottom of a page with
+its choices pushed to the next page is both harder to read and an appeal vector
+("I never saw part (d)") on a proctored paper exam.
+
+How it works, entirely in the template preamble (no authoring change, no build
+change):
+
+- **`\qreserve` reserve.** A `before` hook on the level-1 (question) `enumerate`
+  wraps each `\item` with `\needspace{\qreserve}` (default `5\baselineskip`). If
+  that much vertical space isn't left on the page, the whole question moves to
+  the next page instead of splitting. The level-2 (choice) `enumerate` restores
+  the plain `\item`, so individual choices are never space-reserved.
+- **Stem↔choices glue.** `\@beginparpenalty=9999` discourages a page break
+  between a stem paragraph and its choice list.
+- **Widow/orphan damping.** `\clubpenalty`/`\widowpenalty` at `10000`.
+- **`\raggedbottom`.** Pages are allowed to run short rather than stretch to
+  force-fit a question.
+
+**Tuning.** `\qreserve` is a normal macro — raise it for choice-heavy or
+code-heavy forms (`\renewcommand{\qreserve}{7\baselineskip}` after the preamble),
+lower it to pack more per page. Very tall items (long code listings, `\writelines`
+short-answer blocks) can still break across pages by design; the reserve only
+guarantees the question *starts* with room for its opening lines.
+
+**Parser-safe.** The authored `\item ... \textit{(N pts)}` question pattern is
+unchanged, so `exam_pack` form-splitting (`_QSTART_RE` / `_PTS_RE`) and outline
+parsing are unaffected — the break control lives only in list metrics.
+
+**Verification.** A 40-question stress build (four choices each) splits 3
+questions with the pre-#29 template and **0** with the current template, at the
+same page count.
+
 ## Compile discipline
 
 Delete derived files before regenerating — synced binary files have a race
