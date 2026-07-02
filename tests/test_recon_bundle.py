@@ -27,6 +27,10 @@ def test_write_bundle_emits_all_artifacts(tmp_path):
     assert {r["github_id"] for r in rows} == {"Alpha","Beta"}
     assert any(r["points"] == "70" for r in rows)
     assert any(r["feedback_pr"].endswith("/pull/1") for r in rows)
+    # `cleared` lists the challenge keys each repo passed (feeds the ward-clear funnel)
+    by_id = {r["github_id"]: r for r in rows}
+    assert by_id["Alpha"]["cleared"] == "ward1"   # passed
+    assert by_id["Beta"]["cleared"] == ""         # failed → nothing cleared
     facts = (out / "FACTS.md").read_text()
     assert "Lab 1" in facts and "Alpha" in facts and "Beta" in facts
     assert "Feedback" in facts

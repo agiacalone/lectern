@@ -58,7 +58,7 @@ def render_report(bundle_dir, cohort_csv, manifest, *, standing_csv=None):
     hist_bins = [("<70", 0, 70), ("70-79", 70, 80), ("80-89", 80, 90), ("90-100", 90, 100)]
     ward_rows = []
     for w in manifest.wards:
-        cleared = sum(1 for r in rows if w.key in (r.get("cleared", "") or ""))
+        cleared = sum(1 for r in rows if w.key in (r.get("cleared", "") or "").split())
         ward_rows.append((w.label, cleared))
     rec = recommend(rows, standing, manifest)
 
@@ -93,6 +93,43 @@ def render_report(bundle_dir, cohort_csv, manifest, *, standing_csv=None):
         else:
             out.append("- _none_")
         out.append("")
+
+    # Per-student feedback + grades. This section is a GRADING SCAFFOLD as much as a
+    # record: graded rows show the verbatim student-facing comment; ungraded
+    # submissions render a `_Comments:_` placeholder to be filled by LLM agentic
+    # grading (the reg-lab-digest fan-out — see docs/lab-digest-grader-prompt.md),
+    # NOT scripted; non-submissions render nothing to grade. The block quote is what
+    # `deliver` ships verbatim; the `<!-- internal -->` line is stripped at delivery.
+    total_max = manifest.auto_max + manifest.writeup_max
+    def _submitted(r):
+        return str(r.get("doc_present", "")).lower() in ("true", "1", "yes") or r["points"] > 0
+    out.append("## Per-student feedback & grades\n")
+    out.append("> [!note] The block quote under each student is the **student-facing** text "
+               "`reg-lab-report deliver` ships verbatim to their `FEEDBACK.md`; the "
+               "`<!-- internal -->` line (forensic notes + flags) is **stripped at delivery**. "
+               "A `> _Comments:_` placeholder marks an **ungraded** submission — the comment prose "
+               "is filled by **LLM agentic grading** (`reg-lab-digest`, per "
+               "`docs/lab-digest-grader-prompt.md`), never scripted; `deliver` skips any block "
+               "still holding the placeholder.\n")
+    for r in sorted(rows, key=lambda r: -r["proposed"]):
+        sc = (r.get("student_comment") or "").strip()
+        ic = (r.get("writeup_comment") or "").strip()
+        flags = r["writeup_flags"]
+        graded = bool(sc)
+        submitted = _submitted(r)
+        grade = (f"{r['proposed']} / {total_max}" if graded
+                 else f"__ / {total_max}" if submitted
+                 else f"0 / {total_max}")
+        wr = "__" if (submitted and not graded) else r["writeup_score"]
+        out.append(f"### {r['student']} — **{grade}**")
+        out.append(f"*github: `{r['github_id']}` · Auto {r['points']}/{manifest.auto_max} · "
+                   f"Writeup {wr}/{manifest.writeup_max}*\n")
+        out.append(f"> {sc}\n" if graded
+                   else "> _Comments:_ \n" if submitted
+                   else "> _no submission_\n")
+        if ic or flags:
+            fl = f" — flags: {', '.join(flags)}" if flags else ""
+            out.append(f"<!-- internal: {ic}{fl} -->\n")
 
     out.append("## Canvas entry sheet\n")
     out.append("| Student (Last, First) | Proposed |")

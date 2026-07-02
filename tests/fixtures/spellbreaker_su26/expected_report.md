@@ -93,6 +93,185 @@ OMEGA — padding oracle      ▏██████████████ 13
 - **Slade Wilson** (gh-user-14) — 79.0% — within 1.0 of B cut
 - **Oswald Cobblepot** (gh-user-17) — 70.0% — within 1.0 of C cut
 
+## Per-student feedback & grades
+
+> [!note] The block quote under each student is the **student-facing** text `reg-lab-report deliver` ships verbatim to their `FEEDBACK.md`; the `<!-- internal -->` line (forensic notes + flags) is **stripped at delivery**. A `> _Comments:_` placeholder marks an **ungraded** submission — the comment prose is filled by **LLM agentic grading** (`reg-lab-digest`, per `docs/lab-digest-grader-prompt.md`), never scripted; `deliver` skips any block still holding the placeholder.
+
+### Selina Kyle — **100 / 100**
+*github: `gh-user-06` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Edward Nashton — **100 / 100**
+*github: `gh-user-09` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Harvey Bullock — **100 / 100**
+*github: `gh-user-25` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Harvey Dent — **100 / 100**
+*github: `gh-user-24` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Roman Sionis — **100 / 100**
+*github: `gh-user-11` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Luke Fox — **100 / 100**
+*github: `gh-user-23` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### James Gordon — **100 / 100**
+*github: `gh-user-07` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Victoria Zsasz — **100 / 100**
+*github: `gh-user-05` · Auto 70/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Jason Todd — **98 / 100**
+*github: `gh-user-22` · Auto 70/70 · Writeup 28/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Kate Kane — **94 / 100**
+*github: `gh-user-15` · Auto 70/70 · Writeup 24/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Dick Grayson — **94 / 100**
+*github: `gh-user-19` · Auto 70/70 · Writeup 24/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Floyd Lawton — **90 / 100**
+*github: `gh-user-12` · Auto 60/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Basil Karlo — **90 / 100**
+*github: `gh-user-10` · Auto 60/70 · Writeup 30/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Barbara Gordon — **88 / 100**
+*github: `gh-user-03` · Auto 60/70 · Writeup 28/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Pamela Isley — **87 / 100**
+*github: `gh-user-01` · Auto 60/70 · Writeup 27/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Harleen Quinzel — **87 / 100**
+*github: `gh-user-08` · Auto 60/70 · Writeup 27/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Cassandra Cain — **87 / 100**
+*github: `gh-user-02` · Auto 70/70 · Writeup 17/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Renee Montoya — **84 / 100**
+*github: `gh-user-13` · Auto 60/70 · Writeup 24/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Bruce Wayne — **82 / 100**
+*github: `gh-user-20` · Auto 60/70 · Writeup 22/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Slade Wilson — **79 / 100**
+*github: `gh-user-14` · Auto 60/70 · Writeup 19/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Waylon Jones — **78 / 100**
+*github: `gh-user-16` · Auto 60/70 · Writeup 18/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Oswald Cobblepot — **70 / 100**
+*github: `gh-user-17` · Auto 55/70 · Writeup 15/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Alfreda Pennyworth — **43 / 100**
+*github: `gh-user-18` · Auto 35/70 · Writeup 8/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Jervis Tetch — **14 / 100**
+*github: `gh-user-21` · Auto 10/70 · Writeup 4/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
+### Stephanie Brown — **0 / 100**
+*github: `gh-user-04` · Auto 0/70 · Writeup 0/30*
+
+> Student-facing feedback.
+
+<!-- internal: internal note -->
+
 ## Canvas entry sheet
 
 | Student (Last, First) | Proposed |

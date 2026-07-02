@@ -22,7 +22,7 @@ def write_bundle(records: list[RepoRecord], out_dir: Path, *,
         {"lab": lab_name, "total_points": total_points, "n": len(records)}, indent=2))
 
 def _write_cohort_csv(records: list[RepoRecord], path: Path) -> None:
-    cols = ["github_id","student","repo","points","honor_ok","all_failed",
+    cols = ["github_id","student","repo","points","honor_ok","all_failed","cleared",
             "commits","spread_days","triage_bucket","doc_present","sources",
             "repo_url","feedback_pr"]
     with path.open("w", newline="") as f:
@@ -30,10 +30,13 @@ def _write_cohort_csv(records: list[RepoRecord], path: Path) -> None:
         for r in records:
             ag, g = r.autograde, r.git
             doc = next(iter(r.docs.values()), None)
+            # cleared: the challenge keys this repo passed (space-joined) — feeds the
+            # report's ward-clear funnel. Empty when no autograde / nothing passed.
+            cleared = " ".join(k for k, c in ag.challenges.items() if c.passed) if ag else ""
             w.writerow({
                 "github_id": r.github_id, "student": r.student, "repo": r.repo,
                 "points": ag.points if ag else "", "honor_ok": ag.honor_ok if ag else "",
-                "all_failed": ag.all_failed if ag else "",
+                "all_failed": ag.all_failed if ag else "", "cleared": cleared,
                 "commits": g.commits if g else "", "spread_days": g.spread_days if g else "",
                 "triage_bucket": g.triage_bucket if g else "",
                 "doc_present": doc.present if doc else "", "sources": doc.sources if doc else "",

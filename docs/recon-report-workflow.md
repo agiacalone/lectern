@@ -36,3 +36,25 @@ stay visibly separated. A FLAG is a prompt to look, never a verdict.
 ## 5. Apply or investigate
 - ➊ confirm the grade table → feed `reg-gradebook` (component file).
 - ➋ open the feedback PR per flagged repo to read/leave inline comments.
+
+## 6. Per-student feedback — scaffold → LLM fill → deliver (standard practice)
+`reg-lab-report render` always emits a **`## Per-student feedback & grades`** section, so
+`REPORT.md` is a complete "report + feedback" document. Each student block is a **grading
+scaffold**, not just a record:
+
+- **Graded** (cohort row has a `student_comment`) → renders the grade + the verbatim
+  student-facing comment as a block quote, plus a stripped `<!-- internal -->` note.
+- **Ungraded submission** (writeup present, no comment yet) → renders a `> _Comments:_`
+  **placeholder** with a `__` grade. This is the hand-off point.
+- **Non-submission** → `> _no submission_`, nothing to grade.
+
+**The comment prose is filled by LLM agentic grading, never scripted.** Lectern deliberately
+does not generate feedback text — it scaffolds the placeholders and the `reg-lab-digest`
+fan-out (one agent per writeup, contract in [`lab-digest-grader-prompt.md`](lab-digest-grader-prompt.md))
+fills each `student_comment` against the rubric. `merge` writes those comments back into
+`cohort.csv`, and the next `render` promotes each placeholder to a filled block.
+
+Delivery is note-authoritative and placeholder-safe: `reg-lab-report deliver --from-note REPORT.md`
+(or `--cohort cohort.csv`) ships each student's block quote verbatim to their `FEEDBACK.md` and
+**skips any block still holding the `_Comments:_` placeholder** — so an unfinished grading pass
+never ships blanks. Full close-out sequence: the grading-close-out runbook.
