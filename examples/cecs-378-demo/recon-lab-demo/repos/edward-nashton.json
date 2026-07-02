@@ -1,0 +1,68 @@
+{
+  "github_id": "edward-nashton",
+  "student": "Edward Nashton",
+  "repo": "cecs-378-su26-01-lab-03-buffer-overflow-edward-nashton",
+  "grading_commit": "edwa0f0108",
+  "autograde": {
+    "all_failed": true,
+    "honor_ok": true,
+    "max": 100,
+    "points": 0,
+    "commit": "edwa0f0108",
+    "challenges": {
+      "phi": {
+        "key": "phi",
+        "max": 60,
+        "passed": false,
+        "points": 0
+      },
+      "omega": {
+        "key": "omega",
+        "max": 10,
+        "passed": false,
+        "points": 0
+      }
+    }
+  },
+  "git": {
+    "commits": 12,
+    "deletions": 0,
+    "force_pushes": 0,
+    "largest_add": 1,
+    "spread_days": 30.0,
+    "triage_bucket": "PASS",
+    "triage_score": 60,
+    "notable_messages": [
+      "checkin: shell not popping",
+      "wip payload",
+      "try fix offset",
+      "recon",
+      "GitHub Classroom Feedback"
+    ]
+  },
+  "docs": {
+    "writeup": {
+      "label": "writeup",
+      "present": true,
+      "raw_path": "writeups/edward-nashton.md",
+      "frontmatter": {
+        "csulb-id": "040100108",
+        "real-name": "Edward Nashton",
+        "handle": "edward",
+        "seed-fingerprint": "synthfp",
+        "honor-flag": "CECS378{honor_demo}"
+      },
+      "sections": [
+        "After-Action Report -- Buffer Overflow Lab"
+      ],
+      "sources": 1,
+      "word_count": 1400
+    }
+  },
+  "links": {
+    "docs": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-edward-nashton/blob/edwa0f0108/student/WRITEUP.md",
+    "repo": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-edward-nashton",
+    "feedback_branch": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-edward-nashton/tree/feedback",
+    "feedback_pr": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-edward-nashton/pull/1"
+  }
+}

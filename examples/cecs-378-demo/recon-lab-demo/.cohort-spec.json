@@ -1,0 +1,18 @@
+{
+  "lab": "Lab 3 — Buffer Overflow (demo)",
+  "org": "Gotham-CECS",
+  "repo_prefix": "cecs-378-su26-01-lab-03-buffer-overflow-",
+  "auto_max": 70, "writeup_max": 30,
+  "students": [
+    {"gid":"bruce-wayne","name":"Bruce Wayne","sid":"040100101","phi":true,"omega":true,"commits":18,"spread":29.4,"triage":"PASS","triage_score":88,"sources":2,"submitted":true,"graded":true,"quality":"strong","wr":{"target":2,"recon":6,"phi_walk":6,"omega_walk":9,"aftermath":5,"craft":2}},
+    {"gid":"barbara-gordon","name":"Barbara Gordon","sid":"040100103","phi":true,"omega":true,"commits":22,"spread":30.1,"triage":"PASS","triage_score":86,"sources":3,"submitted":true,"graded":true,"quality":"strong","wr":{"target":2,"recon":6,"phi_walk":6,"omega_walk":8,"aftermath":5,"craft":2}},
+    {"gid":"dick-grayson","name":"Dick Grayson","sid":"040100102","phi":true,"omega":true,"commits":14,"spread":28.7,"triage":"PASS","triage_score":80,"sources":1,"submitted":true,"graded":true,"quality":"good","wr":{"target":2,"recon":5,"phi_walk":6,"omega_walk":7,"aftermath":5,"craft":2}},
+    {"gid":"kate-kane","name":"Kate Kane","sid":"040100109","phi":true,"omega":true,"commits":11,"spread":30.6,"triage":"PASS","triage_score":78,"sources":1,"submitted":true,"graded":true,"quality":"good","wr":{"target":2,"recon":5,"phi_walk":5,"omega_walk":7,"aftermath":5,"craft":2}},
+    {"gid":"harvey-dent","name":"Harvey Dent","sid":"040100106","phi":true,"omega":false,"commits":9,"spread":30.5,"triage":"PASS","triage_score":72,"sources":0,"submitted":true,"graded":true,"quality":"partial","wr":{"target":2,"recon":5,"phi_walk":5,"omega_walk":0,"aftermath":4,"craft":2}},
+    {"gid":"pamela-isley","name":"Pamela Isley","sid":"040100107","phi":true,"omega":false,"commits":6,"spread":29.9,"triage":"REVIEW","triage_score":55,"sources":0,"submitted":true,"graded":true,"quality":"partial","wr":{"target":2,"recon":4,"phi_walk":5,"omega_walk":0,"aftermath":4,"craft":2}},
+    {"gid":"oswald-cobblepot","name":"Oswald Cobblepot","sid":"040100105","phi":true,"omega":false,"commits":7,"spread":30.2,"triage":"PASS","triage_score":68,"sources":0,"submitted":true,"graded":true,"quality":"partial","wr":{"target":2,"recon":4,"phi_walk":4,"omega_walk":0,"aftermath":3,"craft":2}},
+    {"gid":"edward-nashton","name":"Edward Nashton","sid":"040100108","phi":false,"omega":false,"commits":12,"spread":30.0,"triage":"PASS","triage_score":60,"sources":1,"submitted":true,"graded":true,"quality":"phase-fail","wr":{"target":2,"recon":3,"phi_walk":4,"omega_walk":1,"aftermath":2,"craft":0}},
+    {"gid":"jason-todd","name":"Jason Todd","sid":"040100110","phi":true,"omega":true,"commits":10,"spread":30.3,"triage":"PASS","triage_score":75,"sources":1,"submitted":true,"graded":false,"quality":"good","wr":null},
+    {"gid":"selina-kyle","name":"Selina Kyle","sid":"040100104","phi":false,"omega":false,"commits":0,"spread":0,"triage":"","triage_score":0,"sources":0,"submitted":false,"graded":false,"quality":"none","wr":null}
+  ]
+}

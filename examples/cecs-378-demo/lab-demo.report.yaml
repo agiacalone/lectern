@@ -1,0 +1,17 @@
+# reg-lab-report render + deliver manifest — demo buffer-overflow lab.
+course: CECS 378
+section: "01"
+term: su26
+lab: "Lab 3 — Buffer Overflow (demo)"
+org: Gotham-CECS
+repo_prefix: cecs-378-su26-01-lab-03-buffer-overflow
+auto_max: 70
+writeup_max: 30
+wards:
+  - { key: phi,   label: "Phase Φ ACE (WALK IN)" }
+  - { key: omega, label: "Phase Ω ACE (COLD STEEL)" }
+letter_cuts: { A: 90, B: 80, C: 70, D: 60 }
+bump_band: 1.0
+feedback_branch: feedback
+feedback_pr: 1
+default_branch: main

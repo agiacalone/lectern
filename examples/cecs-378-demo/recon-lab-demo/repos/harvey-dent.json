@@ -1,0 +1,68 @@
+{
+  "github_id": "harvey-dent",
+  "student": "Harvey Dent",
+  "repo": "cecs-378-su26-01-lab-03-buffer-overflow-harvey-dent",
+  "grading_commit": "harv0f0106",
+  "autograde": {
+    "all_failed": false,
+    "honor_ok": true,
+    "max": 100,
+    "points": 60,
+    "commit": "harv0f0106",
+    "challenges": {
+      "phi": {
+        "key": "phi",
+        "max": 60,
+        "passed": true,
+        "points": 60
+      },
+      "omega": {
+        "key": "omega",
+        "max": 10,
+        "passed": false,
+        "points": 0
+      }
+    }
+  },
+  "git": {
+    "commits": 9,
+    "deletions": 0,
+    "force_pushes": 0,
+    "largest_add": 1,
+    "spread_days": 30.5,
+    "triage_bucket": "PASS",
+    "triage_score": 72,
+    "notable_messages": [
+      "Writeup + Phi screenshots",
+      "Phase Phi complete",
+      "recon + offset",
+      "GitHub Classroom Feedback",
+      "init"
+    ]
+  },
+  "docs": {
+    "writeup": {
+      "label": "writeup",
+      "present": true,
+      "raw_path": "writeups/harvey-dent.md",
+      "frontmatter": {
+        "csulb-id": "040100106",
+        "real-name": "Harvey Dent",
+        "handle": "harvey",
+        "seed-fingerprint": "synthfp",
+        "honor-flag": "CECS378{honor_demo}"
+      },
+      "sections": [
+        "After-Action Report -- Buffer Overflow Lab"
+      ],
+      "sources": 0,
+      "word_count": 1400
+    }
+  },
+  "links": {
+    "docs": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-harvey-dent/blob/harv0f0106/student/WRITEUP.md",
+    "repo": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-harvey-dent",
+    "feedback_branch": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-harvey-dent/tree/feedback",
+    "feedback_pr": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-harvey-dent/pull/1"
+  }
+}

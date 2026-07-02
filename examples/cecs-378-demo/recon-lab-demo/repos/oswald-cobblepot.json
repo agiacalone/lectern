@@ -1,0 +1,68 @@
+{
+  "github_id": "oswald-cobblepot",
+  "student": "Oswald Cobblepot",
+  "repo": "cecs-378-su26-01-lab-03-buffer-overflow-oswald-cobblepot",
+  "grading_commit": "oswa0f0105",
+  "autograde": {
+    "all_failed": false,
+    "honor_ok": true,
+    "max": 100,
+    "points": 60,
+    "commit": "oswa0f0105",
+    "challenges": {
+      "phi": {
+        "key": "phi",
+        "max": 60,
+        "passed": true,
+        "points": 60
+      },
+      "omega": {
+        "key": "omega",
+        "max": 10,
+        "passed": false,
+        "points": 0
+      }
+    }
+  },
+  "git": {
+    "commits": 7,
+    "deletions": 0,
+    "force_pushes": 0,
+    "largest_add": 1,
+    "spread_days": 30.2,
+    "triage_bucket": "PASS",
+    "triage_score": 68,
+    "notable_messages": [
+      "Writeup + Phi screenshots",
+      "Phase Phi complete",
+      "recon + offset",
+      "GitHub Classroom Feedback",
+      "init"
+    ]
+  },
+  "docs": {
+    "writeup": {
+      "label": "writeup",
+      "present": true,
+      "raw_path": "writeups/oswald-cobblepot.md",
+      "frontmatter": {
+        "csulb-id": "040100105",
+        "real-name": "Oswald Cobblepot",
+        "handle": "oswald",
+        "seed-fingerprint": "synthfp",
+        "honor-flag": "CECS378{honor_demo}"
+      },
+      "sections": [
+        "After-Action Report -- Buffer Overflow Lab"
+      ],
+      "sources": 0,
+      "word_count": 1400
+    }
+  },
+  "links": {
+    "docs": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-oswald-cobblepot/blob/oswa0f0105/student/WRITEUP.md",
+    "repo": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-oswald-cobblepot",
+    "feedback_branch": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-oswald-cobblepot/tree/feedback",
+    "feedback_pr": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-oswald-cobblepot/pull/1"
+  }
+}

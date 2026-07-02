@@ -1,0 +1,68 @@
+{
+  "github_id": "pamela-isley",
+  "student": "Pamela Isley",
+  "repo": "cecs-378-su26-01-lab-03-buffer-overflow-pamela-isley",
+  "grading_commit": "pame0f0107",
+  "autograde": {
+    "all_failed": false,
+    "honor_ok": true,
+    "max": 100,
+    "points": 60,
+    "commit": "pame0f0107",
+    "challenges": {
+      "phi": {
+        "key": "phi",
+        "max": 60,
+        "passed": true,
+        "points": 60
+      },
+      "omega": {
+        "key": "omega",
+        "max": 10,
+        "passed": false,
+        "points": 0
+      }
+    }
+  },
+  "git": {
+    "commits": 6,
+    "deletions": 0,
+    "force_pushes": 0,
+    "largest_add": 1,
+    "spread_days": 29.9,
+    "triage_bucket": "REVIEW",
+    "triage_score": 55,
+    "notable_messages": [
+      "Writeup + Phi screenshots",
+      "Phase Phi complete",
+      "recon + offset",
+      "GitHub Classroom Feedback",
+      "init"
+    ]
+  },
+  "docs": {
+    "writeup": {
+      "label": "writeup",
+      "present": true,
+      "raw_path": "writeups/pamela-isley.md",
+      "frontmatter": {
+        "csulb-id": "040100107",
+        "real-name": "Pamela Isley",
+        "handle": "pamela",
+        "seed-fingerprint": "synthfp",
+        "honor-flag": "CECS378{honor_demo}"
+      },
+      "sections": [
+        "After-Action Report -- Buffer Overflow Lab"
+      ],
+      "sources": 0,
+      "word_count": 1400
+    }
+  },
+  "links": {
+    "docs": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-pamela-isley/blob/pame0f0107/student/WRITEUP.md",
+    "repo": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-pamela-isley",
+    "feedback_branch": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-pamela-isley/tree/feedback",
+    "feedback_pr": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-pamela-isley/pull/1"
+  }
+}

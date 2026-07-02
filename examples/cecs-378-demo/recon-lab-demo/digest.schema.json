@@ -1,0 +1,83 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "abstain": {
+      "type": "boolean"
+    },
+    "bonus": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "confidence": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "github_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "sections": {
+      "additionalProperties": false,
+      "properties": {
+        "aftermath": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "craft": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "omega_walk": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "phi_walk": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "recon": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "target": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "target",
+        "recon",
+        "phi_walk",
+        "omega_walk",
+        "aftermath",
+        "craft"
+      ],
+      "type": "object"
+    },
+    "student_comment": {
+      "maxLength": 600,
+      "type": "string"
+    },
+    "total": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "github_id",
+    "sections",
+    "total",
+    "comment",
+    "student_comment",
+    "confidence",
+    "abstain"
+  ],
+  "type": "object"
+}

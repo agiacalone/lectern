@@ -1,0 +1,68 @@
+{
+  "github_id": "barbara-gordon",
+  "student": "Barbara Gordon",
+  "repo": "cecs-378-su26-01-lab-03-buffer-overflow-barbara-gordon",
+  "grading_commit": "barb0f0103",
+  "autograde": {
+    "all_failed": false,
+    "honor_ok": true,
+    "max": 100,
+    "points": 70,
+    "commit": "barb0f0103",
+    "challenges": {
+      "phi": {
+        "key": "phi",
+        "max": 60,
+        "passed": true,
+        "points": 60
+      },
+      "omega": {
+        "key": "omega",
+        "max": 10,
+        "passed": true,
+        "points": 10
+      }
+    }
+  },
+  "git": {
+    "commits": 22,
+    "deletions": 0,
+    "force_pushes": 0,
+    "largest_add": 1,
+    "spread_days": 30.1,
+    "triage_bucket": "PASS",
+    "triage_score": 86,
+    "notable_messages": [
+      "Complete BO lab: both phases + writeup",
+      "Add Phase Omega ret2libc chain",
+      "Add screenshots",
+      "Refine exploit1 leak parse",
+      "Initial recon + offset"
+    ]
+  },
+  "docs": {
+    "writeup": {
+      "label": "writeup",
+      "present": true,
+      "raw_path": "writeups/barbara-gordon.md",
+      "frontmatter": {
+        "csulb-id": "040100103",
+        "real-name": "Barbara Gordon",
+        "handle": "barbara",
+        "seed-fingerprint": "synthfp",
+        "honor-flag": "CECS378{honor_demo}"
+      },
+      "sections": [
+        "After-Action Report -- Buffer Overflow Lab"
+      ],
+      "sources": 3,
+      "word_count": 1400
+    }
+  },
+  "links": {
+    "docs": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-barbara-gordon/blob/barb0f0103/student/WRITEUP.md",
+    "repo": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-barbara-gordon",
+    "feedback_branch": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-barbara-gordon/tree/feedback",
+    "feedback_pr": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-barbara-gordon/pull/1"
+  }
+}
