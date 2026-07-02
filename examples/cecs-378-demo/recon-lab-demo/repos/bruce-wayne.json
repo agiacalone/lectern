@@ -1,0 +1,68 @@
+{
+  "github_id": "bruce-wayne",
+  "student": "Bruce Wayne",
+  "repo": "cecs-378-su26-01-lab-03-buffer-overflow-bruce-wayne",
+  "grading_commit": "bruc0f0101",
+  "autograde": {
+    "all_failed": false,
+    "honor_ok": true,
+    "max": 100,
+    "points": 70,
+    "commit": "bruc0f0101",
+    "challenges": {
+      "phi": {
+        "key": "phi",
+        "max": 60,
+        "passed": true,
+        "points": 60
+      },
+      "omega": {
+        "key": "omega",
+        "max": 10,
+        "passed": true,
+        "points": 10
+      }
+    }
+  },
+  "git": {
+    "commits": 18,
+    "deletions": 0,
+    "force_pushes": 0,
+    "largest_add": 1,
+    "spread_days": 29.4,
+    "triage_bucket": "PASS",
+    "triage_score": 88,
+    "notable_messages": [
+      "Complete BO lab: both phases + writeup",
+      "Add Phase Omega ret2libc chain",
+      "Add screenshots",
+      "Refine exploit1 leak parse",
+      "Initial recon + offset"
+    ]
+  },
+  "docs": {
+    "writeup": {
+      "label": "writeup",
+      "present": true,
+      "raw_path": "writeups/bruce-wayne.md",
+      "frontmatter": {
+        "csulb-id": "040100101",
+        "real-name": "Bruce Wayne",
+        "handle": "bruce",
+        "seed-fingerprint": "synthfp",
+        "honor-flag": "CECS378{honor_demo}"
+      },
+      "sections": [
+        "After-Action Report -- Buffer Overflow Lab"
+      ],
+      "sources": 2,
+      "word_count": 1400
+    }
+  },
+  "links": {
+    "docs": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-bruce-wayne/blob/bruc0f0101/student/WRITEUP.md",
+    "repo": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-bruce-wayne",
+    "feedback_branch": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-bruce-wayne/tree/feedback",
+    "feedback_pr": "https://github.com/Gotham-CECS/cecs-378-su26-01-lab-03-buffer-overflow-bruce-wayne/pull/1"
+  }
+}

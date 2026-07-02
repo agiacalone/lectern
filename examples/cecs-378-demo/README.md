@@ -26,6 +26,10 @@ Files in this directory:
 | `gradescope-stats/` | Synthetic Gradescope evaluations + `reg-gradescope-stats` item analysis |
 | `exam1/products/` | Per-exam reading-list study guide from `reg-exam-readinglist` |
 | `gradebook-out/` | `gradebook.csv` + `gradebook.md` from `reg-gradebook import` |
+| `lab-demo.recon.yaml` | `reg-lab-recon` manifest for the demo buffer-overflow lab |
+| `lab-demo.rubric.yaml` | Writeup rubric consumed by `reg-lab-digest` |
+| `lab-demo.report.yaml` | `reg-lab-report` render + deliver manifest |
+| `recon-lab-demo/` | Pre-built **recon bundle** (10 synthetic repos) + digest/report outputs — Stage G |
 
 ---
 
@@ -446,6 +450,91 @@ counts, and flags **dead** distractors (chosen by nobody) and possible **miskeys
 
 ---
 
+## Stage G — Grade a lab (recon → digest → report → feedback)
+
+The lab-grading pipeline is separate from the exam flow: **`reg-lab-recon`** sweeps a
+lab's student repos into a *recon bundle*, **`reg-lab-digest`** grades the writeups, and
+**`reg-lab-report`** renders the instructor report and delivers signed feedback.
+
+`reg-lab-recon` needs cloned student repos (GitHub) — see the live-infra note below. This
+directory ships the bundle it would produce at **`recon-lab-demo/`** (10 synthetic
+students; a buffer-overflow lab with autograded **Phase Φ / Phase Ω** + a 30-pt writeup),
+so every command below runs offline and for real.
+
+Bundle contents (`recon-lab-demo/`):
+
+| File | Purpose |
+|------|---------|
+| `cohort.csv` | Part-A facts per repo (autograde `points`, `cleared` phases, triage, `doc_present`) |
+| `FACTS.md` | Audit-grade facts table |
+| `repos/<id>.json` | Per-repo metadata (autograde challenges, git story, links) |
+| `writeups/<id>.md` | Each student's extracted `WRITEUP.md` |
+
+### 15. Digest — grade the writeups
+
+Emit a work-list, let the harness grade it, then merge the results:
+
+```sh
+reg-lab-digest emit --bundle recon-lab-demo --rubric lab-demo.rubric.yaml \
+    --out recon-lab-demo/digest_tasks.jsonl
+```
+
+```
+→ digest: 9 task(s) to grade   # 8 submitters + 1 not-yet-graded; the no-submission is skipped
+```
+
+`digest_tasks.jsonl` + `digest.schema.json` are the contract an **agent grader** consumes
+(see [`docs/lab-digest-grader-prompt.md`](../../docs/lab-digest-grader-prompt.md)); it
+returns one result line per student. A sample result set ships at
+`recon-lab-demo/digest_results.jsonl` — **Jason Todd is left ungraded on purpose**, to
+exercise the report's placeholder path. Merge it:
+
+```sh
+reg-lab-digest merge --bundle recon-lab-demo --rubric lab-demo.rubric.yaml \
+    --results recon-lab-demo/digest_results.jsonl
+```
+
+```
+→ digest: merged 8 scored, 0 withheld -> recon-lab-demo/cohort.csv
+```
+
+`merge` never overwrites autograde truth — it only adds `writeup_score` / comments and
+recomputes the total (capped, partial-ward-zeroed).
+
+### 16. Report — render the instructor report
+
+```sh
+reg-lab-report render --bundle recon-lab-demo --cohort recon-lab-demo/cohort.csv \
+    --manifest lab-demo.report.yaml --out recon-lab-demo/REPORT.md
+```
+
+`REPORT.md` is a complete *report + feedback* document:
+
+- **Distribution** — grade bands, score histogram, and a **ward-clear funnel** (Φ 8 / Ω 5),
+  counted from the `cleared` column recon emits.
+- **Grade table** + four-bucket **recommendations** + a **Canvas entry sheet**.
+- **Per-student feedback & grades** — a grading *scaffold*: graded rows carry the verbatim
+  student-facing comment (with a stripped `<!-- internal -->` note); an **ungraded
+  submission** (Jason Todd) renders a `> _Comments:_` placeholder for the LLM-grading
+  hand-off; a **non-submission** (Selina Kyle) renders `> _no submission_`.
+
+### 17. Feedback — deliver (dry-run)
+
+```sh
+reg-lab-report deliver --cohort recon-lab-demo/cohort.csv --manifest lab-demo.report.yaml \
+    --skip selina-kyle --log-out recon-lab-demo/FEEDBACK_LOG.md
+```
+
+```
+→ DRY-RUN: 9 repos
+```
+
+Dry-run writes a verbatim `FEEDBACK_LOG.md` and touches nothing. Adding `--execute` signs
+each student's `FEEDBACK.md`, pushes it to the repo's `feedback` branch, and merges to
+`main` — that needs the real repos + a signing key (live-infra note below).
+
+---
+
 ## Commands requiring live infrastructure
 
 These lectern commands are part of the workflow but need external systems, so they
@@ -461,6 +550,12 @@ are documented here rather than run in this self-contained demo:
 - **`reg-triage`** — git-history authenticity triage over a lab's student-repo
   population: `sweep` → FLAG/REVIEW/PASS, `report` → two-tier audit (needs cloned
   student repos / an org to scrape).
+- **`reg-lab-recon`** — sweep a lab's student repos into the recon bundle that
+  Stage G consumes (needs cloned student repos / a Classroom org). The pre-built
+  `recon-lab-demo/` is what it produces.
+- **`reg-lab-report deliver --execute`** — sign each student's `FEEDBACK.md`, push it
+  to the `feedback` branch, and merge to `main` (needs the real repos + a GPG signing
+  key). The `--dry-run` form in Stage G runs offline.
 - **`reg-term-finalize`** — reconcile grade distributions, flip section statuses to
   finalized, roll up enrollment-weighted aggregates (needs the populated vault term tree).
 
@@ -500,6 +595,10 @@ for this example — they do not reproduce any live exam bank.
 - `exam1.tex`, `cecs-378-question-bank.md`, the syllabus, and the
   `gradescope-stats/` evaluations all contain fresh synthetic content written for
   this demo; none reproduce any live or past CECS 378 material, grades, or roster.
+- The `recon-lab-demo/` bundle (Stage G) is entirely synthetic: a fictional
+  `Gotham-CECS` org, fabricated buffer-overflow writeups with fake `0xffff`-range
+  addresses and `CECS378{…}` flags, and invented autograde/commit metadata. No real
+  lab source, exploit, repo, or student appears in it.
 - The `@student.csulb.edu` emails in the synthetic Gradescope export are fabricated
   for the demo students and resolve to no real accounts.
 - No internal infrastructure hostnames, real email addresses, real course sections,

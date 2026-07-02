@@ -1,0 +1,23 @@
+# reg-lab-recon manifest — CECS 378 demo buffer-overflow lab.
+# recon itself needs cloned student repos (GitHub) → see the live-infra note in
+# the README; this directory ships the pre-built bundle recon-lab-demo/ that recon
+# would produce, so the digest + report stages below run offline and for real.
+assignment:
+  course: CECS 378
+  section: "01"
+  term: su26
+  name: "Lab 3 — Buffer Overflow (demo)"
+  org: Gotham-CECS
+  repo_prefix: "cecs-378-su26-01-lab-03-buffer-overflow-"
+  total_points: 100
+autograde:
+  workflow: autograde.yml
+  branch: main
+  result_artifact: grading-result
+  result_path: grading/result.json
+docs:
+  - { file: student/WRITEUP.md, label: writeup, summarize: true, points: 30 }
+git:
+  profile: short-project
+report:
+  triage: surface

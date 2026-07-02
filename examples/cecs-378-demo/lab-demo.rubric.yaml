@@ -1,0 +1,125 @@
+# Buffer Overflow (Lab 3) — machine-readable writeup rubric (30 pts)
+# Human-readable source: classes/378-478/labs/378-buffer_overflow/buffer_overflow_lab_grading_rubric.md
+# Anchor philosophy: mechanism-over-outcome — "the leak gave me X, which let me do Y" earns full;
+#   "I ran the exploit" earns near-zero.  Full/Solid/Weak/Absent → strong/adequate/weak/missing.
+# NOTE: §5 craft (2) was added 2026-07-02 to reconcile the writeup to its stated 30-pt total
+#   (the section maxes previously summed to 28). Writeup sections carry NO requires_cleared:
+#   per the rubric, the writeup is graded on its merits independent of the autograded phases.
+
+lab: "Lab 3 — Buffer Overflow (Phase Φ WALK IN / Phase Ω COLD STEEL)"
+total: 30
+comment_max_chars: 140
+student_comment_max_chars: 600
+cap: 30
+
+sections:
+  - key: target
+    label: "§0 TARGET — environment + seed fingerprint"
+    max: 2
+    anchors:
+      strong: >-
+        States where the work was done (Codespace or local) and the dates, and
+        pastes the `make print-seed` line, which matches the `seed-fingerprint:`
+        in the WRITEUP frontmatter.
+      adequate: >-
+        Filled in but missing one element — dates absent, or the fingerprint is
+        pasted without the contextual env/date line.
+      weak: >-
+        Fingerprint or environment stated but it does not appear to match the
+        frontmatter (flag for instructor).
+      missing: >-
+        Empty or placeholder text unchanged.
+
+  - key: recon
+    label: "§1 RECON — gdb output + offset derivation"
+    max: 6
+    anchors:
+      strong: >-
+        Both `info frame` and `x/40wx $esp` pasted from their OWN vuln1 and vuln2
+        (addresses non-trivially seed-specific), and the offset derivation is
+        shown — not merely "the offset was 76".
+      adequate: >-
+        gdb output present and offset reasoning sketched, with small gaps (e.g.
+        shows the offset for vuln1 but not vuln2, or the arithmetic is implicit).
+      weak: >-
+        One of: gdb output but no offset reasoning; offset claimed with no gdb
+        output; output present but identical to another student's addresses
+        (seed collision impossible → flag for instructor).
+      missing: >-
+        No gdb output at all.
+
+  - key: phi_walk
+    label: "§2 Phase Φ walkthrough (exploit1.c)"
+    max: 6
+    anchors:
+      strong: >-
+        Answers all four sub-questions — why those shellcode bytes, why the NOP
+        sled is sized as it is, where the offset came from, and the exact line
+        that reads the leaked `&buffer` from vuln1's stdout and how it is used in
+        the payload — tied to specific lines of THEIR exploit1.c.
+      adequate: >-
+        Three of four sub-questions, or all four but shallow on one (e.g. "I used
+        standard execve shellcode" with no reason for those bytes).
+      weak: >-
+        One or two sub-questions; mostly restates the prompt without engaging
+        with their own code.
+      missing: >-
+        No walkthrough.
+
+  - key: omega_walk
+    label: "§3 Phase Ω walkthrough (4 sub-parts: fail-analysis, libc offsets, setuid, gadget)"
+    max: 9
+    anchors:
+      strong: >-
+        All four sub-parts full: (3a) pastes the segfault/signal AND explains the
+        non-executable stack (no `-z execstack`); (3b) names the tools and shows
+        the actual offsets for system/exit/setreuid/"/bin/sh"; (3c) correctly
+        explains why the naive shell drops the setuid `oracle` privilege and names
+        the `setreuid(geteuid(),geteuid())` fix with a man-page cite; (3d) names
+        the gadget-finding tool, gives the pop/pop/ret address + disassembly of
+        the three instructions, and why it is needed.
+      adequate: >-
+        Three of the four sub-parts solid, or all four present but thin on the
+        "why" (e.g. offsets shown but commands omitted; gadget address without
+        disassembly).
+      weak: >-
+        One or two sub-parts; mechanism vague, a wrong fix ("you need root"), or
+        prompt restated.
+      missing: >-
+        Section empty.
+
+  - key: aftermath
+    label: "§4 AFTERMATH — four reflections (1.25 each)"
+    max: 5
+    anchors:
+      strong: >-
+        All four reflections substantive: a real opinion on which phase was
+        harder; a no-leak counterfactual naming a concrete primitive (format
+        string / side channel / low-entropy brute force / partial overwrite /
+        "stuck without a leak"); the canary answer names `__stack_chk_fail` /
+        abort-before-RIP; and a SPECIFIC cited section (Phrack 49:14 / GNU Coding
+        Standards / TAOUP / POSIX) with a non-platitude "why it matters".
+      adequate: >-
+        Three substantive and one thin, or two substantive and two thin.
+      weak: >-
+        One substantive reflection; the rest vague or "both were hard".
+      missing: >-
+        Section empty.
+
+  - key: craft
+    label: "§5 craft — commented exploit code + required screenshots"
+    max: 2
+    anchors:
+      strong: >-
+        exploit1.c and exploit2.c carry student-written explanatory comments (not
+        just code), all four screenshots are present (phase-phi-shell/flag,
+        phase-omega-shell/flag), and the prose is in the student's own voice.
+      adequate: >-
+        Code commented but sparse OR one-to-two screenshots missing — evidence of
+        craft but incomplete.
+      weak: >-
+        Bare uncommented exploits and/or most screenshots missing.
+      missing: >-
+        No comments and no screenshots.
+
+bonus: []
