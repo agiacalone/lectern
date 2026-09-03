@@ -84,6 +84,8 @@ def _class_note(spec: dict, sec: dict, vault: Path, created: list, skipped: list
         "term": term,
         "term-name": spec["term-name"],
         "class-number": sec["class-number"],
+        "course-dir": cdir,
+        "archive": f"archives/{term}-{sec['section']}",
         "datetime": _now_iso(),
     })
     text = set_frontmatter_fields(text, {
