@@ -1,0 +1,156 @@
+# CSULB Notice of Absence — form profile for reg-admin-form.
+#
+# Route: SSO → "Notice of Absence" chiclet → opens in DocuSign → complete →
+# submit. DocuSign asks for the routing addresses by hand; they are pinned below
+# so they are never retyped from memory.
+#
+# ⚠ The `fields:` list is the shape of the DocuSign packet as of 2026-09.
+# If the packet asks for something else, edit THIS FILE — not the code. Fields
+# with `source: prompt` are the ones only a human can answer.
+
+form: notice-of-absence
+title: CSULB Notice of Absence
+authority: SSO → "Notice of Absence" chiclet (opens in DocuSign)
+submit-via: DocuSign
+hours-per-day: 8
+
+# Standing routing, per Raquel Porter's 2026-09-04 instructions.
+routing:
+  - role: Department Chair
+    email: Shadnaz.Asgari@csulb.edu
+    to: true
+  - role: CC — Department Coordinator / Timekeeper
+    email: Raquel.Porter@csulb.edu
+  - role: CC — Associate Dean
+    email: Antonella.Sciortino@csulb.edu
+
+leave-types:
+  sick:
+    label: Sick Leave
+    key: sick
+    note: Own illness, injury, or medical appointment.
+  personal-holiday:
+    label: Personal Holiday
+    key: personal-holiday
+    note: One per calendar year; does not carry over.
+    # The personal holiday is contractual time off, not discretionary leave the
+    # campus grants on the strength of a reason. Nobody is owed one.
+    omit: [justification]
+    guidance: >-
+      A personal holiday is contractual and needs no reason. Do not volunteer
+      one — if DocuSign forces the box, "Personal holiday" is a complete answer.
+  personal-business:
+    label: Personal Business
+    key: personal-business
+    note: Charged against sick leave, capped per the CBA.
+  family-illness:
+    label: Sick Leave — Family Care
+    key: family-illness
+    note: Illness of a family member, charged against sick leave.
+  bereavement:
+    label: Bereavement Leave
+    key: bereavement
+  jury-duty:
+    label: Jury Duty
+    key: jury-duty
+  professional-development:
+    label: Professional Development / Conference
+    key: professional-development
+    note: Attach the agenda or acceptance when one exists.
+
+fields:
+  - label: Employee Name
+    key: employee-name
+    source: instructor.name
+  - label: Employee ID
+    key: employee-id
+    source: instructor.employee-id
+    hint: From the paystub or the SSO profile page.
+  - label: Department
+    key: department
+    source: instructor.department
+  - label: College
+    key: college
+    source: instructor.college
+  - label: Classification / Title
+    key: title
+    source: instructor.title
+  - label: Type of Absence
+    key: leave-type
+    source: leave.label
+  - label: Date(s) of Absence
+    key: absence-dates
+    source: absence.dates
+  - label: First Day of Absence
+    key: first-day
+    source: absence.first
+  - label: Last Day of Absence
+    key: last-day
+    source: absence.last
+  - label: Total Days
+    key: day-count
+    source: absence.day-count
+  - label: Total Hours Charged
+    key: hours
+    source: absence.hours
+    hint: >-
+      Default is 8 hours per absence day. Scheduled contact hours for these
+      dates are reported separately below — check which figure the timekeeper
+      wants before submitting.
+  - label: Scheduled Contact Hours Missed
+    key: contact-hours
+    source: absence.contact-hours
+    hint: Sum of the affected class meetings, from the term-spec meeting patterns.
+  - label: Classes Affected
+    key: classes-affected
+    source: classes.lines
+    block: true
+  - label: Coverage / Arrangements for Classes
+    key: coverage
+    source: prompt
+    block: true
+    hint: >-
+      What actually happens to each meeting — canceled with async work posted,
+      covered by a colleague or ISA, or made up. Name the mechanism per section.
+  - label: Reason / Justification
+    key: justification
+    source: prompt
+    block: true
+    hint: One or two sentences. Medical detail is not required and not wanted.
+  - label: Department Chair (email)
+    key: chair-email
+    source: literal:Shadnaz.Asgari@csulb.edu
+  - label: CC — Department Coordinator / Timekeeper (email)
+    key: coordinator-email
+    source: literal:Raquel.Porter@csulb.edu
+  - label: CC — Associate Dean (email)
+    key: dean-email
+    source: literal:Antonella.Sciortino@csulb.edu
+  - label: Date Submitted
+    key: date-submitted
+    source: today.long
+
+email:
+  # The heads-up goes to the timekeeper who processes it; the chair is copied.
+  # DocuSign handles the chair's signature separately, via `routing:` above.
+  to: Raquel.Porter@csulb.edu
+  cc: [Shadnaz.Asgari@csulb.edu]
+  subject: "Notice of Absence — {{leave-type}}, {{absence.dates}}"
+  body: |
+    Hi Raquel,
+
+    I'm submitting a Notice of Absence for {{leave-type}} on {{absence.dates}}.
+
+    Classes affected:
+
+    {{classes.lines}}
+
+    Coverage:
+
+    {{coverage}}
+
+    I'll complete the form in DocuSign and route it to Dr. Asgari, with you and
+    Dr. Sciortino copied.
+
+    Thank you,
+    Anthony
