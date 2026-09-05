@@ -533,6 +533,92 @@ def render_record(ctx: Context, fields: list[dict]) -> str:
     return yaml.dump(record, sort_keys=False, allow_unicode=True, width=100)
 
 
+def render_note(ctx: Context, fields: list[dict]) -> str:
+    """The Obsidian-native record note — frontmatter + the human summary.
+
+    ``record.yaml`` is for programs; this is the note Anthony actually opens,
+    links to, and can run a Dataview over ("what did I take off this term?").
+    ``status`` starts at ``draft`` and is flipped to ``submitted`` by hand once
+    DocuSign is through, because only a human knows that it went.
+    """
+    values = {f["key"]: f["value"] for f in fields}
+    slug_type = ctx.leave_type.get("key", "absence")
+    title = (f"{ctx.profile['title']} — {ctx.leave_type.get('label', 'Absence')}, "
+             f"{ctx.absence_dates[0].isoformat()}")
+    fm = {
+        "type": "absence-record",
+        "title": title,
+        "form": ctx.profile["form"],
+        "leave-type": ctx.leave_type.get("label"),
+        "leave-type-key": slug_type,
+        "term": ctx.spec.get("term"),
+        "dates": [d.isoformat() for d in ctx.absence_dates],
+        "day-count": len(ctx.absence_dates),
+        "hours": ctx.hours,
+        "contact-hours": _num(values.get("contact-hours")),
+        "sections-affected": ctx.affected_sections,
+        "status": "draft",
+        "prepared": ctx.today.isoformat(),
+        "submitted": None,
+        "tags": ["absence", "admin", "teaching", f"term-{ctx.spec.get('term')}"],
+        "icon": "LiCalendarOff",
+        "iconColor": "var(--color-orange)",
+    }
+    out = ["---",
+           yaml.dump(fm, sort_keys=False, allow_unicode=True).rstrip(),
+           "---", "", f"# {title}", ""]
+
+    out += ["> [!info] How this gets submitted",
+            f"> {ctx.profile.get('authority', '')}"]
+    for r in ctx.profile.get("routing", []):
+        out.append(f"> - **{r.get('role', '')}** — `{r.get('email', '')}`")
+    out.append("")
+
+    if ctx.leave_type.get("guidance"):
+        out += ["> [!note] " + ctx.leave_type.get("label", ""),
+                "> " + ctx.leave_type["guidance"].strip().replace("\n", "\n> "), ""]
+
+    out += ["## Classes affected", "", ctx.classes_table(), ""]
+    skipped = ctx.skipped_days()
+    if skipped:
+        out += ["Days in the span with no meeting:", "",
+                *[f"- {line}" for line in skipped.splitlines()], ""]
+
+    hours = values.get("hours", "")
+    contact = values.get("contact-hours", "")
+    if hours or contact:
+        out += [f"**Hours charged** {hours or '—'} · "
+                f"**scheduled contact hours missed** {contact or '—'}", ""]
+
+    if values.get("coverage"):
+        out += ["## Coverage", "", str(values["coverage"]), ""]
+    if values.get("justification"):
+        out += ["## Reason given", "", str(values["justification"]), ""]
+
+    pending = [f["label"] for f in fields if f["needs_input"]]
+    if pending:
+        out += ["> [!warning] Still needed before this can be submitted",
+                "> " + ", ".join(pending), ""]
+
+    out += ["## Products", "",
+            "- `FORM.md` — paste into DocuSign, one box at a time",
+            "- `EMAIL.md` — the heads-up to the timekeeper",
+            "- `record.yaml` — the machine record", "",
+            "---", "",
+            "*Rendered by `reg-admin-form`. Flip `status` to `submitted` once "
+            "DocuSign is through.*", ""]
+    return "\n".join(out)
+
+
+def _num(text):
+    """Best-effort numeric coercion for frontmatter, else the original text."""
+    try:
+        value = float(text)
+    except (TypeError, ValueError):
+        return text or None
+    return int(value) if value.is_integer() else value
+
+
 # ──────────────────────────────── driver ────────────────────────────────────
 
 def build_context(args) -> Context:
@@ -606,6 +692,7 @@ def cmd_render(args) -> int:
     form_md = render_form(ctx, fields)
     email_md = render_email(ctx, fields)
     record_yaml = render_record(ctx, fields)
+    note_md = render_note(ctx, fields)
 
     vault_root = Path(args.vault_root) if args.vault_root else None
     outdir = Path(args.out) if args.out else default_outdir(ctx, vault_root)
@@ -614,10 +701,14 @@ def cmd_render(args) -> int:
         (outdir / "FORM.md").write_text(form_md, encoding="utf-8")
         (outdir / "EMAIL.md").write_text(email_md, encoding="utf-8")
         (outdir / "record.yaml").write_text(record_yaml, encoding="utf-8")
+        note_name = (f"{ctx.absence_dates[0].isoformat()}-"
+                     f"{ctx.profile['form']}.md")
+        (outdir / note_name).write_text(note_md, encoding="utf-8")
 
     print(form_md)
     if not args.stdout_only:
-        print(f"\n---\nwrote {outdir}/FORM.md, EMAIL.md, record.yaml")
+        print(f"\n---\nwrote {outdir}/ — {note_name}, FORM.md, EMAIL.md, "
+              f"record.yaml")
     pending = [f["label"] for f in fields if f["needs_input"]]
     if pending:
         print(f"NOTE: {len(pending)} field(s) still need input: "

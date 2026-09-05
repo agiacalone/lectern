@@ -66,6 +66,7 @@ Three files land in
 | `FORM.md` | Paste into DocuSign, box by box. Every value is in its own fenced block. |
 | `EMAIL.md` | The heads-up to the timekeeper, To/Cc already right. |
 | `record.yaml` | Nothing, today. It is how you answer "have I used my personal day this year?" in March. |
+| `<date>-notice-of-absence.md` | The note you actually open. Frontmatter Dataview can query, so the semester note lists your absences on its own. |
 
 The supporting table is the part the form actually wants:
 
@@ -111,6 +112,26 @@ DocuSign insists on a box, "Personal holiday" is a complete answer. Nobody is
 owed the reason.
 
 Sick leave and bereavement keep the field, because those forms do ask.
+
+## Marking it submitted
+
+The record note starts at `status: draft`, because nothing the tool can see
+proves DocuSign went through. Once it has, change one line:
+
+```yaml
+status: submitted
+submitted: 2026-09-05
+```
+
+Add this to the semester note once per term and the list maintains itself:
+
+```dataview
+TABLE WITHOUT ID file.link AS "Record", leave-type AS "Type",
+  dates AS "Date(s)", hours AS "Hrs", status AS "Status"
+FROM "classes/admin-forms/records"
+WHERE type = "absence-record" AND term = this.term
+SORT dates ASC
+```
 
 ## Adding another form
 

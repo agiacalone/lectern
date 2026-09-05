@@ -408,3 +408,54 @@ def test_email_addressing_can_differ_from_docusign_routing(vault):
     out = af.render_email(ctx, af.resolve_fields(ctx))
     assert "**To:** clerk@example.edu" in out
     assert "**Cc:** chair@example.edu" in out
+
+
+# ── the Obsidian record note ────────────────────────────────────────────────
+
+def test_note_has_queryable_frontmatter(vault):
+    ctx = ctx_for(vault, type="personal-holiday")
+    note = af.render_note(ctx, af.resolve_fields(ctx))
+    fm = yaml.safe_load(note.split("---")[1])
+    assert fm["type"] == "absence-record"
+    assert fm["leave-type"] == "Personal Holiday"
+    assert fm["dates"] == ["2026-09-10"]
+    assert fm["contact-hours"] == 2.5
+    assert fm["sections-affected"] == ["CECS 378 §01", "CECS 326 §01"]
+    assert "term-fa26" in fm["tags"]
+
+
+def test_note_starts_as_a_draft_awaiting_a_human(vault):
+    """Only a person knows DocuSign actually went through."""
+    ctx = ctx_for(vault, type="sick")
+    fm = yaml.safe_load(af.render_note(ctx, af.resolve_fields(ctx)).split("---")[1])
+    assert fm["status"] == "draft"
+    assert fm["submitted"] is None
+
+
+def test_note_lists_what_is_still_missing(vault):
+    ctx = ctx_for(vault, type="sick")
+    note = af.render_note(ctx, af.resolve_fields(ctx))
+    assert "Still needed before this can be submitted" in note
+    assert "Coverage" in note
+
+
+def test_note_omits_the_reason_section_for_a_personal_holiday(vault):
+    ctx = ctx_for(vault, type="personal-holiday")
+    note = af.render_note(ctx, af.resolve_fields(ctx))
+    assert "## Reason given" not in note
+    assert "## Coverage" in note
+
+
+def test_note_carries_the_routing_and_the_meetings(vault):
+    ctx = ctx_for(vault, type="sick")
+    note = af.render_note(ctx, af.resolve_fields(ctx))
+    assert "chair@example.edu" in note
+    assert "CECS 378 §01" in note
+    assert "| Date | Course | Class # | Time | Room | Topic scheduled |" in note
+
+
+def test_render_writes_the_note_alongside_the_other_products(vault, tmp_path):
+    out = tmp_path / "out"
+    af.main(render(vault, ["--type", "sick", "--dates", "2026-09-10",
+                           "--out", str(out)]))
+    assert (out / "2026-09-10-demo.md").exists()

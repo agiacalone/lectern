@@ -108,6 +108,7 @@ morning. `reg-admin-form` turns those records into a **paste-per-box** product.
 | `FORM.md` | One labeled section per form field, in the form's own order. Fenced values are click-to-copy; a `[!warning]` lists what still needs a human. |
 | `EMAIL.md` | The routing email — To/Cc filled from the profile, body expanded from the same values. |
 | `record.yaml` | The machine record: dates, hours, affected meetings. This is what makes *"have I used my personal day this year?"* answerable. |
+| `<date>-<form>.md` | The **Obsidian record note** — frontmatter (`type: absence-record`, dates, hours, sections, `status`) plus the human summary. `status: draft` until DocuSign goes through; flip it by hand. Semester notes auto-list these via Dataview. |
 
 **Setup (once):**
 
