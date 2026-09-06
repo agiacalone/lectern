@@ -54,8 +54,9 @@ PROFILE_YAML = textwrap.dedent("""\
         defaults:
           coverage: Async work posted to Canvas.
     fields:
-      - { label: Employee Name, key: employee-name, source: instructor.name }
-      - { label: Employee ID, key: employee-id, source: instructor.employee-id }
+      - { label: Signer Name, key: signer-name, section: Screen 1, source: instructor.name }
+      - { label: Employee Name, key: employee-name, section: Screen 2, source: instructor.name }
+      - { label: Employee ID, key: employee-id, section: Screen 2, source: instructor.employee-id }
       - { label: Type of Absence, key: leave-type, source: leave.label }
       - { label: Dates, key: absence-dates, source: absence.dates }
       - { label: Hours, key: hours, source: absence.hours }
@@ -459,3 +460,40 @@ def test_render_writes_the_note_alongside_the_other_products(vault, tmp_path):
     af.main(render(vault, ["--type", "sick", "--dates", "2026-09-10",
                            "--out", str(out)]))
     assert (out / "2026-09-10-demo.md").exists()
+
+
+# ── section grouping (the form's own box order) ─────────────────────────────
+
+def test_fields_render_grouped_under_their_section_headings(vault):
+    ctx = ctx_for(vault, type="sick")
+    out = af.render_form(ctx, af.resolve_fields(ctx))
+    assert "## Screen 1" in out and "## Screen 2" in out
+    # a paste-per-box block is only useful in box order
+    assert out.index("## Screen 1") < out.index("## Screen 2")
+    assert out.index("### Signer Name") < out.index("### Employee Name")
+
+
+def test_a_section_heading_is_emitted_once_per_run_not_per_field(vault):
+    ctx = ctx_for(vault, type="sick")
+    out = af.render_form(ctx, af.resolve_fields(ctx))
+    assert out.count("## Screen 2\n") == 1
+
+
+def test_fields_without_a_section_fall_under_a_plain_heading(vault):
+    ctx = ctx_for(vault, type="sick")
+    out = af.render_form(ctx, af.resolve_fields(ctx))
+    assert "## Fields" in out          # the demo's unsectioned tail
+
+
+def test_the_note_carries_the_same_ordered_block(vault):
+    ctx = ctx_for(vault, type="sick")
+    note = af.render_note(ctx, af.resolve_fields(ctx))
+    assert "Fields, in the order the form asks for them" in note
+    assert "### Screen 1" in note
+    assert note.index("### Screen 1") < note.index("### Screen 2")
+
+
+def test_section_survives_a_set_override(vault):
+    ctx = ctx_for(vault, type="sick", set=["employee-name=Someone Else"])
+    fields = {f["key"]: f for f in af.resolve_fields(ctx)}
+    assert fields["employee-name"]["section"] == "Screen 2"

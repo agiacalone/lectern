@@ -150,6 +150,17 @@ A field's `source:` is a dotted expression:
 A leave type can carry `omit:` to drop fields it isn't owed, `defaults:` to
 prefill one, and `guidance:` to print a note at the top of the form.
 
+Give each field a `section:` and they render grouped under that heading. Put the
+fields in the order the form asks for them, because that is the only order a
+paste-per-box block is useful in — the Notice of Absence profile mirrors
+DocuSign's two screens.
+
+> [!TIP]
+> Fill the form once with the profile open beside it and fix the order as you go.
+> Screen 2's fields are a best guess until someone has seen the real packet;
+> correcting them costs one YAML edit, which is the reason the shape lives in
+> YAML at all.
+
 ## See also
 
 - `SKILL.md` — the `/timeoff` verb and the full source reference

@@ -10,7 +10,9 @@
 
 form: notice-of-absence
 title: CSULB Notice of Absence
-authority: SSO → "Notice of Absence" chiclet (opens in DocuSign)
+authority: >-
+  SSO → "Notice of Absence" chiclet → DocuSign PowerForm. Screen 1 is the
+  signer-information gate (a name + email per role); the absence form follows.
 submit-via: DocuSign
 hours-per-day: 8
 
@@ -19,10 +21,10 @@ routing:
   - role: Department Chair
     email: Shadnaz.Asgari@csulb.edu
     to: true
-  - role: CC — Department Coordinator / Timekeeper
-    email: Raquel.Porter@csulb.edu
   - role: CC — Associate Dean
     email: Antonella.Sciortino@csulb.edu
+  - role: CC — Department Coordinator / Timekeeper
+    email: Raquel.Porter@csulb.edu
 
 leave-types:
   sick:
@@ -59,54 +61,109 @@ leave-types:
     note: Attach the agenda or acceptance when one exists.
 
 fields:
+  # ── Screen 1: the PowerForm "Signer Information" gate ────────────────────
+  # Name/email pairs, in the order DocuSign lists the roles. ⚠ Note the order:
+  # Faculty, Chair, Associate Dean, THEN Coordinator — the dean comes before
+  # the coordinator on screen, which is NOT the order the instruction email
+  # lists them in.
+  - label: "Faculty — Your Name"
+    key: faculty-name
+    section: Screen 1 — PowerForm Signer Information
+    source: instructor.name
+  - label: "Faculty — Your Email"
+    key: faculty-email
+    section: Screen 1 — PowerForm Signer Information
+    source: instructor.campus-email
+  - label: "Department Chair — Name"
+    key: chair-name
+    section: Screen 1 — PowerForm Signer Information
+    source: instructor.chair
+  - label: "Department Chair — Email"
+    key: chair-email
+    section: Screen 1 — PowerForm Signer Information
+    source: literal:Shadnaz.Asgari@csulb.edu
+  - label: "Associate Dean — Name"
+    key: dean-name
+    section: Screen 1 — PowerForm Signer Information
+    source: instructor.associate-dean
+  - label: "Associate Dean — Email"
+    key: dean-email
+    section: Screen 1 — PowerForm Signer Information
+    source: literal:Antonella.Sciortino@csulb.edu
+  - label: "Department Coordinator — Name"
+    key: coordinator-name
+    section: Screen 1 — PowerForm Signer Information
+    source: instructor.coordinator
+  - label: "Department Coordinator — Email"
+    key: coordinator-email
+    section: Screen 1 — PowerForm Signer Information
+    source: literal:Raquel.Porter@csulb.edu
+
+  # ── Screen 2: the absence form itself ────────────────────────────────────
+  # ⚠ NOT YET VERIFIED against the live document — only the PowerForm gate
+  # above had been seen when this was written. Reorder/rename these to match
+  # the real packet the first time you fill it out; keeping the form's shape
+  # in YAML is exactly so that correction costs nothing.
   - label: Employee Name
     key: employee-name
+    section: Screen 2 — Notice of Absence
     source: instructor.name
   - label: Employee ID
     key: employee-id
+    section: Screen 2 — Notice of Absence
     source: instructor.employee-id
-    hint: From the paystub or the SSO profile page.
   - label: Department
     key: department
+    section: Screen 2 — Notice of Absence
     source: instructor.department
   - label: College
     key: college
+    section: Screen 2 — Notice of Absence
     source: instructor.college
   - label: Classification / Title
     key: title
+    section: Screen 2 — Notice of Absence
     source: instructor.title
   - label: Type of Absence
     key: leave-type
+    section: Screen 2 — Notice of Absence
     source: leave.label
   - label: Date(s) of Absence
     key: absence-dates
+    section: Screen 2 — Notice of Absence
     source: absence.dates
   - label: First Day of Absence
     key: first-day
+    section: Screen 2 — Notice of Absence
     source: absence.first
   - label: Last Day of Absence
     key: last-day
+    section: Screen 2 — Notice of Absence
     source: absence.last
   - label: Total Days
     key: day-count
+    section: Screen 2 — Notice of Absence
     source: absence.day-count
   - label: Total Hours Charged
     key: hours
+    section: Screen 2 — Notice of Absence
     source: absence.hours
     hint: >-
-      Default is 8 hours per absence day. Scheduled contact hours for these
-      dates are reported separately below — check which figure the timekeeper
-      wants before submitting.
+      Default is 8 hours per absence day. Scheduled contact hours are reported
+      separately — check which figure the timekeeper wants.
   - label: Scheduled Contact Hours Missed
     key: contact-hours
+    section: Screen 2 — Notice of Absence
     source: absence.contact-hours
     hint: Sum of the affected class meetings, from the term-spec meeting patterns.
   - label: Classes Affected
     key: classes-affected
+    section: Screen 2 — Notice of Absence
     source: classes.lines
     block: true
   - label: Coverage / Arrangements for Classes
     key: coverage
+    section: Screen 2 — Notice of Absence
     source: prompt
     block: true
     hint: >-
@@ -114,20 +171,13 @@ fields:
       covered by a colleague or ISA, or made up. Name the mechanism per section.
   - label: Reason / Justification
     key: justification
+    section: Screen 2 — Notice of Absence
     source: prompt
     block: true
     hint: One or two sentences. Medical detail is not required and not wanted.
-  - label: Department Chair (email)
-    key: chair-email
-    source: literal:Shadnaz.Asgari@csulb.edu
-  - label: CC — Department Coordinator / Timekeeper (email)
-    key: coordinator-email
-    source: literal:Raquel.Porter@csulb.edu
-  - label: CC — Associate Dean (email)
-    key: dean-email
-    source: literal:Antonella.Sciortino@csulb.edu
   - label: Date Submitted
     key: date-submitted
+    section: Screen 2 — Notice of Absence
     source: today.long
 
 email:

@@ -402,6 +402,7 @@ def resolve_fields(ctx: Context) -> list[dict]:
         resolved.append({
             "key": key,
             "label": fld["label"],
+            "section": fld.get("section"),
             "value": value,
             "hint": fld.get("hint"),
             "block": bool(fld.get("block")) or "\n" in str(value),
@@ -411,6 +412,33 @@ def resolve_fields(ctx: Context) -> list[dict]:
 
 
 # ─────────────────────────────── rendering ──────────────────────────────────
+
+def render_fields_block(fields: list[dict], *, level: int = 2) -> list[str]:
+    """Render the fields grouped under their ``section:`` headings, in order.
+
+    A paste-per-box product is only useful in *box order*, so the profile's
+    field order is the form's field order and sections mirror the form's own
+    screens. Fields without a section fall under a plain heading.
+    """
+    out: list[str] = []
+    current = object()                    # sentinel: no section emitted yet
+    for f in fields:
+        section = f.get("section")
+        if section != current:
+            current = section
+            out += ["#" * level + " " + (section or "Fields"), ""]
+        out.append("#" * (level + 1) + " " + f["label"])
+        if f["hint"]:
+            out += [f"*{f['hint']}*", ""]
+        else:
+            out.append("")
+        value = f["value"] if str(f["value"]).strip() else NEEDS_INPUT
+        if f["block"]:
+            out += [str(value), ""]
+        else:
+            out += ["```", str(value), "```", ""]
+    return out
+
 
 def render_form(ctx: Context, fields: list[dict]) -> str:
     """The copy/paste block — one labeled section per form field, in order."""
@@ -439,17 +467,7 @@ def render_form(ctx: Context, fields: list[dict]) -> str:
             out.append(f"| {r.get('role', '')} | `{r.get('email', '')}` |")
         out.append("")
 
-    out += ["## Fields", ""]
-    for f in fields:
-        out.append(f"### {f['label']}")
-        if f["hint"]:
-            out.append(f"*{f['hint']}*")
-        out.append("")
-        value = f["value"] if str(f["value"]).strip() else NEEDS_INPUT
-        if f["block"]:
-            out += [str(value), ""]
-        else:
-            out += ["```", str(value), "```", ""]
+    out += render_fields_block(fields)
 
     if ctx.days:
         out += ["## Supporting detail — affected class meetings", "",
@@ -599,6 +617,9 @@ def render_note(ctx: Context, fields: list[dict]) -> str:
     if pending:
         out += ["> [!warning] Still needed before this can be submitted",
                 "> " + ", ".join(pending), ""]
+
+    out += ["## Fields, in the order the form asks for them", ""]
+    out += render_fields_block(fields, level=3)
 
     out += ["## Products", "",
             "- `FORM.md` — paste into DocuSign, one box at a time",

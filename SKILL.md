@@ -153,6 +153,13 @@ A profile (`lectern/references/forms/*.form.yaml`, copied into
 (lines, table, sections, skipped), `literal:<text>`, or `prompt` for what only a
 human can answer.
 
+A field's optional `section:` groups it under a heading, and ==the field order is
+the *form's* order== — a paste-per-box product is only useful in box order. The
+Notice of Absence profile mirrors DocuSign's two screens: `Screen 1 — PowerForm
+Signer Information` (a name + email per role) and `Screen 2 — Notice of Absence`.
+⚠ DocuSign lists **Associate Dean before Department Coordinator**, which is not
+the order the instruction email gives them in.
+
 A leave type may carry `omit:` (drop fields this type isn't owed),
 `defaults:` (prefill a prompt field) and `guidance:` (a callout in `FORM.md`).
 ==The personal holiday omits *justification* on purpose== — it is contractual
