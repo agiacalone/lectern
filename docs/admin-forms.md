@@ -157,9 +157,26 @@ DocuSign's two screens.
 
 > [!TIP]
 > Fill the form once with the profile open beside it and fix the order as you go.
-> Screen 2's fields are a best guess until someone has seen the real packet;
-> correcting them costs one YAML edit, which is the reason the shape lives in
-> YAML at all.
+> The shipped Notice of Absence profile was a best guess until someone actually
+> submitted one; the completed envelope showed it asks nothing about employee ID,
+> hours, or department, and the correction was a single YAML edit. That is the
+> reason the shape lives in YAML at all.
+
+A field with `choices:` renders as a tick-list rather than a paste block, since a
+checkbox is ticked, not pasted:
+
+```yaml
+- label: Reason for the Change
+  key: reason
+  source: prompt
+  choices:
+    - Illness/Sick Leave
+    - Personal Holiday or Other Authorized Leave
+    - Other
+```
+
+A leave type's `defaults:` then picks the right box, which matters because the
+form's reason vocabulary and your leave-type vocabulary are not the same list.
 
 ## See also
 

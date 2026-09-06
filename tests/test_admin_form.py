@@ -22,6 +22,7 @@ SPEC_YAML = textwrap.dedent("""\
       - { date: 2026-09-07, label: "Labor Day (campus closed)" }
     sections:
       - course: CECS 378
+        title: Introduction to Computer Security Principles
         section: "01"
         class-number: 4785
         room: VEC-331
@@ -53,10 +54,17 @@ PROFILE_YAML = textwrap.dedent("""\
         guidance: No reason required.
         defaults:
           coverage: Async work posted to Canvas.
+          reason: Personal Holiday or Other Authorized Leave
     fields:
       - { label: Signer Name, key: signer-name, section: Screen 1, source: instructor.name }
       - { label: Employee Name, key: employee-name, section: Screen 2, source: instructor.name }
       - { label: Employee ID, key: employee-id, section: Screen 2, source: instructor.employee-id }
+      - label: Reason
+        key: reason
+        section: Screen 2
+        source: prompt
+        choices: [Illness/Sick Leave, Personal Holiday or Other Authorized Leave, Other]
+      - { label: Numbers, key: numbers, section: Screen 2, source: classes.numbers-titles, block: true }
       - { label: Type of Absence, key: leave-type, source: leave.label }
       - { label: Dates, key: absence-dates, source: absence.dates }
       - { label: Hours, key: hours, source: absence.hours }
@@ -159,7 +167,7 @@ def test_fields_resolve_from_identity_and_calendar(vault):
 def test_prompt_fields_are_marked_as_needing_input(vault):
     ctx = ctx_for(vault, type="sick")
     pending = [f["key"] for f in af.resolve_fields(ctx) if f["needs_input"]]
-    assert pending == ["coverage", "justification"]
+    assert pending == ["reason", "coverage", "justification"]
 
 
 def test_set_overrides_a_prompt_field(vault):
@@ -497,3 +505,62 @@ def test_section_survives_a_set_override(vault):
     ctx = ctx_for(vault, type="sick", set=["employee-name=Someone Else"])
     fields = {f["key"]: f for f in af.resolve_fields(ctx)}
     assert fields["employee-name"]["section"] == "Screen 2"
+
+
+# ── "Class Number and Title" + checkbox choices ─────────────────────────────
+
+def test_numbers_titles_pairs_the_class_number_with_the_catalog_title(vault):
+    ctx = ctx_for(vault, type="sick")
+    lines = ctx.numbers_titles().splitlines()
+    assert lines[0] == "4785 — CECS 378 §01, Introduction to Computer Security Principles"
+    assert lines[1] == "1131 — CECS 326 §01"      # no title in the spec for this one
+
+
+def test_numbers_titles_dedupes_across_a_multi_day_absence(vault):
+    """A Tue+Thu absence hits each section twice; the form wants each once."""
+    ctx = ctx_for(vault, type="sick", dates="2026-09-08,2026-09-10")
+    assert len(ctx.meetings) == 4
+    assert len(ctx.numbers_titles().splitlines()) == 2
+
+
+def test_a_choice_field_renders_as_a_tick_list(vault):
+    ctx = ctx_for(vault, type="personal-holiday")
+    out = af.render_form(ctx, af.resolve_fields(ctx))
+    assert "- [x] Personal Holiday or Other Authorized Leave" in out
+    assert "- [ ] Illness/Sick Leave" in out
+
+
+def test_a_leave_type_default_picks_the_right_checkbox(vault):
+    ctx = ctx_for(vault, type="personal-holiday")
+    fields = {f["key"]: f["value"] for f in af.resolve_fields(ctx)}
+    assert fields["reason"] == "Personal Holiday or Other Authorized Leave"
+
+
+def test_an_unticked_choice_field_shows_every_box_empty(vault):
+    ctx = ctx_for(vault, type="sick")          # no default reason on this type
+    out = af.render_form(ctx, af.resolve_fields(ctx))
+    assert "- [ ] Personal Holiday or Other Authorized Leave" in out
+    assert "- [x]" not in out
+
+
+def test_a_value_outside_the_choices_is_rejected(vault):
+    """A typo'd checkbox is a profile bug, not something to paste blindly."""
+    ctx = ctx_for(vault, type="sick", set=["reason=Sabbatical"])
+    with pytest.raises(af.AdminFormError, match="not one of its choices"):
+        af.resolve_fields(ctx)
+
+
+
+def test_a_section_split_across_the_profile_is_rejected(tmp_path):
+    """Field order is box order, so a reappearing section is an authoring slip."""
+    bad = tmp_path / "bad.form.yaml"
+    bad.write_text(textwrap.dedent("""\
+        form: bad
+        title: Bad
+        fields:
+          - { label: A, section: One, source: "literal:a" }
+          - { label: B, section: Two, source: "literal:b" }
+          - { label: C, section: One, source: "literal:c" }
+    """))
+    with pytest.raises(af.AdminFormError, match="split apart"):
+        af.load_profile(bad)

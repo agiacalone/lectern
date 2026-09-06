@@ -74,6 +74,7 @@ class Meeting:
     room: str | None
     pattern: MeetingPattern
     topic: str | None = None           # filled in from the syllabus, when found
+    title: str | None = None           # catalog course title, from the term-spec
 
     @property
     def weekday_name(self) -> str:
@@ -289,6 +290,7 @@ def meetings_in_range(spec: dict, start: date, end: date,
                         class_number=sec.get("class-number"),
                         room=sec.get("room"),
                         pattern=pattern,
+                        title=sec.get("title"),
                     ))
             entry.meetings.sort(key=lambda m: (m.pattern.start or "", m.label))
         days.append(entry)

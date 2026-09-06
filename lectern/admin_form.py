@@ -85,7 +85,29 @@ def load_profile(path: Path) -> dict:
         if "label" not in fld:
             raise AdminFormError(f"{path}: field #{i + 1} has no 'label'")
         fld.setdefault("key", _slug_key(fld["label"]))
+    _check_sections_contiguous(path, profile["fields"])
     return profile
+
+
+def _check_sections_contiguous(path, fields: list[dict]) -> None:
+    """Reject a section whose fields are split apart in the profile.
+
+    Field order is the form's box order, so a section that reappears later is
+    an authoring slip, not a layout choice — and it would print its heading
+    twice, which reads as two different screens.
+    """
+    seen: set[str] = set()
+    previous = object()
+    for fld in fields:
+        section = fld.get("section")
+        if section == previous:
+            continue
+        if section in seen:
+            raise AdminFormError(
+                f"{path}: section {section!r} is split apart — a section's "
+                f"fields must be consecutive, in the order the form asks")
+        seen.add(section)
+        previous = section
 
 
 def load_identity(vault_root: Path | None) -> dict:
@@ -285,6 +307,22 @@ class Context:
             out.append(line)
         return "\n".join(out)
 
+    def numbers_titles(self) -> str:
+        """``"4785 — CECS 378 §01, Introduction to Computer Security"``.
+
+        What a form means by "Class Number and Title" — the registrar's
+        identifiers, not the meeting logistics. One line per affected section,
+        deduplicated, because a multi-day absence hits the same section twice.
+        """
+        seen: list[str] = []
+        for m in self.meetings:
+            line = f"{m.class_number or '—'} — {m.label}"
+            if m.title:
+                line += f", {m.title}"
+            if line not in seen:
+                seen.append(line)
+        return "\n".join(seen) or "None"
+
     def skipped_days(self) -> str:
         """Days in the span that cost no class, and why — reviewers ask."""
         notes = [f"{d.weekday_abbr} {d.date.isoformat()}: {d.note}"
@@ -353,6 +391,8 @@ def _classes(key: str, ctx: Context) -> str:
         return ctx.classes_table()
     if key in ("lines", "list"):
         return ctx.classes_lines()
+    if key in ("numbers-titles", "numbers"):
+        return ctx.numbers_titles()
     if key == "sections":
         return ", ".join(ctx.affected_sections) or "none"
     if key == "count":
@@ -399,10 +439,17 @@ def resolve_fields(ctx: Context) -> list[dict]:
             value = defaults[key]
         else:
             value = resolve(fld.get("source"), ctx)
+        choices = fld.get("choices")
+        if choices and str(value).strip() not in ("", NEEDS_INPUT):
+            if str(value).strip() not in [str(c).strip() for c in choices]:
+                raise AdminFormError(
+                    f"field {key!r}: {value!r} is not one of its choices "
+                    f"({', '.join(str(c) for c in choices)})")
         resolved.append({
             "key": key,
             "label": fld["label"],
             "section": fld.get("section"),
+            "choices": fld.get("choices"),
             "value": value,
             "hint": fld.get("hint"),
             "block": bool(fld.get("block")) or "\n" in str(value),
@@ -433,7 +480,14 @@ def render_fields_block(fields: list[dict], *, level: int = 2) -> list[str]:
         else:
             out.append("")
         value = f["value"] if str(f["value"]).strip() else NEEDS_INPUT
-        if f["block"]:
+        if f.get("choices"):
+            # A checkbox is ticked, not pasted — so show every option and mark
+            # the one that applies, rather than handing over a string.
+            for choice in f["choices"]:
+                hit = str(choice).strip() == str(value).strip()
+                out.append(f"- [{'x' if hit else ' '}] {choice}")
+            out.append("")
+        elif f["block"]:
             out += [str(value), ""]
         else:
             out += ["```", str(value), "```", ""]

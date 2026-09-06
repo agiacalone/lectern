@@ -160,6 +160,10 @@ Signer Information` (a name + email per role) and `Screen 2 — Notice of Absenc
 ⚠ DocuSign lists **Associate Dean before Department Coordinator**, which is not
 the order the instruction email gives them in.
 
+A field with `choices:` renders as a **tick-list** with the right box marked, because a checkbox is ticked, not pasted; a value outside its choices is an error, and a section split across the profile is rejected (field order is box order).
+
+==The Notice of Absence is a **class-delivery** form, not a timekeeping one== — verified against a completed envelope 2026-09-06. It asks for no employee ID, no hours, no department. It wants the class numbers + catalog titles (`title:` on each term-spec section feeds `classes.numbers-titles`), one of three delivery changes, one of six reasons, and the arrangements for students. ⚠ The free-text **`Other:` box is required even when a named reason is ticked** — a placeholder satisfies it. Leave types map themselves onto the form's reason list via `defaults:`, since the two vocabularies do not match.
+
 A leave type may carry `omit:` (drop fields this type isn't owed),
 `defaults:` (prefill a prompt field) and `guidance:` (a callout in `FORM.md`).
 ==The personal holiday omits *justification* on purpose== — it is contractual

@@ -9,12 +9,12 @@
 # with `source: prompt` are the ones only a human can answer.
 
 form: notice-of-absence
-title: CSULB Notice of Absence
+title: CSULB Notice of Absence from Class / Class Cancellation / Temporary Instruction Mode Change
 authority: >-
   SSO → "Notice of Absence" chiclet → DocuSign PowerForm. Screen 1 is the
   signer-information gate (a name + email per role); the absence form follows.
 submit-via: DocuSign
-hours-per-day: 8
+hours-per-day: 8   # only for the vault record; the form asks for no hours
 
 # Standing routing, per Raquel Porter's 2026-09-04 instructions.
 routing:
@@ -31,34 +31,49 @@ leave-types:
     label: Sick Leave
     key: sick
     note: Own illness, injury, or medical appointment.
+    defaults:
+      reason: Illness/Sick Leave
   personal-holiday:
     label: Personal Holiday
     key: personal-holiday
     note: One per calendar year; does not carry over.
     # The personal holiday is contractual time off, not discretionary leave the
     # campus grants on the strength of a reason. Nobody is owed one.
-    omit: [justification]
+    defaults:
+      reason: Personal Holiday or Other Authorized Leave
     guidance: >-
-      A personal holiday is contractual and needs no reason. Do not volunteer
-      one — if DocuSign forces the box, "Personal holiday" is a complete answer.
+      A personal holiday is contractual. The form has a checkbox for it —
+      tick "Personal Holiday or Other Authorized Leave" and stop there. The
+      required "Other:" box takes a placeholder; do not explain yourself in it.
   personal-business:
     label: Personal Business
     key: personal-business
     note: Charged against sick leave, capped per the CBA.
+    defaults:
+      reason: Personal Holiday or Other Authorized Leave
   family-illness:
     label: Sick Leave — Family Care
     key: family-illness
     note: Illness of a family member, charged against sick leave.
+    defaults:
+      reason: Personal or Family Emergency
   bereavement:
     label: Bereavement Leave
     key: bereavement
+    defaults:
+      reason: Personal or Family Emergency
   jury-duty:
     label: Jury Duty
     key: jury-duty
+    defaults:
+      reason: Other
+      reason-other: Jury duty
   professional-development:
     label: Professional Development / Conference
     key: professional-development
     note: Attach the agenda or acceptance when one exists.
+    defaults:
+      reason: Professional Conference or Professional Activity
 
 fields:
   # ── Screen 1: the PowerForm "Signer Information" gate ────────────────────
@@ -99,86 +114,76 @@ fields:
     section: Screen 1 — PowerForm Signer Information
     source: literal:Raquel.Porter@csulb.edu
 
-  # ── Screen 2: the absence form itself ────────────────────────────────────
-  # ⚠ NOT YET VERIFIED against the live document — only the PowerForm gate
-  # above had been seen when this was written. Reorder/rename these to match
-  # the real packet the first time you fill it out; keeping the form's shape
-  # in YAML is exactly so that correction costs nothing.
-  - label: Employee Name
-    key: employee-name
-    section: Screen 2 — Notice of Absence
+  # ── Screen 2: the form itself ────────────────────────────────────────────
+  # ✅ VERIFIED against a completed envelope (2026-09-06, form "Revised August
+  # 2026"). This is NOT a timekeeping form — there is no employee ID, no hours,
+  # no department or college. It is an academic class-delivery form governed by
+  # CFA CBA Article 24.6, and it asks only about the classes.
+  - label: Faculty Name
+    key: faculty-name-form
+    section: Screen 2 — Notice of Absence from Class
     source: instructor.name
-  - label: Employee ID
-    key: employee-id
-    section: Screen 2 — Notice of Absence
-    source: instructor.employee-id
-  - label: Department
-    key: department
-    section: Screen 2 — Notice of Absence
-    source: instructor.department
-  - label: College
-    key: college
-    section: Screen 2 — Notice of Absence
-    source: instructor.college
-  - label: Classification / Title
-    key: title
-    section: Screen 2 — Notice of Absence
-    source: instructor.title
-  - label: Type of Absence
-    key: leave-type
-    section: Screen 2 — Notice of Absence
-    source: leave.label
-  - label: Date(s) of Absence
+  - label: Class Number and Title
+    key: class-number-title
+    section: Screen 2 — Notice of Absence from Class
+    source: classes.numbers-titles
+    block: true
+    hint: The registrar's identifiers, not the meeting logistics.
+  - label: "Date(s) of Absence / Class Cancelation / Modality Changes"
     key: absence-dates
-    section: Screen 2 — Notice of Absence
+    section: Screen 2 — Notice of Absence from Class
     source: absence.dates
-  - label: First Day of Absence
-    key: first-day
-    section: Screen 2 — Notice of Absence
-    source: absence.first
-  - label: Last Day of Absence
-    key: last-day
-    section: Screen 2 — Notice of Absence
-    source: absence.last
-  - label: Total Days
-    key: day-count
-    section: Screen 2 — Notice of Absence
-    source: absence.day-count
-  - label: Total Hours Charged
-    key: hours
-    section: Screen 2 — Notice of Absence
-    source: absence.hours
+  - label: Select the type of changes to class delivery
+    key: delivery-change
+    section: Screen 2 — Notice of Absence from Class
+    source: prompt
+    choices:
+      - Faculty Absence but Class Not Cancelled
+      - Class Cancellations
+      - Request Temporary Instruction Mode Change [Prior Approval Required]
     hint: >-
-      Default is 8 hours per absence day. Scheduled contact hours are reported
-      separately — check which figure the timekeeper wants.
-  - label: Scheduled Contact Hours Missed
-    key: contact-hours
-    section: Screen 2 — Notice of Absence
-    source: absence.contact-hours
-    hint: Sum of the affected class meetings, from the term-spec meeting patterns.
-  - label: Classes Affected
-    key: classes-affected
-    section: Screen 2 — Notice of Absence
-    source: classes.lines
-    block: true
-  - label: Coverage / Arrangements for Classes
+      Pick by what actually happens to the meeting. A substitute or an unchanged
+      mode is the first; the meeting simply not happening is the second; moving
+      a face-to-face meeting to asynchronous or online is the third — and that
+      one needs the chair's approval IN ADVANCE. The form states plainly that
+      illness, emergency or travel does not by itself authorize a mode change.
+  - label: "Reason for the Change — select the primary reason"
+    key: reason
+    section: Screen 2 — Notice of Absence from Class
+    source: prompt
+    choices:
+      - Illness/Sick Leave
+      - Personal or Family Emergency
+      - University-Authorized Travel
+      - Professional Conference or Professional Activity
+      - Personal Holiday or Other Authorized Leave
+      - Other
+  - label: "Other:"
+    key: reason-other
+    section: Screen 2 — Notice of Absence from Class
+    source: "literal:N/A"
+    hint: >-
+      ⚠ DocuSign marks this REQUIRED even when you ticked one of the named
+      reasons above. A placeholder satisfies it; you are not obliged to
+      elaborate on a reason the form already has a checkbox for.
+  - label: Arrangement for the Scheduled Class
     key: coverage
-    section: Screen 2 — Notice of Absence
+    section: Screen 2 — Notice of Absence from Class
     source: prompt
     block: true
     hint: >-
-      What actually happens to each meeting — canceled with async work posted,
-      covered by a colleague or ISA, or made up. Name the mechanism per section.
-  - label: Reason / Justification
-    key: justification
-    section: Screen 2 — Notice of Absence
-    source: prompt
-    block: true
-    hint: One or two sentences. Medical detail is not required and not wanted.
-  - label: Date Submitted
-    key: date-submitted
-    section: Screen 2 — Notice of Absence
-    source: today.long
+      Substitute instructor, alternative assignment or activity, or the approved
+      temporary instructional mode. Paste this text alone — no "Coverage:" label
+      and no sign-off.
+  - label: "For CC: Dept Coordinator/Timekeeper Email"
+    key: cc-coordinator
+    section: Screen 2 — Notice of Absence from Class
+    source: literal:Raquel.Porter@csulb.edu
+    hint: Asked again on the form itself, not only in the signer gate.
+  - label: "For CC: Associate Dean Email"
+    key: cc-dean
+    section: Screen 2 — Notice of Absence from Class
+    source: literal:Antonella.Sciortino@csulb.edu
 
 email:
   # The heads-up goes to the timekeeper who processes it; the chair is copied.
