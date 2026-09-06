@@ -11,7 +11,8 @@ CLI: pa-lms-roster-import <xls> --out <csv> --term <t>
      [--course CECS_NNN --section NN --class-number NNNNN]
 
 If --course/--section/--class-number are omitted, they are inferred from the
-filename pattern class-roster-cecs-NNN-NN-NNNNN.xls.
+filename pattern class-roster-cecs-NNN-NN-NNNN[N].xls
+(MyCSULB class numbers are 4 or 5 digits).
 """
 from __future__ import annotations
 
@@ -88,7 +89,7 @@ def parse_mycsulb_xls(path: Path) -> list[dict]:
 # ── filename inference ───────────────────────────────────────────────────────
 
 _FILENAME_RE = re.compile(
-    r"^class-roster-cecs-(\d{3})-(\d{2})-(\d{5})\.xls$", re.IGNORECASE
+    r"^class-roster-cecs-(\d{3})-(\d{2})-(\d{4,5})\.xls$", re.IGNORECASE
 )
 
 
@@ -209,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     if missing:
         parser.error(
             f"filename {args.xls.name!r} doesn't match the "
-            f"class-roster-cecs-NNN-NN-NNNNN.xls pattern; pass --{', --'.join(missing)} explicitly"
+            f"class-roster-cecs-NNN-NN-NNNN[N].xls pattern; pass --{', --'.join(missing)} explicitly"
         )
 
     raw = parse_mycsulb_xls(args.xls)

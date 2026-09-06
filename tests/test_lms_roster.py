@@ -21,6 +21,24 @@ def test_infer_from_filename():
     assert infer_from_filename(Path("some-other-roster.xls")) == {}
 
 
+def test_infer_from_filename_four_digit_class_number():
+    """MyCSULB class numbers are not fixed-width; fa26 has 4-digit ones
+    (CECS 378-01 = 4785, CECS 326-01 = 1131) alongside 5-digit (326-03 = 10674)."""
+    assert infer_from_filename(Path("class-roster-cecs-378-01-4785.xls")) == {
+        "course": "CECS 378", "section": "01", "class_number": "4785"
+    }
+    assert infer_from_filename(Path("class-roster-cecs-326-01-1131.xls")) == {
+        "course": "CECS 326", "section": "01", "class_number": "1131"
+    }
+    # 5-digit still works (regression guard for the original behaviour)
+    assert infer_from_filename(Path("class-roster-cecs-326-03-10674.xls")) == {
+        "course": "CECS 326", "section": "03", "class_number": "10674"
+    }
+    # Widths outside 4-5 are still rejected
+    assert infer_from_filename(Path("class-roster-cecs-326-03-113.xls")) == {}
+    assert infer_from_filename(Path("class-roster-cecs-326-03-106745.xls")) == {}
+
+
 def test_parse_real_478_04_xls():
     rows = parse_mycsulb_xls(FIX / "roster_478-04_sp26.xls")
     assert len(rows) == 15
