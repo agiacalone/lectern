@@ -33,9 +33,10 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-lab-recon` | recon | Sweep a lab's student-repo population into a deterministic **recon bundle** (Part A facts): per-repo autograde points (parsed from CI logs), honor gate, commit triage, structural writeup facts → `cohort.csv` + `FACTS.md` + a two-tier cohort-intelligence `REPORT.md`. Advisory; no student graded without human review |
 | `reg-lab-digest` | lab_digest | **Layer-2 writeup digest** over a recon bundle: `emit` a grading work-list (writeups + rubric YAML + output schema), then `merge` model-graded results into the cohort sheet as advisory writeup scores + rationale comments. LLM grading runs in the **harness via a contract** (no API dep in lectern); deterministic guardrails — partial-ward zeroing from autograde truth, total recompute, confidence gating. Results carry both an internal `comment` and a sanitized `student_comment`. **Never writes the gradebook** |
 | `reg-lab-report` | lab_report | **Layer-3 instructor report + feedback delivery.** `render` → the canonical `REPORT.md` (distribution + agate charts, grade table, four-bucket grading recommendations, Canvas entry sheet) deterministically from the recon bundle + digest cohort. `deliver` → a sanitized, GPG-signed `FEEDBACK.md` to each repo's `feedback` branch, closes the feedback PR, **then merges `feedback` into `main`** (signed; direct-add fallback for unrelated-history repos) so it shows on the student's default branch; **`--dry-run` by default**, signing mandatory, idempotent (feedback + main independently; `--no-merge-main` opts out), emits a verbatim `FEEDBACK_LOG.md`. Feedback source is either the digest cohort (`--cohort`) or — **note-authoritative** — the grading-round note itself (`--from-note <REPORT.md>`), parsing per-student blocks so hand-authored feedback is delivered verbatim, never re-derived (N generic components). Trigger after grading a lab to produce the instructor report and/or post feedback to students |
+| `reg-admin-form` | admin_form | **Administrative forms** — fill a campus form (Notice of Absence, …) from the vault's own records. A YAML *form profile* declares the fields; the engine resolves them from the term-spec, class-notes and syllabi, and emits a copy/paste `FORM.md`, a routing `EMAIL.md`, and a machine `record.yaml`. Computes which class meetings an absence actually costs (meeting patterns × campus closures) and what topic each was going to cover. Adding a form is a profile, not code. Slash command: `/timeoff` |
 
 Library modules (no wrapper): `exam_serial`, `manifest_schema`, `student_id`,
-`drive_auth`, `isa_publish_schema`. Triage engine: `triage_signals`, `triage_engine`, `triage_manifest`, `triage_rhythm`, `triage_scrape`, `triage_version`. Plus `syllabus_serial`, `qbank`.
+`drive_auth`, `isa_publish_schema`, `class_calendar`. Triage engine: `triage_signals`, `triage_engine`, `triage_manifest`, `triage_rhythm`, `triage_scrape`, `triage_version`. Plus `syllabus_serial`, `qbank`.
 
 ## Exam reading-list study guides (`reg-exam-readinglist`)
 
@@ -91,6 +92,94 @@ coverage = edit the manifest's `topics` and re-run. (First built for CECS 326,
 2026-05-31; extended for CECS 378 — `textbook`/`citation_key`/`note` — same day. The
 per-topic lecture reading lists are still produced by the lecture-materials
 `reading-list` artifact.)
+
+## Administrative forms (`reg-admin-form`, `/timeoff`)
+
+Campus admin forms are haphazard: no dropdowns, and they nonetheless want exact
+course numbers, class numbers, rooms, meeting times and a coverage plan — facts
+the vault already holds and that are miserable to retype from memory on a sick
+morning. `reg-admin-form` turns those records into a **paste-per-box** product.
+
+**The three artifacts**, written to
+`classes/admin-forms/records/<date>-<form>-<type>/`:
+
+| File | What it is |
+|---|---|
+| `FORM.md` | One labeled section per form field, in the form's own order. Fenced values are click-to-copy; a `[!warning]` lists what still needs a human. |
+| `EMAIL.md` | The routing email — To/Cc filled from the profile, body expanded from the same values. |
+| `record.yaml` | The machine record: dates, hours, affected meetings. This is what makes *"have I used my personal day this year?"* answerable. |
+| `<date>-<form>.md` | The **Obsidian record note** — frontmatter (`type: absence-record`, dates, hours, sections, `status`) plus the human summary. `status: draft` until DocuSign goes through; flip it by hand. Semester notes auto-list these via Dataview. |
+
+**Setup (once):**
+
+```sh
+reg-admin-form init --vault-root /mnt/es1/vault     # identity.yaml + profile copies
+$EDITOR /mnt/es1/vault/classes/admin-forms/identity.yaml   # fill employee-id
+```
+
+**Use:**
+
+```sh
+reg-admin-form list --vault-root <V>                        # forms + leave types
+reg-admin-form render --form notice-of-absence \
+    --type personal-holiday --dates 2026-09-10 \
+    --term fa26 --vault-root <V> \
+    --set coverage="Async work posted to Canvas for all three sections."
+```
+
+`--dates` takes a day (`2026-09-10`), a span (`2026-09-10..2026-09-12`), or a
+comma list. `--set key=value` fills any field; `--hours` overrides the
+`hours-per-day × days` default; `--stdout-only` writes nothing.
+
+### Where the numbers come from
+
+`class_calendar` expands each section's `meets` pattern across the requested
+dates, then subtracts the term boundaries and the term-spec's `no-instruction`
+closures. It reads both `meets` dialects (`"TuTh 11:00-12:15"` and
+`"TuTh 11:00 AM–12:15 PM"`), and a bare `T` means Tuesday. Each meeting's topic
+is looked up in that section's syllabus *Week of* table.
+
+==Keep `no-instruction` current in the term-spec== — without it a Thanksgiving
+absence bills classes that were never going to meet. Source it from
+`notes/csulb-deadlines-<AY>.md`.
+
+### Form profiles
+
+A profile (`lectern/references/forms/*.form.yaml`, copied into
+`classes/admin-forms/` where a vault copy shadows the built-in) declares
+`routing:`, `leave-types:`, `fields:` and an `email:` template. Each field's
+`source:` is a dotted expression — `instructor.*` (identity.yaml), `leave.*`,
+`term.*`, `absence.*` (dates, day-count, hours, contact-hours), `classes.*`
+(lines, table, sections, skipped), `literal:<text>`, or `prompt` for what only a
+human can answer.
+
+A field's optional `section:` groups it under a heading, and ==the field order is
+the *form's* order== — a paste-per-box product is only useful in box order. The
+Notice of Absence profile mirrors DocuSign's two screens: `Screen 1 — PowerForm
+Signer Information` (a name + email per role) and `Screen 2 — Notice of Absence`.
+⚠ DocuSign lists **Associate Dean before Department Coordinator**, which is not
+the order the instruction email gives them in.
+
+A field with `choices:` renders as a **tick-list** with the right box marked, because a checkbox is ticked, not pasted; a value outside its choices is an error, and a section split across the profile is rejected (field order is box order).
+
+==The Notice of Absence is a **class-delivery** form, not a timekeeping one== — verified against a completed envelope 2026-09-06. It asks for no employee ID, no hours, no department. It wants the class numbers + catalog titles (`title:` on each term-spec section feeds `classes.numbers-titles`), one of three delivery changes, one of six reasons, and the arrangements for students. ⚠ The free-text **`Other:` box is required even when a named reason is ticked** — a placeholder satisfies it. Leave types map themselves onto the form's reason list via `defaults:`, since the two vocabularies do not match.
+
+A leave type may carry `omit:` (drop fields this type isn't owed),
+`defaults:` (prefill a prompt field) and `guidance:` (a callout in `FORM.md`).
+==The personal holiday omits *justification* on purpose== — it is contractual
+time off, and an empty "Reason" box invites volunteering one.
+
+### The `/timeoff` verb
+
+1. Read the date(s) and leave type from the arguments. Ask only what's missing
+   and can't be defaulted; a bare date on a teaching day is enough to render.
+2. Run `reg-admin-form render` for the current term.
+3. **Fill the coverage plan with Anthony**, per affected section — the tool names
+   the meetings and their topics; the mechanism (async, colleague, ISA, makeup)
+   is his call.
+4. Hand back the form block and the email. ==Never invent a justification==, and
+   for a personal holiday do not supply one at all.
+
 
 ## Authoring assignments
 

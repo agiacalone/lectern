@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
 from dataclasses import dataclass, field, fields, asdict
 from datetime import datetime, timezone
@@ -557,38 +558,85 @@ def grade_distribution(gradebook_csv: Path) -> dict:
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 
-def _default_archives_root() -> Path:
-    """Best-effort vault classes root for dfw rollups."""
-    candidates = [
-        Path.home() / "documents" / "obsidian" / "vault" / "classes",
-    ]
+# Legacy vault location, kept last so a pre-2026-07-09 checkout still resolves.
+_LEGACY_VAULT = Path.home() / "documents" / "obsidian" / "vault"
+_DEFAULT_VAULTS = (Path("/mnt/es1/vault"), _LEGACY_VAULT)
+
+
+def _default_archives_root(vault_root: Path | None = None) -> Path:
+    """Resolve the vault's `classes/` root.
+
+    Order: explicit --vault-root, then $LECTERN_VAULT_ROOT, then known vault
+    locations. Never hardcode a single path: the vault has moved once already
+    (2026-07-09, verse → reason) and a stale constant fails as a confusing
+    "schema not found" pointing at a directory that has not existed for months.
+    """
+    candidates: list[Path] = []
+    if vault_root:
+        candidates.append(Path(vault_root) / "classes")
+    env = os.environ.get("LECTERN_VAULT_ROOT")
+    if env:
+        candidates.append(Path(env) / "classes")
+    candidates.extend(v / "classes" for v in _DEFAULT_VAULTS)
     for c in candidates:
         if c.exists():
             return c
     return candidates[0]
 
 
-def _schema_for_course(course: str) -> Path:
+def _course_num(course: str) -> str:
+    """"CECS_478" / "CECS 478" / "478" → "478".
+
+    Raises SystemExit rather than IndexError on empty/garbage input: this is
+    reached straight from argv, and a CLI should not answer bad input with a
+    traceback.
+    """
+    parts = course.split("_") if "_" in course else course.split()
+    num = parts[-1].strip() if parts else ""
+    if not num:
+        sys.exit(f"cannot read a course number from --course {course!r} "
+                 "(expected e.g. 'CECS_326', 'CECS 326' or '326')")
+    return num
+
+
+def _course_dirs(classes: Path, num: str) -> list[Path]:
+    """Class folders that could hold `num`'s schema, most specific first.
+
+    A course may live in its own folder (`326/`) or in a shared one named with
+    hyphen-separated numbers (`378-478/`). The exact-name folder always wins;
+    shared folders follow, sorted for determinism.
+    """
+    exact, shared = [], []
+    if classes.is_dir():
+        for d in sorted(classes.iterdir()):
+            if not d.is_dir():
+                continue
+            if d.name == num:
+                exact.append(d)
+            elif num in d.name.split("-"):
+                shared.append(d)
+    # Fall back to the canonical guess so error messages name something sane.
+    return exact + shared or [classes / num]
+
+
+def _schema_for_course(course: str, vault_root: Path | None = None) -> Path:
     """Resolve <vault>/classes/<dir>/gradebook-schema.yaml for a course code.
 
-    Prefers a course-specific override (`gradebook-schema-<num>.yaml`) before
-    falling back to the shared `gradebook-schema.yaml` in the same folder.
-    This lets 378 and 478 — which share the `378-478/` folder but diverge in
-    Canvas column layout — each carry their own schema.
+    Precedence, most specific first:
+      1. `<dir>/gradebook-schema-<num>.yaml` — an explicit per-course override
+      2. `<num>/gradebook-schema.yaml`       — the course's OWN folder
+      3. `<shared>/gradebook-schema.yaml`    — a shared folder's generic file
+
+    Rule 2 must beat rule 3. `378-478/` holds 478's generic schema, so a
+    shared-folder-first order silently hands CECS 326 the *478* schema instead
+    of `326/gradebook-schema.yaml` — wrong weights, no error.
     """
-    classes = _default_archives_root()
-    # Course code "CECS_478" → folder "378-478" or "478", num "478"
-    num = course.split("_")[-1] if "_" in course else course.split()[-1]
-    candidates = [
-        # Per-course overrides in the shared folder (e.g. 378-478/gradebook-schema-378.yaml)
-        classes / "378-478" / f"gradebook-schema-{num}.yaml",
-        classes / num / f"gradebook-schema-{num}.yaml",
-        # Shared / generic schemas as fallback
-        classes / "378-478" / "gradebook-schema.yaml",
-        classes / num / "gradebook-schema.yaml",
-        classes / course / "gradebook-schema.yaml",
-    ]
-    # Pick first that exists; if none, return the first canonical guess.
+    classes = _default_archives_root(vault_root)
+    num = _course_num(course)
+    dirs = _course_dirs(classes, num)
+    candidates = [d / f"gradebook-schema-{num}.yaml" for d in dirs]
+    candidates += [d / "gradebook-schema.yaml" for d in dirs]
+    candidates.append(classes / course / "gradebook-schema.yaml")
     for c in candidates:
         if c.exists():
             return c
@@ -596,7 +644,8 @@ def _schema_for_course(course: str) -> Path:
 
 
 def _cmd_import(args: argparse.Namespace) -> int:
-    schema_path = args.schema or _schema_for_course(args.course)
+    schema_path = args.schema or _schema_for_course(
+        args.course, getattr(args, "vault_root", None))
     if not schema_path.exists():
         sys.exit(f"schema not found: {schema_path}; pass --schema explicitly")
     schema = load_schema(schema_path)
@@ -614,7 +663,8 @@ def _cmd_import(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     from lectern.gradebook_build import build_gradebook
-    schema_path = args.schema or _schema_for_course(args.course)
+    schema_path = args.schema or _schema_for_course(
+        args.course, getattr(args, "vault_root", None))
     schema = load_schema(schema_path)
     rows = build_gradebook(
         args.registry, args.roster, schema, args.out,
@@ -627,7 +677,9 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
 def _cmd_export_canvas(args: argparse.Namespace) -> int:
     from lectern.gradebook_build import export_canvas
-    schema_path = args.schema or (_schema_for_course(args.course) if args.course else None)
+    schema_path = args.schema or (
+        _schema_for_course(args.course, getattr(args, "vault_root", None))
+        if args.course else None)
     if schema_path is None:
         sys.exit("export-canvas needs --schema or --course to resolve the schema")
     schema = load_schema(schema_path)
@@ -639,7 +691,8 @@ def _cmd_export_canvas(args: argparse.Namespace) -> int:
 
 
 def _cmd_dfw(args: argparse.Namespace) -> int:
-    root = args.archives_root or _default_archives_root()
+    root = args.archives_root or _default_archives_root(
+        getattr(args, "vault_root", None))
     result = dfw_rollup(args.term, course=args.course, archives_root=root)
     print(f"DFW rollup · term={args.term}"
           + (f" · course={args.course}" if args.course else ""))
@@ -661,7 +714,8 @@ def _cmd_dfw(args: argparse.Namespace) -> int:
 
 
 def _cmd_dist(args: argparse.Namespace) -> int:
-    root = args.archives_root or _default_archives_root()
+    root = args.archives_root or _default_archives_root(
+        getattr(args, "vault_root", None))
     # course_dir layout: <root>/<course-dir>/archives/<term>-<section>/gradebook.csv
     # course arg may be "CECS_478" → folder is "378-478"
     num = args.course.split("_")[-1] if "_" in args.course else args.course.split()[-1]
@@ -686,7 +740,8 @@ def _cmd_dist(args: argparse.Namespace) -> int:
 
 def _cmd_check(args: argparse.Namespace) -> int:
     """Validate all gradebook.csv files for the term parse cleanly."""
-    root = args.archives_root or _default_archives_root()
+    root = args.archives_root or _default_archives_root(
+        getattr(args, "vault_root", None))
     errors = 0
     checked = 0
     for course_dir in sorted(root.iterdir()) if root.exists() else []:
@@ -729,6 +784,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="output directory (gradebook.csv + gradebook.md written here)")
     pi.add_argument("--schema", type=Path,
                     help="path to gradebook-schema.yaml (else resolved by --course)")
+    pi.add_argument("--vault-root", type=Path, dest="vault_root",
+                    help="vault root (else $LECTERN_VAULT_ROOT, else known locations)")
     pi.set_defaults(func=_cmd_import)
 
     pb = sub.add_parser("build", help="build gradebook from per-component score files (vault SoT)")
@@ -739,12 +796,16 @@ def main(argv: list[str] | None = None) -> int:
     pb.add_argument("--roster", type=Path, required=True, help="normalized roster.csv")
     pb.add_argument("--out", type=Path, required=True, help="output directory")
     pb.add_argument("--schema", type=Path, help="schema yaml (else resolved by --course)")
+    pb.add_argument("--vault-root", type=Path, dest="vault_root",
+                    help="vault root (else $LECTERN_VAULT_ROOT, else known locations)")
     pb.set_defaults(func=_cmd_build)
 
     pe = sub.add_parser("export-canvas", help="emit Canvas bulk-upload CSV from gradebook.csv")
     pe.add_argument("--gradebook", type=Path, required=True)
     pe.add_argument("--schema", type=Path, help="schema yaml (else resolved by --course)")
     pe.add_argument("--course", help="course code (used only to resolve --schema)")
+    pe.add_argument("--vault-root", type=Path, dest="vault_root",
+                    help="vault root (else $LECTERN_VAULT_ROOT, else known locations)")
     pe.add_argument("--out", type=Path, required=True)
     pe.add_argument("--template", type=Path,
                     help="a Canvas gradebook EXPORT to overlay scores onto, "
@@ -758,6 +819,8 @@ def main(argv: list[str] | None = None) -> int:
     pd.add_argument("--term", required=True)
     pd.add_argument("--course", help="filter to one course (e.g. CECS_478)")
     pd.add_argument("--archives-root", type=Path, dest="archives_root")
+    pd.add_argument("--vault-root", type=Path, dest="vault_root",
+                    help="vault root (else $LECTERN_VAULT_ROOT, else known locations)")
     pd.set_defaults(func=_cmd_dfw)
 
     pdist = sub.add_parser("dist", help="grade distribution + summary for one section")
@@ -765,11 +828,15 @@ def main(argv: list[str] | None = None) -> int:
     pdist.add_argument("--term", required=True)
     pdist.add_argument("--section", required=True)
     pdist.add_argument("--archives-root", type=Path, dest="archives_root")
+    pdist.add_argument("--vault-root", type=Path, dest="vault_root",
+                    help="vault root (else $LECTERN_VAULT_ROOT, else known locations)")
     pdist.set_defaults(func=_cmd_dist)
 
     pc = sub.add_parser("check", help="verify all gradebooks in a term parse cleanly")
     pc.add_argument("--term", required=True)
     pc.add_argument("--archives-root", type=Path, dest="archives_root")
+    pc.add_argument("--vault-root", type=Path, dest="vault_root",
+                    help="vault root (else $LECTERN_VAULT_ROOT, else known locations)")
     pc.set_defaults(func=_cmd_check)
 
     args = parser.parse_args(argv)

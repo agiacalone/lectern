@@ -41,4 +41,6 @@ make_wrapper reg-lab-recon             lectern.recon
 make_wrapper reg-lab-digest            lectern.lab_digest
 make_wrapper reg-lab-report            lectern.lab_report
 
+make_wrapper reg-admin-form            lectern.admin_form
+
 echo "lectern installed. reg-* wrappers in $BIN."
