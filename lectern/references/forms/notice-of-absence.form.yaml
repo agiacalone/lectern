@@ -16,15 +16,18 @@ authority: >-
 submit-via: DocuSign
 hours-per-day: 8   # only for the vault record; the form asks for no hours
 
-# Standing routing, per Raquel Porter's 2026-09-04 instructions.
+# ⚠ PLACEHOLDER ADDRESSES. This profile ships publicly, so it carries no real
+# people. Put your department's actual chair / coordinator / associate-dean
+# addresses in YOUR VAULT'S copy at classes/admin-forms/, which shadows this
+# file — `reg-admin-form init` puts one there for exactly this reason.
 routing:
   - role: Department Chair
-    email: Shadnaz.Asgari@csulb.edu
+    email: chair@example.edu
     to: true
   - role: CC — Associate Dean
-    email: Antonella.Sciortino@csulb.edu
+    email: associate.dean@example.edu
   - role: CC — Department Coordinator / Timekeeper
-    email: Raquel.Porter@csulb.edu
+    email: coordinator@example.edu
 
 leave-types:
   sick:
@@ -96,7 +99,7 @@ fields:
   - label: "Department Chair — Email"
     key: chair-email
     section: Screen 1 — PowerForm Signer Information
-    source: literal:Shadnaz.Asgari@csulb.edu
+    source: literal:chair@example.edu
   - label: "Associate Dean — Name"
     key: dean-name
     section: Screen 1 — PowerForm Signer Information
@@ -104,7 +107,7 @@ fields:
   - label: "Associate Dean — Email"
     key: dean-email
     section: Screen 1 — PowerForm Signer Information
-    source: literal:Antonella.Sciortino@csulb.edu
+    source: literal:associate.dean@example.edu
   - label: "Department Coordinator — Name"
     key: coordinator-name
     section: Screen 1 — PowerForm Signer Information
@@ -112,7 +115,7 @@ fields:
   - label: "Department Coordinator — Email"
     key: coordinator-email
     section: Screen 1 — PowerForm Signer Information
-    source: literal:Raquel.Porter@csulb.edu
+    source: literal:coordinator@example.edu
 
   # ── Screen 2: the form itself ────────────────────────────────────────────
   # ✅ VERIFIED against a completed envelope (2026-09-06, form "Revised August
@@ -178,21 +181,21 @@ fields:
   - label: "For CC: Dept Coordinator/Timekeeper Email"
     key: cc-coordinator
     section: Screen 2 — Notice of Absence from Class
-    source: literal:Raquel.Porter@csulb.edu
+    source: literal:coordinator@example.edu
     hint: Asked again on the form itself, not only in the signer gate.
   - label: "For CC: Associate Dean Email"
     key: cc-dean
     section: Screen 2 — Notice of Absence from Class
-    source: literal:Antonella.Sciortino@csulb.edu
+    source: literal:associate.dean@example.edu
 
 email:
   # The heads-up goes to the timekeeper who processes it; the chair is copied.
   # DocuSign handles the chair's signature separately, via `routing:` above.
-  to: Raquel.Porter@csulb.edu
-  cc: [Shadnaz.Asgari@csulb.edu]
+  to: coordinator@example.edu
+  cc: [chair@example.edu]
   subject: "Notice of Absence — {{leave-type}}, {{absence.dates}}"
   body: |
-    Hi Raquel,
+    Hello,
 
     I'm submitting a Notice of Absence for {{leave-type}} on {{absence.dates}}.
 
@@ -204,8 +207,7 @@ email:
 
     {{coverage}}
 
-    I'll complete the form in DocuSign and route it to Dr. Asgari, with you and
-    Dr. Sciortino copied.
+    I'll complete the form in DocuSign and route it to the chair, with you and
+    the associate dean copied.
 
     Thank you,
-    Anthony

@@ -838,16 +838,20 @@ def cmd_init(args) -> int:
 IDENTITY_STUB = """\
 # Instructor identity for reg-admin-form — the fields every campus form reasks.
 # Fill once; every form profile reads from here via `instructor.<key>`.
-name: Anthony Giacalone
-employee-id:            # CSULB Employee ID (from the paystub / SSO profile)
-campus-email: Anthony.Giacalone@csulb.edu
+#
+# This file stays in YOUR VAULT and is never published. Real routing addresses
+# belong here and in the vault's copy of a form profile, not in the profiles
+# that ship with lectern.
+name:
+employee-id:            # e.g. CSULB Employee ID (from the paystub / SSO profile)
+campus-email:
 title: Lecturer
-department: Computer Engineering and Computer Science
-department-code: CECS
-college: College of Engineering
-chair: Shadnaz Asgari
-coordinator: Raquel Porter
-associate-dean: Antonella Sciortino
+department:
+department-code:
+college:
+chair:
+coordinator:
+associate-dean:
 """
 
 
