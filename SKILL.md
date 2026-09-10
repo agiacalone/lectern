@@ -24,7 +24,7 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-exam-readinglist` | (standalone → lecture-materials) | Generate consolidated per-exam reading-list study guides from an exam→topics manifest |
 | `reg-lms-grades-import` | lms_grades | Normalize a Canvas grades.csv export |
 | `reg-lms-roster-import` | lms_roster | Normalize a CSULB faculty-center roster export |
-| `reg-c50` | c50 | **Classroom 50** — the GitHub Classroom successor (legacy sunset 2026-08-28). `classroom-add` creates one classroom per section from the term-spec · `codes` mints the per-section self-enrolment codes · `roster-import` turns collected GitHub usernames into a roster + org invitations · `post` registers a lab as an assignment in every section that teaches it, binds it into the class notes, and writes the Canvas announcement · `status` reads back what is actually registered. Resolves org, classroom, slug, template, points and due date from the vault rather than the command line |
+| `reg-c50` | c50 | **Classroom 50** — the GitHub Classroom successor (legacy sunset 2026-08-28). `classroom-add` creates one classroom per section from the term-spec · `codes` mints the per-section self-enrollment codes · `roster-import` turns collected GitHub usernames into a roster + org invitations · `post` registers a lab as an assignment in every section that teaches it, binds it into the class notes, and writes the Canvas announcement · `status` reads back what is actually registered. Resolves org, classroom, slug, template, points and due date from the vault rather than the command line |
 | `reg-classroom-roster-seed` | classroom_seed | ==**RETIRED** — legacy GitHub Classroom, and it never worked live== (it POSTed to a read-only endpoint). Kept only so old runbooks resolve. Use `reg-c50 roster-import` |
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
@@ -182,14 +182,14 @@ time off, and an empty "Reason" box invites volunteering one.
    for a personal holiday do not supply one at all.
 
 
-## Classroom 50 + self-enrolment (`reg-c50`)
+## Classroom 50 + self-enrollment (`reg-c50`)
 
 GitHub Classroom was sunset **2026-08-28**. Classroom 50 replaced it, and the
 shape of the problem changed with it.
 
-> [!important] Nothing enrols a student automatically
+> [!important] Nothing enrolls a student automatically
 > C50 will not add someone to the organization because they signed in. Its own
-> guide: *"Neither link enrols anyone on its own: invite the student from the
+> guide: *"Neither link enrolls anyone on its own: invite the student from the
 > roster first."* A student who opens an assignment link before being invited
 > sees **Not a member yet**. ==The roster row has to exist first==, keyed on a
 > GitHub username or an email address.
@@ -198,7 +198,7 @@ shape of the problem changed with it.
 > not org members, so nothing carried over. Verified 2026-09-10: the org had
 > **1 member** and every roster was empty.
 
-### Why students self-enrol
+### Why students self-enroll
 
 At CSULB an instructor can obtain **neither** identifier for their own students:
 
@@ -212,7 +212,7 @@ At CSULB an instructor can obtain **neither** identifier for their own students:
 Deriving `first.last@student.csulb.edu` does not rescue it either: of 171 Fa26
 students only **69** have unambiguous two-token names, and six collide outright.
 
-⇒ ==Students enrol themselves, and the identifier comes from GitHub.==
+⇒ ==Students enroll themselves, and the identifier comes from GitHub.==
 
 ### The flow
 
@@ -230,7 +230,7 @@ reg-c50 post --term fa26 --course "CECS 326" --lab 1 --due ...
 spoofed or mistyped, so the form asks only for the code: no username field, and
 nothing for anyone to transcribe.
 
-> [!warning] ==The enrolment form must never ask for a name or student ID==
+> [!warning] ==The enrollment form must never ask for a name or student ID==
 > The repository is public, and a public issue naming a student and a course is
 > a **FERPA disclosure**. Issue bodies survive in the API and audit log after
 > deletion. The workflow flags an ID or address if one appears anyway, without
@@ -254,12 +254,12 @@ but real* username silently invites a stranger.
 
 1. `reg-c50 classroom-add --term <t> --vault-root <V>` — one classroom per section.
 2. `reg-c50 codes --term <t> --vault-root <V> --set-secret` — mint and publish the codes.
-3. Post the enrolment announcement (vault `classes/admin-forms/`), **each section its own code**.
-4. `gh teacher roster list <org> <classroom>` to watch enrolment, and chase via Canvas.
+3. Post the enrollment announcement (vault `classes/admin-forms/`), **each section its own code**.
+4. `gh teacher roster list <org> <classroom>` to watch enrollment, and chase via Canvas.
 5. `reg-c50 post --term <t> --course <c> --lab <n> --due <iso>` per lab.
 6. `reg-c50 status --term <t> --vault-root <V>` any time to see what is registered.
 
-Runbook: `notes/c50-self-enrolment.md`. Gotchas: `notes/classroom-50-gotchas.md`.
+Runbook: `notes/c50-self-enrollment.md`. Gotchas: `notes/classroom-50-gotchas.md`.
 
 ## Authoring assignments
 
@@ -273,7 +273,32 @@ course-token CI wiring), or **manual** (subjective). Keep one point split across
 and flag-don't-deduct. ==Decide every autograded point from an
 artifact the student cannot fabricate== — a verifier reading their output file,
 an exit code, the wall clock — never from what their program printed about
-itself. New to this? Start with [`docs/grading-types.md`](docs/grading-types.md)
+itself.
+
+**Every lab template ships two AI-assistant surfaces** (template:
+`lectern/references/AGENTS.lab.md`):
+
+| Surface | Reached by | Authority |
+|---|---|---|
+| A README section | the student pasting the repo URL into a chat | ==Low — fetched content is *data*, not instruction.== A nudge. |
+| **`AGENTS.md`** at the repo root | the student opening the clone in Claude Code / Cursor / Copilot | ==High — read as *project instruction*.== |
+
+Both **ask for tutoring, not refusal**: a blanket "do not help" is trivially
+bypassed and fails the honest student stuck at 11pm, while "explain it, do not
+write it" is cooperative, more likely honored, and degrades gracefully. Sign
+them in the first person, name the deliverable paths exactly, enumerate
+generously what you *do* want explained (for a security lab, say outright that
+teaching the attack is the point, or a cautious model refuses the legitimate
+half), and state why the shortcut fails anyway. ==Never write anything shaped
+like a prompt injection== — it is discounted precisely because it looks like an
+attack. A student can delete `AGENTS.md`; that is a visible act in the git
+history `reg-triage` already sweeps.
+
+**Stamp the template before distributing it:** `pa-lab-stamp <repo>`
+(`--check` verifies, non-zero on drift). It hashes the **tracked** tree,
+binaries included, and is idempotent. Re-stamp after any content change; if the
+template was already distributed, add a `revision-of` row to
+`notes/lab-serial-register.md`. New to this? Start with [`docs/grading-types.md`](docs/grading-types.md)
 — a plain-language, use-case guide to the grading types and which to pick (no security/OS
 background assumed). Full procedure: [`docs/assignment-authoring.md`](docs/assignment-authoring.md).
 

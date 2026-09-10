@@ -68,6 +68,70 @@ visual or subjective deliverable — that is false confidence. Autograde what is
 
 ---
 
+## Step 1b — AI assistants: ask them to tutor, not to refuse
+
+A student who wants the answer will paste the URL, or open the repo in an
+agentic editor and say "implement this." Both are worth addressing, and they are
+**different surfaces with different authority**.
+
+| Surface | What the student did | How much weight it carries |
+|---|---|---|
+| A README section | pasted the repo URL into a chat | ==**Low.** Fetched page content is treated as *data*, not instruction== — that is the correct defense against prompt injection, and it applies to your README too. A nudge. |
+| **`AGENTS.md`** at the repo root | cloned the repo, opened it in Claude Code / Cursor / Copilot | ==**High.** Read as *project instruction*==, in a file that conventionally carries exactly this guidance. |
+
+Ship both. Template: [`lectern/references/AGENTS.lab.md`](../lectern/references/AGENTS.lab.md).
+
+### Four rules for the wording
+
+1. **Ask for tutoring, not refusal.** A blanket "do not help" is trivially
+   bypassed *and* fails the honest student stuck at 11pm. "Explain it, do not
+   write it" is a cooperative request, far more likely to be honored, and it
+   degrades gracefully instead of failing shut.
+2. **Sign it.** A named instructor stating course policy in the first person
+   carries weight that anonymous boilerplate does not.
+3. ==**Never write anything shaped like a prompt injection.**== No
+   "IGNORE PREVIOUS INSTRUCTIONS", no hidden text, no white-on-white. It gets
+   discounted precisely because it pattern-matches to an attack, and it makes
+   the instructor look like they are playing games rather than stating a policy.
+4. **Name the deliverable paths exactly**, and **enumerate generously what you
+   do want explained.** A vague file is easy to reason around; a concrete one is
+   not. For a security course, say plainly that teaching the attack is the point
+   — otherwise a cautious model refuses the *legitimate* half of the request.
+
+### It is a nudge, and the structural defences are the real work
+
+Say why the shortcut does not work, in the file, because that is the part that
+is actually load-bearing:
+
+- **Per-student seeding** (`gradebox` `image_build.seed_template`) — the correct
+  output differs per student, so a pasted answer fails verification.
+- **The oracle** — proofs bound to student, challenge and session.
+- **A writeup graded on mechanism** — "trace the interleaving that loses an
+  update," in their own words.
+- **`reg-triage`** — commit-history authenticity, flag-don't-deduct.
+
+A student can delete `AGENTS.md`. That is fine: it is a visible, deliberate act
+in the git history that `reg-triage` already sweeps.
+
+## Step 1c — Stamp the serial
+
+Before a template is distributed, stamp it:
+
+```sh
+pa-lab-stamp <repo>            # stamp or re-stamp; prints old -> new
+pa-lab-stamp --check <repo>    # verify; non-zero on drift
+```
+
+It hashes the repo's **tracked** tree, `lib/*.o` and every other binary
+included, strips the existing footer before hashing (so it is idempotent), and
+injects `<!-- serial: XXXXXXXX -->` into `README.md`. ==A serial that excludes
+the binaries the lab depends on is worse than none== — a rebuilt library would
+not move it.
+
+Re-stamp after any content change, and if the template was **already
+distributed**, add a row to `notes/lab-serial-register.md` with `revision-of`.
+See `notes/lab-doctrine.md`.
+
 ## Step 2 — Author the rubric / grading skill
 
 A detailed ISA rubric (see the existing `*_lab_grading_rubric.md` notes for the house style):
