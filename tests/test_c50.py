@@ -568,3 +568,39 @@ def test_codes_dry_run_writes_nothing(vault):
     assert c50.main(["codes", "--term", "fa26", "--vault-root", str(vault),
                      "--dry-run"]) == 0
     assert not store.exists()
+
+
+# ── regeneration safety (regression: 2026-09-10 clobbered OMEGA note) ────────
+
+
+def test_announce_note_from_the_index_survives_regeneration(vault):
+    """A due-date change regenerated an announcement and silently dropped a
+    hand-added paragraph about which bosses were optional. The note now lives
+    in the lab-index frontmatter, so regeneration reproduces it."""
+    index = vault / "classes" / "326" / "labs" / "threads" / "index.md"
+    index.write_text(index.read_text().replace(
+        "lab-slug: threads",
+        'lab-slug: threads\nannounce-note: "Only three of the four are required."'))
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    assert lab.announce_note == "Only three of the four are required."
+    text = c50.announcement("Giacalone-CECS", "cecs-326-fa26-01", lab,
+                            {"course": "CECS 326", "section": "01"},
+                            "2026-09-25T23:59:00-07:00")
+    assert "Only three of the four are required." in text
+    assert "Bring questions" in text          # the note is inserted, not substituted
+
+
+def test_announcement_without_a_note_has_no_stray_blank_run(vault):
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    assert lab.announce_note is None
+    text = c50.announcement("Giacalone-CECS", "cecs-326-fa26-01", lab,
+                            {"course": "CECS 326", "section": "01"}, None)
+    assert "\n\n\n" not in text
+
+
+def test_friday_due_date_renders_as_friday(vault):
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    text = c50.announcement("Giacalone-CECS", "cecs-326-fa26-01", lab,
+                            {"course": "CECS 326", "section": "01"},
+                            "2026-09-25T23:59:00-07:00")
+    assert "Friday, September 25 at 11:59 PM" in text

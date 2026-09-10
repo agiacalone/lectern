@@ -73,6 +73,7 @@ class Lab:
     template: str  # "<owner>/<repo>"
     points: int | None
     canvas_column: str | None
+    announce_note: str | None   # regeneration-safe extra paragraph
     index_path: Path
 
 
@@ -191,6 +192,7 @@ def find_lab(vault_root: Path, course: str, lab_number: int) -> Lab:
         template=template,
         points=points if points is not None else fm.get("points"),
         canvas_column=canvas_title or fm.get("gradebook-column"),
+        announce_note=fm.get("announce-note"),
         index_path=index,
     )
 
@@ -475,6 +477,11 @@ def announcement(
     due_line = _human_due(due) if due else "announced in class"
     points = f"{lab.points} points" if lab.points else "see the README"
     heading = lab.canvas_column or lab.title
+    # A per-lab paragraph lives in the lab-index frontmatter, not in the
+    # generated file: anything hand-added here is lost on the next regeneration.
+    # Learned the hard way 2026-09-10, when a due-date change silently dropped a
+    # note about which bosses were optional.
+    note = f"\n{lab.announce_note.strip()}\n" if lab.announce_note else ""
     return f"""\
 # {heading}
 
@@ -498,7 +505,7 @@ Accepting creates `{org}/{short_name}-{lab.assignment_slug}-<your-username>`.
 Clone it, do the work there, and commit and push. **Your last push before the
 deadline is what gets graded.** Read the repository's `README.md` first: it
 carries the task, the deliverable paths, and the grading breakdown.
-
+{note}
 Bring questions to class or office hours.
 """
 

@@ -41,6 +41,15 @@ says 20/20/15/20/25 is a defect — reconcile at authoring time, across README, 
 | **manual** | The deliverable is **inherently subjective** (a writeup, a design, a reflection) | ISA rubric / grading skill only. |
 | **hybrid** | Most real labs | Deterministic slice → gradebox/oracle; subjective slice → manual rubric. The automated grader also emits **evidence** that accelerates the manual pass. |
 
+> [!warning] ==A grader that reads the student's stdout is not a grader==
+> CECS 326 Lab 1, 2026-09-10: a submission whose `main()` printed the three
+> expected report lines and did nothing else scored **45/45** against the first
+> draft of its spec. Decide each point from an artifact the student cannot
+> fabricate: a verifier reading their output *file*, an exit code, the wall
+> clock. Where a fact genuinely only exists inside their process, say so in the
+> spec and pair it with something that does not. Worked example:
+> `~/git/326/cecs-326-lab-threads-dev/gradebox/`.
+
 Pick the smallest mechanism that covers each deliverable. Don't try to autograde an inherently
 visual or subjective deliverable — that is false confidence. Autograde what is *decidable*; emit
 *evidence* for the rest.
