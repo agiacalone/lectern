@@ -604,3 +604,41 @@ def test_friday_due_date_renders_as_friday(vault):
                             {"course": "CECS 326", "section": "01"},
                             "2026-09-25T23:59:00-07:00")
     assert "Friday, September 25 at 11:59 PM" in text
+
+
+# ── pulse ────────────────────────────────────────────────────────────────────
+
+
+def test_pulse_reports_enrollment_and_flags_a_thin_class(vault, monkeypatch, capsys):
+    monkeypatch.setattr(c50, "_gh_json", lambda p: [])
+    monkeypatch.setattr(c50, "read_assignments", lambda o, s: [])
+    import subprocess as sp
+    monkeypatch.setattr(c50.subprocess, "run",
+                        lambda *a, **k: sp.CompletedProcess(a, 0, "alice\nbob\n", ""))
+    assert c50.main(["pulse", "--term", "fa26", "--vault-root", str(vault)]) == 0
+    out = capsys.readouterr().out
+    assert "CLASSROOM PULSE" in out
+    assert "under half the class is enrolled" in out
+
+
+def test_pulse_says_so_plainly_when_nothing_needs_attention(vault, monkeypatch, capsys):
+    import subprocess as sp
+    roster = "\n".join(f"s{i}" for i in range(70)) + "\n"
+    monkeypatch.setattr(c50, "_gh_json", lambda p: [])
+    monkeypatch.setattr(c50, "read_assignments", lambda o, s: [])
+    monkeypatch.setattr(c50.subprocess, "run",
+                        lambda *a, **k: sp.CompletedProcess(a, 0, roster, ""))
+    c50.main(["pulse", "--term", "fa26", "--vault-root", str(vault)])
+    assert "nothing. Enrollment healthy" in capsys.readouterr().out
+
+
+def test_pulse_survives_the_github_api_being_down(vault, monkeypatch, capsys):
+    """A monitor that dies on a transient API failure is worse than one that
+    reports a gap: the cron would just go silent."""
+    import subprocess as sp
+    monkeypatch.setattr(c50, "_gh_json", lambda p: None)
+    monkeypatch.setattr(c50, "read_assignments", lambda o, s: [])
+    monkeypatch.setattr(c50.subprocess, "run",
+                        lambda *a, **k: sp.CompletedProcess(a, 1, "", "boom"))
+    assert c50.main(["pulse", "--term", "fa26", "--vault-root", str(vault)]) == 0
+    assert "CLASSROOM PULSE" in capsys.readouterr().out
