@@ -1,3 +1,4 @@
+import json
 import textwrap
 from pathlib import Path
 
@@ -383,3 +384,187 @@ def test_write_back_replaces_a_stale_binding_without_duplicating_it(tmp_path):
     text = note.read_text()
     assert text.count("github-classroom:") == 1
     assert "cecs-326-sp26-01" not in text
+
+
+# ── roster-import ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("octocat", "octocat"),
+    ("  octocat  ", "octocat"),
+    ("@octocat", "octocat"),
+    ("https://github.com/octocat", "octocat"),
+    ("http://www.github.com/octocat/", "octocat"),
+    ("github.com/octocat", None),          # no scheme: too ambiguous to trust
+    ("octo-cat", "octo-cat"),
+    ("a" * 39, "a" * 39),
+])
+def test_normalize_recovers_what_students_actually_submit(raw, expected):
+    assert c50.normalize_submitted_username(raw) == expected
+
+
+@pytest.mark.parametrize("raw", [
+    "", "   ", "octocat@student.csulb.edu", "032571160",
+    "my name is octocat", "-octocat", "octocat-", "a" * 40, "octo--cat",
+])
+def test_normalize_refuses_rather_than_guesses(raw):
+    """An email's local part is not a username. Refusing beats inviting a stranger."""
+    assert c50.normalize_submitted_username(raw) is None
+
+
+def test_parse_submissions_finds_the_columns_in_a_canvas_style_export(tmp_path):
+    f = tmp_path / "sub.csv"
+    f.write_text(
+        "name,id,section,answer\n"
+        '"Doe, Jane",032571160,CECS 326 Sec01,janedoe\n'
+        '"Roe, Rick",027369145,CECS 326 Sec01,@rickroe\n'
+    )
+    pairs = c50.parse_submissions(f)
+    assert pairs == [("032571160", "janedoe"), ("027369145", "@rickroe")]
+
+
+def test_parse_submissions_falls_back_to_names_when_there_is_no_id(tmp_path):
+    f = tmp_path / "sub.csv"
+    f.write_text("student,github\nJane Doe,janedoe\nRick Roe,rickroe\n")
+    assert c50.parse_submissions(f) == [("Jane Doe", "janedoe"), ("Rick Roe", "rickroe")]
+
+
+def test_parse_submissions_says_so_when_no_column_holds_usernames(tmp_path):
+    f = tmp_path / "sub.csv"
+    f.write_text("name,score\nJane Doe,10\nRick Roe,9\n")
+    with pytest.raises(c50.C50Error, match="no column looks like GitHub usernames"):
+        c50.parse_submissions(f)
+
+
+ROSTER_CSV = (
+    "student_id,lms_name,display_name,canonical_name,section,enrollment_status\n"
+    '032571160,"Doe,Jane",Jane Doe,jane doe,01,enrolled\n'
+    '027369145,"Roe,Rick",Rick Roe,rick roe,01,enrolled\n'
+    '099999999,"Gone,Gus",Gus Gone,gus gone,01,withdrawn\n'
+)
+
+
+def test_match_student_by_id_and_by_reordered_name():
+    import csv, io
+    roster = [r for r in csv.DictReader(io.StringIO(ROSTER_CSV))
+              if r["enrollment_status"] != "withdrawn"]
+    used = set()
+    assert c50.match_student("032571160", roster, used)["display_name"] == "Jane Doe"
+    # Canvas writes "Last, First"; the roster stores "First Last"
+    assert c50.match_student("Roe, Rick", roster, used)["display_name"] == "Rick Roe"
+    assert c50.match_student("Nobody At All", roster, used) is None
+
+
+def test_match_student_does_not_reuse_a_row():
+    import csv, io
+    roster = list(csv.DictReader(io.StringIO(ROSTER_CSV)))[:2]
+    used = {"032571160"}
+    assert c50.match_student("032571160", roster, used) is None
+
+
+def _vault_with_roster(vault: Path) -> Path:
+    arch = vault / "classes" / "326" / "archives" / "fa26-01"
+    arch.mkdir(parents=True, exist_ok=True)
+    (arch / "roster.csv").write_text(ROSTER_CSV)
+    return vault
+
+
+def test_roster_import_dry_run_reports_and_writes_nothing(vault, tmp_path, monkeypatch, capsys):
+    _vault_with_roster(vault)
+    subs = tmp_path / "s.csv"
+    subs.write_text("id,answer\n032571160,janedoe\n027369145,not an account\n")
+    monkeypatch.setattr(c50, "verify_github_user", lambda u: u)
+    rc = c50.main([
+        "roster-import", "--term", "fa26", "--course", "CECS 326", "--section", "01",
+        "--usernames", str(subs), "--vault-root", str(vault), "--dry-run",
+    ])
+    out = capsys.readouterr().out
+    assert rc == 1                       # one submission needs a human
+    assert "resolved 1/2" in out
+    assert "is not a GitHub username" in out
+    assert not (tmp_path / "cecs-326-fa26-01-roster.csv").exists()
+
+
+def test_roster_import_flags_a_username_that_does_not_exist(vault, tmp_path, monkeypatch, capsys):
+    _vault_with_roster(vault)
+    subs = tmp_path / "s.csv"
+    subs.write_text("id,answer\n032571160,typodname\n")
+    monkeypatch.setattr(c50, "verify_github_user", lambda u: None)
+    rc = c50.main([
+        "roster-import", "--term", "fa26", "--course", "CECS 326", "--section", "01",
+        "--usernames", str(subs), "--vault-root", str(vault), "--dry-run",
+    ])
+    assert rc == 1
+    assert "does not exist" in capsys.readouterr().out
+
+
+def test_roster_import_writes_the_c50_shape_and_imports(vault, tmp_path, monkeypatch, capsys):
+    _vault_with_roster(vault)
+    subs = tmp_path / "s.csv"
+    subs.write_text("id,answer\n032571160,JaneDoe\n027369145,https://github.com/rickroe\n")
+    monkeypatch.setattr(c50, "verify_github_user", lambda u: u)
+    calls = []
+    monkeypatch.setattr(c50, "_run", lambda cmd, dry: (calls.append(cmd), (0, "imported"))[1])
+    out_csv = tmp_path / "roster.csv"
+    rc = c50.main([
+        "roster-import", "--term", "fa26", "--course", "CECS 326", "--section", "01",
+        "--usernames", str(subs), "--vault-root", str(vault), "--out", str(out_csv),
+    ])
+    assert rc == 0
+    text = out_csv.read_text()
+    assert text.splitlines()[0] == "username,first_name,last_name,email,section"
+    assert "JaneDoe,Jane,Doe,,01" in text
+    assert "rickroe,Rick,Roe,,01" in text
+    assert calls[-1][:5] == ["gh", "teacher", "roster", "import", "Giacalone-CECS"]
+    assert "expires in 7 days" in capsys.readouterr().out
+
+
+# ── enrolment codes ──────────────────────────────────────────────────────────
+
+
+def test_codes_are_minted_once_and_reused(vault, capsys):
+    rc = c50.main(["codes", "--term", "fa26", "--vault-root", str(vault)])
+    assert rc == 0
+    store = vault / "classes" / "semesters" / "fa26.enroll-codes.json"
+    first = json.loads(store.read_text())
+    assert len(first) == 3                      # one per section in the spec
+    c50.main(["codes", "--term", "fa26", "--vault-root", str(vault)])
+    assert json.loads(store.read_text()) == first, "a re-run must not re-mint"
+
+
+def test_codes_omit_characters_students_misread(vault):
+    c50.main(["codes", "--term", "fa26", "--vault-root", str(vault)])
+    store = vault / "classes" / "semesters" / "fa26.enroll-codes.json"
+    for code in json.loads(store.read_text()):
+        suffix = code.rsplit("-", 1)[-1]
+        assert not (set(suffix) & set("ILO01")), f"{code} contains a lookalike"
+
+
+def test_codes_map_one_to_one_onto_the_terms_classrooms(vault):
+    c50.main(["codes", "--term", "fa26", "--vault-root", str(vault)])
+    store = vault / "classes" / "semesters" / "fa26.enroll-codes.json"
+    codes = json.loads(store.read_text())
+    assert sorted(codes.values()) == [
+        "cecs-326-fa26-01", "cecs-326-fa26-03", "cecs-378-fa26-01"]
+    assert len(set(codes.values())) == len(codes), "two codes share a classroom"
+
+
+def test_rotate_replaces_a_code_without_orphaning_its_classroom(vault):
+    c50.main(["codes", "--term", "fa26", "--vault-root", str(vault)])
+    store = vault / "classes" / "semesters" / "fa26.enroll-codes.json"
+    before = json.loads(store.read_text())
+    c50.main(["codes", "--term", "fa26", "--course", "CECS 378", "--section", "01",
+              "--vault-root", str(vault), "--rotate"])
+    after = json.loads(store.read_text())
+    assert sorted(after.values()) == sorted(before.values()), "a classroom lost its code"
+    assert set(after) != set(before), "rotate did not change anything"
+    # only the rotated section's code changed
+    unchanged = {k: v for k, v in before.items() if v != "cecs-378-fa26-01"}
+    assert unchanged.items() <= after.items()
+
+
+def test_codes_dry_run_writes_nothing(vault):
+    store = vault / "classes" / "semesters" / "fa26.enroll-codes.json"
+    assert c50.main(["codes", "--term", "fa26", "--vault-root", str(vault),
+                     "--dry-run"]) == 0
+    assert not store.exists()

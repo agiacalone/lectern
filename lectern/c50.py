@@ -6,10 +6,18 @@ short-name, a slug, a template and a due date typed by hand. The vault already
 holds all five, so this module resolves them from the term-spec, the lab-index
 notes and the gradebook schema, then drives ``gh teacher``.
 
-Three verbs:
+Four verbs:
 
 ``classroom-add``
     Create one C50 classroom per section of a term (``cecs-326-fa26-01``).
+
+``roster-import``
+    Turn GitHub usernames collected from students into a C50 roster, verifying
+    each account exists, then send the organization invitations. Needed because
+    ==nothing enrols a student automatically==: C50 will not add someone to the
+    org just because they signed in, and at CSULB an instructor can obtain
+    neither student email addresses nor a Canvas API token, so usernames
+    collected from the students are the only identifier available.
 
 ``post``
     Register a lab as an assignment in every section that teaches it, then emit
@@ -266,6 +274,174 @@ def register_assignment(
     return out
 
 
+# ── roster ───────────────────────────────────────────────────────────────────
+
+# GitHub's own rule: alphanumeric or single hyphens, no leading/trailing hyphen,
+# 39 characters at most.
+GH_USERNAME_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$")
+
+# Things students type instead of a username, in rough order of frequency.
+_NOT_A_USERNAME = re.compile(
+    r"(@|^https?://|\.com|\.edu|^\d{9}$|\s)", re.I
+)
+
+
+def looks_like_username(value: str) -> bool:
+    """True when `value` could be a GitHub username and nothing else."""
+    v = value.strip()
+    if not v or _NOT_A_USERNAME.search(v):
+        return False
+    return bool(GH_USERNAME_RE.match(v))
+
+
+def normalize_submitted_username(value: str) -> str | None:
+    """Recover a username from what a student actually submitted.
+
+    They paste profile URLs, add an @, wrap it in whitespace, or type their
+    email. Recover the first three; refuse the fourth rather than guess.
+    """
+    v = (value or "").strip().strip(".,;\"'")
+    if not v:
+        return None
+    m = re.match(r"^https?://(?:www\.)?github\.com/([^/?#\s]+)", v, re.I)
+    if m:
+        v = m.group(1)
+    v = v.lstrip("@")
+    # An email address is not recoverable: the local part is not the username.
+    if "@" in v:
+        return None
+    return v if looks_like_username(v) else None
+
+
+def verify_github_user(username: str) -> str | None:
+    """Return the canonical login for `username`, or None if no such account.
+
+    A typo'd username is the failure this exists to catch: `roster add` on a
+    nonexistent account errors, but on a *wrong but real* account it silently
+    invites a stranger.
+    """
+    proc = subprocess.run(
+        ["gh", "api", f"users/{username}", "--jq", ".login"],
+        capture_output=True, text=True,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def read_roster(vault_root: Path, course: str, term: str, section: str) -> list[dict]:
+    """Load the section's normalized roster from its archive bundle."""
+    path = (vault_root / "classes" / course_dir(course) / "archives"
+            / f"{term}-{section}" / "roster.csv")
+    if not path.exists():
+        raise C50Error(f"no roster at {path} (run reg-lms-roster-import first)")
+    import csv as _csv
+
+    with path.open() as fh:
+        return [r for r in _csv.DictReader(fh)
+                if (r.get("enrollment_status") or "").lower() != "withdrawn"]
+
+
+def parse_submissions(path: Path) -> list[tuple[str, str]]:
+    """Read (student_key, raw_value) pairs from a submissions export.
+
+    Accepts any CSV whose columns include something student-identifying and
+    something username-shaped, which covers the Canvas quiz and assignment
+    exports without needing to know their exact schema. A two-column file or a
+    bare `id,username` pair works too.
+    """
+    import csv as _csv
+
+    text = path.read_text(encoding="utf-8-sig")
+    rows = list(_csv.reader(text.splitlines()))
+    rows = [r for r in rows if any(c.strip() for c in r)]
+    if not rows:
+        raise C50Error(f"{path} is empty")
+
+    header, body = rows[0], rows[1:]
+    if not body:
+        raise C50Error(f"{path} has a header but no rows")
+
+    # The username column is the one whose values most often look like one.
+    # Detection is stricter than validation: a username must contain a letter
+    # here, so a column of scores or row numbers is not mistaken for one.
+    def detects(v: str) -> bool:
+        u = normalize_submitted_username(v)
+        return bool(u) and any(c.isalpha() for c in u) and len(u) > 1
+
+    ncols = max(len(r) for r in rows)
+    scores = []
+    for i in range(ncols):
+        vals = [r[i] for r in body if i < len(r)]
+        hits = sum(1 for v in vals if detects(v))
+        scores.append(hits)
+    if max(scores, default=0) == 0:
+        raise C50Error(
+            f"{path}: no column looks like GitHub usernames. "
+            "Check the export actually contains the submitted text."
+        )
+    ucol = scores.index(max(scores))
+
+    # The student column: prefer a 9-digit id, else the longest text column
+    # that is not the username column.
+    idcol = None
+    for i in range(ncols):
+        if i == ucol:
+            continue
+        vals = [r[i].strip() for r in body if i < len(r)]
+        if vals and sum(1 for v in vals if re.fullmatch(r"\d{9}", v)) > len(vals) / 2:
+            idcol = i
+            break
+    if idcol is None:
+        best, blen = None, -1
+        for i in range(ncols):
+            if i == ucol:
+                continue
+            vals = [r[i] for r in body if i < len(r)]
+            avg = sum(len(v) for v in vals) / max(len(vals), 1)
+            if avg > blen:
+                best, blen = i, avg
+        idcol = best
+    if idcol is None:
+        raise C50Error(f"{path}: could not find a column identifying the student")
+
+    out = []
+    for r in body:
+        key = r[idcol].strip() if idcol < len(r) else ""
+        val = r[ucol].strip() if ucol < len(r) else ""
+        if key or val:
+            out.append((key, val))
+    return out
+
+
+def match_student(key: str, roster: list[dict], used: set[str]) -> dict | None:
+    """Resolve a submission's student key to a roster row."""
+    k = key.strip()
+    if not k:
+        return None
+    digits = re.sub(r"\D", "", k)
+    if len(digits) == 9:
+        for r in roster:
+            if r["student_id"] == digits and r["student_id"] not in used:
+                return r
+    norm = re.sub(r"[^a-z]", "", _deaccent(k).lower())
+    if not norm:
+        return None
+    # Canvas writes "Last, First"; the roster stores "First Last".
+    for r in roster:
+        if r["student_id"] in used:
+            continue
+        cand = re.sub(r"[^a-z]", "", _deaccent(
+            r.get("canonical_name") or r.get("display_name") or "").lower())
+        if cand and (cand == norm or sorted(cand) == sorted(norm)):
+            return r
+    return None
+
+
+def _deaccent(s: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFKD", s)
+                   if not unicodedata.combining(c))
+
+
 def read_assignments(org: str, short_name: str) -> list[dict]:
     """Read a classroom's registered assignments back from the config repo."""
     path = f"{short_name}/assignments.json"
@@ -474,6 +650,151 @@ def cmd_post(args) -> int:
     return 0
 
 
+def cmd_roster_import(args) -> int:
+    """Turn collected GitHub usernames into a C50 roster import."""
+    import csv as _csv
+
+    vault_root = Path(args.vault_root)
+    spec = load_term_spec(spec_path(vault_root, args.term))
+    secs = sections_for(spec, args.course, args.section)
+    if len(secs) != 1:
+        raise C50Error("roster-import needs exactly one section: pass --section")
+    sec = secs[0]
+    short = classroom_name(sec["course"], args.term, str(sec["section"]))
+
+    roster = read_roster(vault_root, sec["course"], args.term, str(sec["section"]))
+    pairs = parse_submissions(Path(args.usernames))
+    print(f"{sec['course']} §{sec['section']} -> {short}")
+    print(f"  roster {len(roster)} enrolled · {len(pairs)} submission(s)\n")
+
+    used: set[str] = set()
+    rows: list[dict] = []
+    problems: list[str] = []
+
+    for key, raw in pairs:
+        student = match_student(key, roster, used)
+        if student is None:
+            problems.append(f"no roster match for {key!r} (submitted {raw!r})")
+            continue
+        username = normalize_submitted_username(raw)
+        if username is None:
+            problems.append(
+                f"{student['display_name']}: {raw!r} is not a GitHub username")
+            continue
+        canonical = None if args.no_verify else verify_github_user(username)
+        if not args.no_verify and canonical is None:
+            problems.append(
+                f"{student['display_name']}: github.com/{username} does not exist")
+            continue
+        used.add(student["student_id"])
+        name = (student.get("display_name") or "").split()
+        rows.append({
+            "username": canonical or username,
+            "first_name": name[0] if name else "",
+            "last_name": name[-1] if len(name) > 1 else "",
+            "email": "",
+            "section": str(sec["section"]),
+        })
+
+    missing = [r for r in roster if r["student_id"] not in used]
+
+    out = Path(args.out) if args.out else Path(f"{short}-roster.csv")
+    if not args.dry_run:
+        with out.open("w", newline="") as fh:
+            w = _csv.DictWriter(
+                fh, fieldnames=["username", "first_name", "last_name", "email", "section"])
+            w.writeheader()
+            w.writerows(rows)
+
+    print(f"  resolved {len(rows)}/{len(roster)}")
+    if problems:
+        print(f"\n  NEEDS A HUMAN ({len(problems)}):")
+        for p in problems:
+            print(f"    {p}")
+    if missing:
+        print(f"\n  NO SUBMISSION YET ({len(missing)}):")
+        for r in missing[:20]:
+            print(f"    {r['student_id']}  {r['display_name']}")
+        if len(missing) > 20:
+            print(f"    ... and {len(missing) - 20} more")
+
+    if args.dry_run:
+        print(f"\n  dry run: would write {out} and import it")
+        return 0 if not problems else 1
+
+    print(f"\n  wrote {out}")
+    if not rows:
+        print("  nothing to import")
+        return 1
+
+    rc, msg = _run(["gh", "teacher", "roster", "import", args.org, short, str(out)], False)
+    if rc != 0:
+        raise C50Error(f"roster import failed:\n{msg}")
+    print(f"  {msg}")
+    print("\n  GitHub has emailed each new member an invitation. It expires in 7 days.")
+    return 0 if not problems else 1
+
+
+def codes_path(vault_root: Path, term: str) -> Path:
+    return vault_root / "classes" / "semesters" / f"{term}.enroll-codes.json"
+
+
+def cmd_codes(args) -> int:
+    """Mint or show the per-section self-enrolment codes.
+
+    The codes live in the vault, which is private, and the repo secret is
+    derived from them. That way the record of which code routes where survives
+    independently of a secret nobody can read back.
+    """
+    import secrets
+
+    vault_root = Path(args.vault_root)
+    spec = load_term_spec(spec_path(vault_root, args.term))
+    secs = sections_for(spec, args.course, args.section)
+    store = codes_path(vault_root, args.term)
+    existing = json.loads(store.read_text()) if store.exists() else {}
+
+    # No I/L/O/0/1: students retype these off a phone.
+    alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    by_classroom = {v: k for k, v in existing.items()}
+    out: dict[str, str] = dict(existing)
+
+    for sec in secs:
+        classroom = classroom_name(sec["course"], args.term, str(sec["section"]))
+        if classroom in by_classroom and not args.rotate:
+            continue
+        if classroom in by_classroom:
+            out.pop(by_classroom[classroom], None)
+        dept, num = sec["course"].split()[0].upper(), sec["course"].split()[-1]
+        suffix = "".join(secrets.choice(alphabet) for _ in range(4))
+        out[f"{dept}{num}-{sec['section']}-{args.term.upper()}-{suffix}"] = classroom
+
+    if not args.dry_run and out != existing:
+        store.parent.mkdir(parents=True, exist_ok=True)
+        store.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+
+    wanted = {classroom_name(s["course"], args.term, str(s["section"])) for s in secs}
+    print(f"{args.term} enrolment codes")
+    for code, classroom in sorted(out.items(), key=lambda kv: kv[1]):
+        if classroom in wanted:
+            print(f"  {code:<26} -> {classroom}")
+    if args.dry_run:
+        print(f"\n  dry run: would write {store}")
+        return 0
+    print(f"\n  stored in {store}")
+
+    if args.set_secret:
+        rc, msg = _run(["gh", "secret", "set", "ENROLL_CODES",
+                        "--repo", args.enroll_repo,
+                        "--body", json.dumps(out)], False)
+        if rc != 0:
+            raise C50Error(f"could not set ENROLL_CODES:\n{msg}")
+        print(f"  pushed ENROLL_CODES to {args.enroll_repo}")
+    else:
+        print(f"  (add --set-secret to push these to {args.enroll_repo})")
+    return 0
+
+
 def cmd_status(args) -> int:
     vault_root = Path(args.vault_root)
     spec = load_term_spec(spec_path(vault_root, args.term))
@@ -528,6 +849,29 @@ def main(argv=None) -> int:
     po.add_argument("--stdout-only", action="store_true", help="print announcements only")
     po.add_argument("--dry-run", action="store_true")
     po.set_defaults(func=cmd_post)
+
+    ri = sub.add_parser(
+        "roster-import",
+        help="turn collected GitHub usernames into a C50 roster + org invites")
+    common(ri)
+    ri.add_argument("--usernames", required=True,
+                    help="CSV export of the submissions (Canvas quiz or assignment)")
+    ri.add_argument("--out", help="where to write the C50 roster CSV")
+    ri.add_argument("--no-verify", action="store_true",
+                    help="skip the github.com existence check (faster, riskier)")
+    ri.add_argument("--dry-run", action="store_true")
+    ri.set_defaults(func=cmd_roster_import)
+
+    cd = sub.add_parser(
+        "codes", help="mint or show the per-section self-enrolment codes")
+    common(cd)
+    cd.add_argument("--rotate", action="store_true",
+                    help="replace existing codes (invalidates the announced ones)")
+    cd.add_argument("--set-secret", action="store_true",
+                    help="push the codes to the enrolment repo's ENROLL_CODES secret")
+    cd.add_argument("--enroll-repo", default=f"{DEFAULT_ORG}/enroll")
+    cd.add_argument("--dry-run", action="store_true")
+    cd.set_defaults(func=cmd_codes)
 
     st = sub.add_parser("status", help="read back what is registered")
     common(st)
