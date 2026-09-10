@@ -772,6 +772,111 @@ def cmd_codes(args) -> int:
     return 0
 
 
+def _gh_json(path: str):
+    """GET a gh api path as JSON, or None. Never raises: a pulse that dies on a
+    transient API hiccup is worse than one that reports a gap."""
+    proc = subprocess.run(["gh", "api", path], capture_output=True, text=True)
+    if proc.returncode != 0:
+        return None
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+
+
+def cmd_pulse(args) -> int:
+    """One screen of classroom state: who is in, who is stuck, what is due.
+
+    Written for the OpenClaw cron to read aloud, so the output is compact and
+    every line is either a number or a thing to do. ==Signals only: it never
+    contacts a student and never changes anything.==
+    """
+    from datetime import timezone
+
+    vault_root = Path(args.vault_root)
+    spec = load_term_spec(spec_path(vault_root, args.term))
+    secs = sections_for(spec, args.course, args.section)
+    now = datetime.now(timezone.utc)
+
+    print(f"CLASSROOM PULSE · {args.term} · {now.astimezone():%Y-%m-%d %H:%M}")
+
+    # ── org invitations: the 7-day expiry is the silent killer ──────────────
+    invites = _gh_json(f"orgs/{args.org}/invitations?per_page=100") or []
+    expiring = []
+    for inv in invites:
+        try:
+            age = (now - datetime.fromisoformat(
+                inv["created_at"].replace("Z", "+00:00"))).days
+        except Exception:
+            continue
+        if age >= args.expiry_warn:
+            expiring.append((inv.get("login") or inv.get("email") or "?", age))
+
+    # ── enrollment + accepts per section ───────────────────────────────────
+    recent = _gh_json(
+        f"orgs/{args.org}/repos?per_page=100&sort=created&direction=desc") or []
+    repo_names = [r["name"] for r in recent]
+
+    total_roster = total_expected = 0
+    lines = []
+    for sec in secs:
+        short = classroom_name(sec["course"], args.term, str(sec["section"]))
+        proc = subprocess.run(
+            ["gh", "teacher", "roster", "list", args.org, short, "--quiet"],
+            capture_output=True, text=True)
+        rostered = len([l for l in proc.stdout.splitlines() if l.strip()]) if proc.returncode == 0 else 0
+        expected = int(sec.get("enrolled") or 0)
+        total_roster += rostered
+        total_expected += expected
+
+        pct = (100 * rostered // expected) if expected else 0
+        lines.append(f"  {sec['course']} §{sec['section']:<3} {rostered:>3}/{expected:<3} enrolled ({pct}%)")
+
+        for a in read_assignments(args.org, short):
+            slug = a["slug"]
+            accepted = sum(1 for n in repo_names if n.startswith(f"{short}-{slug}-"))
+            due = (a.get("due_meta") or {}).get("input", "")
+            days = ""
+            if due:
+                try:
+                    d = (datetime.fromisoformat(due) - datetime.now().astimezone()).days
+                    days = f" · due in {d}d" if d >= 0 else f" · OVERDUE by {-d}d"
+                except Exception:
+                    pass
+            flag = "  <-- nobody has started" if accepted == 0 else ""
+            lines.append(f"      {slug:<26} {accepted:>3} accepted{days}{flag}")
+
+    print(f"\nENROLLMENT  {total_roster}/{total_expected} "
+          f"({100 * total_roster // total_expected if total_expected else 0}%)")
+    for l in lines:
+        print(l)
+
+    # ── enrollment repo health ─────────────────────────────────────────────
+    open_issues = _gh_json(f"repos/{args.org}/{args.enroll_repo}/issues?state=open&per_page=50") or []
+    real = [i for i in open_issues if "pull_request" not in i]
+
+    print("\nATTENTION")
+    hits = 0
+    if expiring:
+        hits += 1
+        print(f"  {len(expiring)} invitation(s) unaccepted for >={args.expiry_warn}d "
+              f"(GitHub expires them at 7):")
+        for login, age in sorted(expiring, key=lambda x: -x[1])[:10]:
+            print(f"      {login} ({age}d)")
+    if real:
+        hits += 1
+        print(f"  {len(real)} open issue(s) in {args.enroll_repo} — the bot closes "
+              "every one it handles, so an open issue means it did not:")
+        for i in real[:10]:
+            print(f"      #{i['number']} by {i['user']['login']}: {i['title'][:48]}")
+    if total_expected and total_roster * 2 < total_expected:
+        hits += 1
+        print(f"  under half the class is enrolled ({total_roster}/{total_expected})")
+    if not hits:
+        print("  nothing. Enrollment healthy, no stuck issues, no expiring invitations.")
+    return 0
+
+
 def cmd_status(args) -> int:
     vault_root = Path(args.vault_root)
     spec = load_term_spec(spec_path(vault_root, args.term))
@@ -849,6 +954,13 @@ def main(argv=None) -> int:
     cd.add_argument("--enroll-repo", default=f"{DEFAULT_ORG}/enroll")
     cd.add_argument("--dry-run", action="store_true")
     cd.set_defaults(func=cmd_codes)
+
+    pu = sub.add_parser("pulse", help="one screen of classroom state, for monitoring")
+    common(pu)
+    pu.add_argument("--expiry-warn", type=int, default=4,
+                    help="flag invitations unaccepted for this many days (GitHub expires at 7)")
+    pu.add_argument("--enroll-repo", default="enroll")
+    pu.set_defaults(func=cmd_pulse)
 
     st = sub.add_parser("status", help="read back what is registered")
     common(st)
