@@ -1,0 +1,21 @@
+# Guard-file notification, for a lab template's .github/workflows/autograde.yml.
+#
+# It tells the STUDENT, in the run they already look at, that a file they were
+# not asked to edit has changed. It does not grade: no points, no pass/fail, and
+# the step cannot fail the run. The authoritative check is instructor-side
+# (`reg-triage sweep`), which reads git history from outside the student's
+# control; a repo can edit its own workflow, so nothing here is evidence.
+#
+# Setup, once, in the template repo:
+#   reg-guardcheck stamp AGENTS.md          # writes grading/guard.sha256
+#   cp <lectern>/lectern/guardcheck.py grading/guardcheck.py
+#   git add grading/ && git commit
+#
+# guardcheck.py is stdlib-only, so it runs on the bare runner Python with no
+# install step. Place the step AFTER the grader has written result.json.
+
+      - name: Course-file check
+        if: always()
+        run: |
+          python3 grading/guardcheck.py check \
+            --result grading/result.json

@@ -13,6 +13,8 @@ from pathlib import Path
 import jsonschema
 import yaml
 
+from lectern.triage_guardfile import DEFAULT_GUARD_FILES
+
 
 class TriageManifestError(Exception):
     """Raised when a triage manifest is missing keys, malformed, or invalid."""
@@ -38,6 +40,22 @@ SCHEMA = {
         },
         "profile": {"enum": ["single-sitting", "short-project", "term-project"]},
         "source": {"enum": ["classroom", "scrape"]},
+        "guard_files": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {"type": "string"},
+                    {
+                        "type": "object",
+                        "required": ["path"],
+                        "properties": {
+                            "path": {"type": "string"},
+                            "sha256": {"type": "string"},
+                        },
+                    },
+                ]
+            },
+        },
     },
 }
 
@@ -61,6 +79,9 @@ def load_manifest(path: Path) -> dict:
     cfg.setdefault("thresholds", {})
     cfg.setdefault("weights", {})
     cfg.setdefault("deliverables", [])
+    # Instructor-authored files the student is not asked to edit. Editing or
+    # deleting one is a Part A fact, never a score — see triage_guardfile.
+    cfg.setdefault("guard_files", list(DEFAULT_GUARD_FILES))
 
     # Normalize date fields: yaml.safe_load parses bare YAML dates (e.g.
     # ``due_date: 2026-05-16``) into datetime.date objects, but all downstream

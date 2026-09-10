@@ -265,7 +265,8 @@ def _ledger_table(ledger: list) -> str:
 
 
 def _part_a(student: dict, cfg: dict, facts, forensics: list[dict],
-            *, release: bool, grading_ref: str | None = None) -> str:
+            *, release: bool, grading_ref: str | None = None,
+            guard_facts: list | None = None) -> str:
     """Render Part A — Verified record (audit-grade)."""
     asgn = cfg.get("assignment", {})
     repo_name = (
@@ -377,7 +378,68 @@ Every fact below is derivable by a third party with repository access by running
 commands in A.4 against the pinned commit. No interpretation is required to confirm them.
 """
 
-    return "\n\n".join([header, a1, a2, a3, a4, a5])
+    a6 = _part_a6(guard_facts or [])
+
+    return "\n\n".join(x for x in [header, a1, a2, a3, a4, a5, a6] if x)
+
+
+
+def _part_a6(guard_facts: list) -> str:
+    """Render A.6 — Guard-file integrity (verified; carries no score)."""
+    if not guard_facts:
+        return ""
+
+    header = """\
+## A.6 Guard-file integrity
+
+Instructor-authored files the student was not asked to edit. Status compares the
+file at the grading commit against its baseline: the file as distributed when the
+manifest declares a `sha256`, otherwise the file's first appearance in this repo.
+
+==A change here is a fact, not a finding.== It carries no score and no penalty.
+Deleting `AGENTS.md` is a visible, deliberate act, and there are innocuous reasons
+to touch these files. Read the commit before drawing any conclusion."""
+
+    rows = ["| File | Status | Baseline | Student commits touching it |",
+            "|---|---|---|--:|"]
+    for f in guard_facts:
+        target = f.path or f.pattern
+        baseline = {
+            "template-sha256": "file as distributed",
+            "first-commit": f"first appearance (`{f.baseline_sha}`)",
+            "none": "none (file never in this repo)",
+        }.get(f.baseline_source, f.baseline_source)
+        rows.append(
+            f"| `{target}` | **{f.status}** | {baseline} | {f.student_touches} |"
+        )
+
+    blocks = [header, "\n".join(rows)]
+
+    for f in guard_facts:
+        if not f.touches:
+            continue
+        target = f.path or f.pattern
+        lines = [f"**Commits touching `{target}`**", ""]
+        lines.append("```")
+        for t in f.touches:
+            tag = "[bot]" if t.is_bot else "     "
+            lines.append(
+                f"{t.change:<3} {t.sha:<10} {t.iso[:16]}  {tag} "
+                f"{t.author:<24}  {t.subject}"
+            )
+        lines.append("```")
+        blocks.append("\n".join(lines))
+
+    repro = ["### Reproduce A.6", ""]
+    for f in guard_facts:
+        target = f.path or f.pattern
+        repro += [f"**`{target}`**", "", "```",
+                  "# History of the file:", f.reproduce["history"],
+                  "", "# Content at the grading commit:", f.reproduce["content"],
+                  "```", ""]
+    blocks.append("\n".join(repro).rstrip())
+
+    return "\n\n".join(b for b in blocks if b)
 
 
 def _part_b(student: dict, cfg: dict, score: tuple) -> str:
@@ -456,6 +518,7 @@ def render_report(
     score: tuple,
     release: bool = False,
     grading_ref: str | None = None,
+    guard_facts: list | None = None,
 ) -> str:
     """Assemble the two-tier (Part A/B/C) authenticity audit report.
 
@@ -477,6 +540,10 @@ def render_report(
         (Full sanitization — wikilink stripping, callout flattening, etc. — is
         a later task; for now ``release=True`` only guarantees the SSID does
         not appear.)
+    guard_facts:
+        List of ``GuardFileFact`` from :func:`lectern.triage_guardfile.guardfile_forensics`.
+        Renders section A.6. Verified facts only — a guard-file change carries no
+        score and is never an adverse finding on its own. Omitted when ``None``.
     grading_ref:
         When provided, a ``| Grading commit (deliverables) | `<ref>` |`` row
         is added to A.1 so readers know which commit the deliverable facts pin
@@ -519,7 +586,18 @@ audit. The advisory screen (Part B) is a heuristic signal bounded by the limitat
 in Part C. Nothing in Part B is used adversely against the student without independent
 human review."""
 
-    part_a = _part_a(student, cfg, facts, forensics, release=release, grading_ref=grading_ref)
+    changed = [f for f in (guard_facts or []) if f.notable]
+    if changed:
+        what = ", ".join(f"`{f.path or f.pattern}` **{f.status}**" for f in changed)
+        preamble += f"""
+
+> [!warning] A course file was changed
+> {what}. This is a Part A fact carrying no score: it moves no bucket and costs
+> no points. It is recorded in **A.6** with the commits that made the change and
+> the commands to verify them. Read the commit before drawing a conclusion."""
+
+    part_a = _part_a(student, cfg, facts, forensics, release=release,
+                     grading_ref=grading_ref, guard_facts=guard_facts)
     part_b = _part_b(student, cfg, score)
     part_c = _part_c(cfg)
 
