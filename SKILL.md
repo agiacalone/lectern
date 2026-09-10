@@ -24,7 +24,8 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-exam-readinglist` | (standalone → lecture-materials) | Generate consolidated per-exam reading-list study guides from an exam→topics manifest |
 | `reg-lms-grades-import` | lms_grades | Normalize a Canvas grades.csv export |
 | `reg-lms-roster-import` | lms_roster | Normalize a CSULB faculty-center roster export |
-| `reg-classroom-roster-seed` | classroom_seed | Seed a GitHub Classroom roster from a normalized roster |
+| `reg-c50` | c50 | **Classroom 50** — the GitHub Classroom successor (legacy sunset 2026-08-28). `classroom-add` creates one classroom per section from the term-spec · `codes` mints the per-section self-enrolment codes · `roster-import` turns collected GitHub usernames into a roster + org invitations · `post` registers a lab as an assignment in every section that teaches it, binds it into the class notes, and writes the Canvas announcement · `status` reads back what is actually registered. Resolves org, classroom, slug, template, points and due date from the vault rather than the command line |
+| `reg-classroom-roster-seed` | classroom_seed | ==**RETIRED** — legacy GitHub Classroom, and it never worked live== (it POSTed to a read-only endpoint). Kept only so old runbooks resolve. Use `reg-c50 roster-import` |
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
 | `reg-gradescope-stats` | gradescope_stats | Per-outcome **item analysis** from Gradescope *Export Evaluations* — per-distractor stats joined to grading-note `form·Qn·slot` keys (dead/over-key distractors, miskey alarm); emits `ITEM_ANALYSIS.md` newspaper broadsheet + `item_scores` matrix |
@@ -181,6 +182,85 @@ time off, and an empty "Reason" box invites volunteering one.
    for a personal holiday do not supply one at all.
 
 
+## Classroom 50 + self-enrolment (`reg-c50`)
+
+GitHub Classroom was sunset **2026-08-28**. Classroom 50 replaced it, and the
+shape of the problem changed with it.
+
+> [!important] Nothing enrols a student automatically
+> C50 will not add someone to the organization because they signed in. Its own
+> guide: *"Neither link enrols anyone on its own: invite the student from the
+> roster first."* A student who opens an assignment link before being invited
+> sees **Not a member yet**. ==The roster row has to exist first==, keyed on a
+> GitHub username or an email address.
+>
+> Legacy Classroom added students as *outside collaborators on their own repo*,
+> not org members, so nothing carried over. Verified 2026-09-10: the org had
+> **1 member** and every roster was empty.
+
+### Why students self-enrol
+
+At CSULB an instructor can obtain **neither** identifier for their own students:
+
+| Source | Email? |
+|---|---|
+| Canvas gradebook export | No — `SIS Login ID` is the 9-digit student number |
+| MyCSULB faculty-center roster | No — "Notify" is a mail-merge checkbox, not an address |
+| Canvas People page or its export | Not shown, and not offered to instructors |
+| Canvas API | "New Access Token" is disabled for instructor accounts |
+
+Deriving `first.last@student.csulb.edu` does not rescue it either: of 171 Fa26
+students only **69** have unambiguous two-token names, and six collide outright.
+
+⇒ ==Students enrol themselves, and the identifier comes from GitHub.==
+
+### The flow
+
+```
+reg-c50 codes --term fa26 --vault-root <V> --set-secret   # once per term
+        ↓  one code per section, e.g. CECS326-01-FA26-TVVZ
+   student opens an issue at <org>/enroll with their code
+        ↓  workflow: github.event.issue.user.login IS the identity
+   gh teacher roster add  →  GitHub emails an org invitation
+        ↓  student accepts (expires after 7 days)
+reg-c50 post --term fa26 --course "CECS 326" --lab 1 --due ...
+```
+
+**The issue author is the identity.** `github.event.issue.user.login` cannot be
+spoofed or mistyped, so the form asks only for the code: no username field, and
+nothing for anyone to transcribe.
+
+> [!warning] ==The enrolment form must never ask for a name or student ID==
+> The repository is public, and a public issue naming a student and a course is
+> a **FERPA disclosure**. Issue bodies survive in the API and audit log after
+> deletion. The workflow flags an ID or address if one appears anyway, without
+> echoing it.
+>
+> The `student_id ↔ github_username` binding instead comes from a **name and ID
+> header in the graded deliverable**, inside the student's private repo. Free,
+> re-asserted every lab, and a wrong ID is visible in the artifact.
+
+Codes are stored in `classes/semesters/<term>.enroll-codes.json` (the vault is
+private) and the `ENROLL_CODES` repo secret is derived from it, so the record of
+which code routes where survives a secret nobody can read back. Rotate per term
+with `--rotate`: they are bearer secrets shared with a whole class, so assume
+they leak. Blast radius is a stranger joining the org, visible in the roster.
+
+`roster-import` remains for the case where usernames arrive some other way. It
+verifies every account exists before writing, because `roster add` on a *wrong
+but real* username silently invites a stranger.
+
+### Term lifecycle, C50 half
+
+1. `reg-c50 classroom-add --term <t> --vault-root <V>` — one classroom per section.
+2. `reg-c50 codes --term <t> --vault-root <V> --set-secret` — mint and publish the codes.
+3. Post the enrolment announcement (vault `classes/admin-forms/`), **each section its own code**.
+4. `gh teacher roster list <org> <classroom>` to watch enrolment, and chase via Canvas.
+5. `reg-c50 post --term <t> --course <c> --lab <n> --due <iso>` per lab.
+6. `reg-c50 status --term <t> --vault-root <V>` any time to see what is registered.
+
+Runbook: `notes/c50-self-enrolment.md`. Gotchas: `notes/classroom-50-gotchas.md`.
+
 ## Authoring assignments
 
 Author every coding assignment with its **graders' contract** included — a student-facing spec
@@ -190,7 +270,10 @@ grading mechanism per deliverable: **gradebox** (sandbox / runnable code / deter
 artifacts), the **oracle** (verify-by-proof; document the `/verify` receiving-end contract +
 course-token CI wiring), or **manual** (subjective). Keep one point split across README, course
 `CLAUDE.md`, Classroom issues, and the rubric. Bake integrity in via forcing-functions/canaries
-and flag-don't-deduct. New to this? Start with [`docs/grading-types.md`](docs/grading-types.md)
+and flag-don't-deduct. ==Decide every autograded point from an
+artifact the student cannot fabricate== — a verifier reading their output file,
+an exit code, the wall clock — never from what their program printed about
+itself. New to this? Start with [`docs/grading-types.md`](docs/grading-types.md)
 — a plain-language, use-case guide to the grading types and which to pick (no security/OS
 background assumed). Full procedure: [`docs/assignment-authoring.md`](docs/assignment-authoring.md).
 
@@ -198,7 +281,7 @@ background assumed). Full procedure: [`docs/assignment-authoring.md`](docs/assig
 
 See the project README for term-end/mid-term rituals.
 Vault is the proprietary record; Canvas is student-facing + ISA grade entry;
-Drive is ISA distribution only; GitHub Classroom binds students to repos.
+Drive is ISA distribution only; **Classroom 50** binds students to repos.
 
 ### Term lifecycle (start → close)
 
