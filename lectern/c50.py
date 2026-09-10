@@ -45,7 +45,7 @@ from pathlib import Path
 import yaml
 
 from lectern.term_spec import TermSpecError, load_term_spec
-from lectern.vault_notes import course_dir, split_frontmatter
+from lectern.vault_notes import course_dir, set_frontmatter_fields, split_frontmatter
 
 DEFAULT_ORG = "Giacalone-CECS"
 CONFIG_REPO = "classroom50"
@@ -520,43 +520,6 @@ def _human_due(due: str) -> str:
     return re.sub(r"\s+", " ", stamp)
 
 
-_FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n", re.S)
-_GH_CLASSROOM_RE = re.compile(r"^github-classroom:\n(?:[ \t]+\S.*\n)*", re.M)
-_UPDATED_RE = re.compile(r"^updated:.*$", re.M)
-
-
-def _patch_frontmatter(text: str, short_name: str, url: str, now: str) -> str:
-    """Patch the binding into a note's frontmatter **textually**.
-
-    Deliberately not a YAML round-trip. Class notes are hand-authored, and
-    dumping the parsed frontmatter back reformats everything it touches:
-    ``tags`` collapses from flow to block style, quotes come and go, and
-    PyYAML re-emits a parsed timestamp as ``2026-07-08 11:31:22-07:00`` —
-    dropping the ``T`` that the vault's ``created:`` fields and Dataview's
-    date parsing both rely on. A targeted edit leaves every untouched line
-    byte-identical.
-    """
-    m = _FRONTMATTER_RE.match(text)
-    if not m:
-        raise C50Error("class note does not begin with a frontmatter fence")
-    fm = m.group(1)
-    block = f"github-classroom:\n  id: {short_name}\n  url: {url}\n"
-
-    if _GH_CLASSROOM_RE.search(fm):
-        fm = _GH_CLASSROOM_RE.sub(lambda _: block, fm, count=1)
-    elif re.search(r"^tags:", fm, re.M):
-        fm = re.sub(r"^tags:", lambda _: block + "tags:", fm, count=1, flags=re.M)
-    else:
-        fm = fm + block
-
-    if _UPDATED_RE.search(fm):
-        fm = _UPDATED_RE.sub(lambda _: f"updated: {now}", fm, count=1)
-    else:
-        fm = fm + f"updated: {now}\n"
-
-    return "---\n" + fm + "---\n" + text[m.end():]
-
-
 def write_back(class_note: Path, org: str, short_name: str, dry_run: bool) -> bool:
     """Record the C50 binding in a class-note's frontmatter.
 
@@ -573,7 +536,14 @@ def write_back(class_note: Path, org: str, short_name: str, dry_run: bool) -> bo
         return False
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     if not dry_run:
-        class_note.write_text(_patch_frontmatter(text, short_name, url, now))
+        # vault_notes.set_frontmatter_fields patches textually as of
+        # 2026-09-10; c50 carried its own copy of that logic while the shared
+        # one still round-tripped through PyYAML.
+        class_note.write_text(set_frontmatter_fields(text, {
+            "github-classroom.id": short_name,
+            "github-classroom.url": url,
+            "updated": now,
+        }))
     return True
 
 
