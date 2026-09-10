@@ -29,9 +29,9 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
 | `reg-gradescope-stats` | gradescope_stats | Per-outcome **item analysis** from Gradescope *Export Evaluations* — per-distractor stats joined to grading-note `form·Qn·slot` keys (dead/over-key distractors, miskey alarm); emits `ITEM_ANALYSIS.md` newspaper broadsheet + `item_scores` matrix |
-| `reg-triage` | triage | Git-history **authenticity triage** for GitHub Classroom submissions: `init` scaffolds a manifest, `sweep` scores a class into FLAG/REVIEW/PASS (CSV + Markdown broadsheet; org-`scrape` repo discovery post-Classroom), `report` emits a two-tier audit doc with a sanitized `--release` variant, `rhythm` flags cross-assignment commit-rhythm shifts. 100% triage — no student penalized without human review |
+| `reg-triage` | triage | Git-history **authenticity triage** for GitHub Classroom submissions: `init` scaffolds a manifest, `sweep` scores a class into FLAG/REVIEW/PASS (CSV + Markdown broadsheet; org-`scrape` repo discovery post-Classroom), `report` emits a two-tier audit doc with a sanitized `--release` variant, `rhythm` flags cross-assignment commit-rhythm shifts. Also reports **guard-file integrity**: whether a repo edited or deleted `AGENTS.md` or another instructor-authored file, as a fact that carries no score. 100% triage — no student penalized without human review |
 | `reg-syllabus` | syllabus | Generate course syllabi from Markdown with a tamper-evident control-number serial: `stamp` injects a repo-tree SHA-256 + register row, `build` renders `syllabus.html` + a Canvas-RCE-safe `syllabus_canvas.html` (`--pdf` opt-in, print only) |
-| `reg-lab-recon` | recon | Sweep a lab's student-repo population into a deterministic **recon bundle** (Part A facts): per-repo autograde points (parsed from CI logs), honor gate, commit triage, structural writeup facts → `cohort.csv` + `FACTS.md` + a two-tier cohort-intelligence `REPORT.md`. Advisory; no student graded without human review |
+| `reg-lab-recon` | recon | Sweep a lab's student-repo population into a deterministic **recon bundle** (Part A facts): per-repo autograde points (parsed from CI logs), honor gate, commit triage, guard-file integrity, structural writeup facts → `cohort.csv` + `FACTS.md` + a two-tier cohort-intelligence `REPORT.md`. Advisory; no student graded without human review |
 | `reg-lab-digest` | lab_digest | **Layer-2 writeup digest** over a recon bundle: `emit` a grading work-list (writeups + rubric YAML + output schema), then `merge` model-graded results into the cohort sheet as advisory writeup scores + rationale comments. LLM grading runs in the **harness via a contract** (no API dep in lectern); deterministic guardrails — partial-ward zeroing from autograde truth, total recompute, confidence gating. Results carry both an internal `comment` and a sanitized `student_comment`. **Never writes the gradebook** |
 | `reg-lab-report` | lab_report | **Layer-3 instructor report + feedback delivery.** `render` → the canonical `REPORT.md` (distribution + agate charts, grade table, four-bucket grading recommendations, Canvas entry sheet) deterministically from the recon bundle + digest cohort. `deliver` → a sanitized, GPG-signed `FEEDBACK.md` to each repo's `feedback` branch, closes the feedback PR, **then merges `feedback` into `main`** (signed; direct-add fallback for unrelated-history repos) so it shows on the student's default branch; **`--dry-run` by default**, signing mandatory, idempotent (feedback + main independently; `--no-merge-main` opts out), emits a verbatim `FEEDBACK_LOG.md`. Feedback source is either the digest cohort (`--cohort`) or — **note-authoritative** — the grading-round note itself (`--from-note <REPORT.md>`), parsing per-student blocks so hand-authored feedback is delivered verbatim, never re-derived (N generic components). Trigger after grading a lab to produce the instructor report and/or post feedback to students |
 | `reg-admin-form` | admin_form | **Administrative forms** — fill a campus form (Notice of Absence, …) from the vault's own records. A YAML *form profile* declares the fields; the engine resolves them from the term-spec, class-notes and syllabi, and emits a copy/paste `FORM.md`, a routing `EMAIL.md`, and a machine `record.yaml`. Computes which class meetings an absence actually costs (meeting patterns × campus closures) and what topic each was going to cover. Adding a form is a profile, not code. Slash command: `/timeoff` |
@@ -292,7 +292,16 @@ teaching the attack is the point, or a cautious model refuses the legitimate
 half), and state why the shortcut fails anyway. ==Never write anything shaped
 like a prompt injection== — it is discounted precisely because it looks like an
 attack. A student can delete `AGENTS.md`; that is a visible act in the git
-history `reg-triage` already sweeps.
+history, and both `reg-triage` and `reg-lab-recon` report it. Every declared
+**guard file** (`guard_files:` in either manifest, default `AGENTS.md`) is
+compared against its baseline at the grading commit and comes back `intact`,
+`modified`, `deleted` or `absent`. It surfaces as a `guard` column plus a
+*Guard files* roll-up in the sweep, section **A.6** in the per-student report,
+and a `guard` column in the recon bundle. ==It is a fact, never a score==: it carries no points
+and moves no triage bucket, because there are innocuous reasons to touch these
+files. Declare a guard file as `{path, sha256}` to compare against the template
+**as distributed**. Otherwise the baseline is the file's first appearance in
+that repo, which a squashed initial commit hides.
 
 **Stamp the template before distributing it:** `pa-lab-stamp <repo>`
 (`--check` verifies, non-zero on drift). It hashes the **tracked** tree,

@@ -23,7 +23,7 @@ def write_bundle(records: list[RepoRecord], out_dir: Path, *,
 
 def _write_cohort_csv(records: list[RepoRecord], path: Path) -> None:
     cols = ["github_id","student","repo","points","honor_ok","all_failed","cleared",
-            "commits","spread_days","triage_bucket","doc_present","sources",
+            "commits","spread_days","triage_bucket","guard","doc_present","sources",
             "repo_url","feedback_pr"]
     with path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols); w.writeheader()
@@ -39,6 +39,7 @@ def _write_cohort_csv(records: list[RepoRecord], path: Path) -> None:
                 "all_failed": ag.all_failed if ag else "", "cleared": cleared,
                 "commits": g.commits if g else "", "spread_days": g.spread_days if g else "",
                 "triage_bucket": g.triage_bucket if g else "",
+                "guard": g.guard_detail if g else "",
                 "doc_present": doc.present if doc else "", "sources": doc.sources if doc else "",
                 "repo_url": r.links.get("repo",""), "feedback_pr": r.links.get("feedback_pr","")})
 
@@ -46,16 +47,34 @@ def _write_facts_md(records: list[RepoRecord], path: Path, *, lab_name: str, tot
     lines = [f"# {lab_name} — Recon Facts (Part A)", "",
              f"Population: **{len(records)}** repos · max **{total_points}** pts", "",
              "> Verified record. Each row is reproducible from the repo + commit.", "",
-             "| Student | Auto pts | Honor | Commits | Spread (d) | Triage | Doc | Feedback |",
-             "| --- | --: | :-: | --: | --: | :-: | :-: | :-: |"]
+             "| Student | Auto pts | Honor | Commits | Spread (d) | Triage | Guard | Doc | Feedback |",
+             "| --- | --: | :-: | --: | --: | :-: | :-: | :-: | :-: |"]
     for r in sorted(records, key=lambda x: (x.autograde.points if x.autograde else -1)):
         ag, g = r.autograde, r.git
         doc = next(iter(r.docs.values()), None)
         fb = r.links.get("feedback_pr","")
-        lines.append("| {gid} | {pts} | {h} | {c} | {s} | {t} | {d} | {fb} |".format(
+        lines.append("| {gid} | {pts} | {h} | {c} | {s} | {t} | {gu} | {d} | {fb} |".format(
             gid=r.github_id, pts=ag.points if ag else "—",
             h="✓" if (ag and ag.honor_ok) else "✗", c=g.commits if g else "—",
             s=g.spread_days if g else "—", t=(g.triage_bucket or "—") if g else "—",
+            gu=(g.guard_detail or "—") if g else "—",
             d="✓" if (doc and doc.present) else "✗",
             fb=f"[PR]({fb})" if fb else "—"))
+
+    touched = [r for r in records if r.git and r.git.guard_notable]
+    lines += ["", "## Guard files", ""]
+    if touched:
+        lines += ["Repos that edited or deleted an instructor-authored file "
+                  "(`AGENTS.md` and any other declared guard file).",
+                  "",
+                  "> [!note] A fact, not a finding",
+                  "> A guard-file change carries no score and no penalty. It is a "
+                  "visible, deliberate act with innocuous explanations as well as "
+                  "concerning ones. Read the commit before drawing a conclusion.",
+                  ""]
+        for r in touched:
+            lines.append(f"- **{r.github_id}** — {r.git.guard_detail}")
+    else:
+        lines.append("No repo edited or deleted an instructor-authored file.")
+
     path.write_text("\n".join(lines) + "\n")

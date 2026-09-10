@@ -56,7 +56,7 @@ def run_recon(*, manifest_path: Path, roster_csv: Path, out_dir: Path,
             repo = tmp / "repo"
             if cloned and repo.exists():
                 ag = do_auto(ref)
-                git = recon_git(repo, profile=m.git_profile)
+                git = recon_git(repo, profile=m.git_profile, guard_files=m.guard_files)
                 docs = {d.label: recon_doc(resolve_doc_path(repo, d.file), label=d.label) for d in m.docs}
             else:
                 ag, git, docs = None, None, {d.label: recon_doc(repo / d.file, label=d.label) for d in m.docs}

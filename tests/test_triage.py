@@ -25,9 +25,13 @@ def test_init_writes_manifest_stub(tmp_path):
 def test_sweep_writers_emit_csv_and_md(tmp_path):
     from lectern.triage import write_results_csv, write_triage_md
     rows = [
-        {"name": "A", "repo_url": "u1", "triage": "FLAG",   "score": 10, "grade": "", "reasoning": "no deletions"},
-        {"name": "B", "repo_url": "u2", "triage": "PASS",   "score": 90, "grade": "", "reasoning": "spread across 8 days"},
-        {"name": "C", "repo_url": "u3", "triage": "REVIEW", "score": 50, "grade": "", "reasoning": "mixed"},
+        {"name": "A", "repo_url": "u1", "triage": "FLAG",   "score": 10, "guard": "intact",
+         "grade": "", "reasoning": "no deletions"},
+        {"name": "B", "repo_url": "u2", "triage": "PASS",   "score": 90, "guard": "deleted(1)",
+         "guard_notable": True, "guard_detail": "`AGENTS.md` deleted in abc1234",
+         "grade": "", "reasoning": "spread across 8 days"},
+        {"name": "C", "repo_url": "u3", "triage": "REVIEW", "score": 50, "guard": "intact",
+         "grade": "", "reasoning": "mixed"},
     ]
     cfg = {"assignment": {"name": "Lab 02"}, "schema_version": 1, "profile": "short-project"}
     csv_p = tmp_path / "results.csv"
@@ -39,9 +43,12 @@ def test_sweep_writers_emit_csv_and_md(tmp_path):
     # All three buckets present and in FLAG < REVIEW < PASS order
     assert body.index("FLAG") < body.index("REVIEW") < body.index("PASS")
     assert "Lab 02" in body and "schema_version" in body    # pinned footer
+    # A guard-file change is rolled up by name, and framed as a fact
+    assert "## Guard files" in body
+    assert "`AGENTS.md` deleted in abc1234" in body
 
     csv_text = csv_p.read_text()
-    assert csv_text.splitlines()[0] == "name,repo_url,triage,score,grade,reasoning"
+    assert csv_text.splitlines()[0] == "name,repo_url,triage,score,guard,grade,reasoning"
     # CSV body is sorted: FLAG row before REVIEW row before PASS row
     assert csv_text.index("FLAG") < csv_text.index("REVIEW") < csv_text.index("PASS")
 

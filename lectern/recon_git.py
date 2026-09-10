@@ -14,13 +14,20 @@ class GitRecon:
     notable_messages: list[str] = field(default_factory=list)
     triage_bucket: str = ""
     triage_score: int | None = None
+    # Guard-file integrity: instructor-authored files the student was not asked
+    # to edit. A fact, never a score — see lectern/triage_guardfile.py.
+    guard_status: str = ""      # intact | modified | deleted | absent (worst of)
+    guard_detail: str = ""      # per-file summary, ";"-joined
+    guard_notable: bool = False # True when a human should read the commit
 
 def _log(repo: Path, fmt: str) -> list[str]:
     out = subprocess.run(["git","-C",str(repo),"log",f"--pretty=format:{fmt}"],
                          capture_output=True, text=True)
     return [l for l in out.stdout.splitlines() if l.strip()]
 
-def recon_git(repo: Path, *, profile: str = "short-project") -> GitRecon:
+def recon_git(repo: Path, *, profile: str = "short-project",
+              guard_files: list | None = None,
+              grading_ref: str = "HEAD") -> GitRecon:
     msgs = _log(repo, "%s")
     dates = _log(repo, "%cI")
     spread = 0.0
@@ -41,6 +48,17 @@ def recon_git(repo: Path, *, profile: str = "short-project") -> GitRecon:
         points, _reasoning, bucket = te.score_repo(str(repo), cfg, profile=profile)
         g.triage_score = int(points)
         g.triage_bucket = str(bucket)
+    except Exception:
+        pass
+    # Guard files are a separate, deterministic fact: kept out of the triage
+    # try/except so a scoring failure cannot silently swallow them.
+    try:
+        from lectern.triage_guardfile import guardfile_forensics, worst_status, NOTABLE
+        gf = guardfile_forensics(repo, guard_files, grading_ref=grading_ref)
+        if gf:
+            g.guard_detail = ";".join(f.summary() for f in gf)
+            g.guard_status = worst_status(gf)
+            g.guard_notable = any(f.status in NOTABLE for f in gf)
     except Exception:
         pass
     return g

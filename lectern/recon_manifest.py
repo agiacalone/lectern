@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import yaml
 
+from lectern.triage_guardfile import DEFAULT_GUARD_FILES
+
 @dataclass
 class AutogradeSpec:
     workflow: str = "autograde.yml"
@@ -28,6 +30,9 @@ class ReconManifest:
     docs: list[DocSpec] = field(default_factory=list)
     git_profile: str = "short-project"
     triage: str = "surface"
+    #: Instructor-authored files the student is not asked to edit. Each entry is
+    #: a pattern, or {path, sha256} to compare against the file as distributed.
+    guard_files: list = field(default_factory=list)
 
 def load_manifest(path: Path) -> ReconManifest:
     data = yaml.safe_load(Path(path).read_text()) or {}
@@ -52,4 +57,5 @@ def load_manifest(path: Path) -> ReconManifest:
         autograde=autograde, docs=docs,
         git_profile=(data.get("git") or {}).get("profile", "short-project"),
         triage=(data.get("report") or {}).get("triage", "surface"),
+        guard_files=list(data.get("guard_files") or DEFAULT_GUARD_FILES),
     )

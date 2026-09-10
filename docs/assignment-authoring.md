@@ -110,8 +110,43 @@ is actually load-bearing:
   update," in their own words.
 - **`reg-triage`** — commit-history authenticity, flag-don't-deduct.
 
-A student can delete `AGENTS.md`. That is fine: it is a visible, deliberate act
-in the git history that `reg-triage` already sweeps.
+### The guard-file check
+
+A student can delete `AGENTS.md`. That is fine, and it is the reason the file is
+worth shipping: it is a visible, deliberate act in the git history.
+
+`reg-triage` and `reg-lab-recon` both report it. A **guard file** is an
+instructor-authored file the student was not asked to edit; the default is
+`AGENTS.md`. Each one is compared against its baseline at the grading commit and
+comes back `intact`, `modified`, `deleted` or `absent`:
+
+- `reg-triage sweep`: a `guard` column in `results.csv`, a Guard column in
+  `TRIAGE.md`, and a **Guard files** roll-up naming each repo and commit.
+- `reg-triage report`: section **A.6 Guard-file integrity**, with the commits
+  that touched the file and a reproduce command for each fact.
+- `reg-lab-recon`: a `guard` column in `cohort.csv` and a **Guard files**
+  section in `FACTS.md`.
+
+Declare them in the manifest (both tools read the same key):
+
+```yaml
+guard_files:
+  - AGENTS.md
+  - path: .github/workflows/autograde.yml
+    sha256: 9f2b…            # the file as distributed
+```
+
+==Add the `sha256` when you have it.== Without it the baseline is the file's
+first appearance *in that repo*, which a squashed initial commit hides: a student
+who edited `AGENTS.md` before their first push reads as `intact`. With it, the
+comparison is against the template as you shipped it. `pa-lab-stamp` already
+hashes the tracked tree, so the per-file digest is a `sha256sum` away.
+
+> [!important] It is a fact, never a score
+> A guard-file change carries no points and moves no triage bucket. That is by
+> design, and the test suite asserts it. The scoring engine does not read `guard_files`
+> at all. There are innocuous reasons to touch these files, so the tool names the
+> commit and stops. Read it, then decide.
 
 ## Step 1c — Stamp the serial
 

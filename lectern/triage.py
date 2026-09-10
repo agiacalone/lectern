@@ -17,7 +17,7 @@ from lectern.triage_version import SCHEMA_VERSION, SIGNAL_SET_VERSION
 # Bucket ordering: FLAG is most urgent, PASS is least
 # ---------------------------------------------------------------------------
 _BUCKET_ORDER = {"FLAG": 0, "REVIEW": 1, "PASS": 2}
-_FIELDS = ["name", "repo_url", "triage", "score", "grade", "reasoning"]
+_FIELDS = ["name", "repo_url", "triage", "score", "guard", "grade", "reasoning"]
 
 
 def _sorted_rows(rows):
@@ -44,11 +44,31 @@ def write_triage_md(rows, path, cfg):
         "> 100% triage. A flag is a prompt to look, not a verdict. "
         "No student is penalized without human review.",
         "",
-        "| Triage | Score | Student | Reasoning |",
-        "|---|---|---|---|",
+        "| Triage | Score | Guard | Student | Reasoning |",
+        "|---|---|---|---|---|",
     ]
     for r in rows:
-        lines.append(f"| {r['triage']} | {r['score']} | {r['name']} | {r['reasoning']} |")
+        # Reasoning joins its clauses with " | ", which would end the table cell.
+        reasoning = str(r["reasoning"]).replace("|", "\\|")
+        lines.append(
+            f"| {r['triage']} | {r['score']} | {r.get('guard', '')} | "
+            f"{r['name']} | {reasoning} |"
+        )
+
+    notable = [r for r in rows if r.get("guard_notable")]
+    lines += ["", "## Guard files", ""]
+    if notable:
+        lines += [
+            "Instructor-authored files these repos edited or deleted. "
+            "==A guard-file change is a fact, not a finding==: it carries no "
+            "score and no penalty. Read the commit, then decide.",
+            "",
+        ]
+        for r in notable:
+            lines.append(f"- **{r['name']}** — {r.get('guard_detail', r.get('guard', ''))}")
+    else:
+        lines.append("No repo edited or deleted an instructor-authored file.")
+
     lines += [
         "",
         "---",
@@ -88,6 +108,7 @@ def _discover_repos(run_dir):
 def _score_one(repo_dir, cfg, roster):
     """Score a single repo dir and return a row dict."""
     from lectern.triage_engine import score_repo
+    from lectern.triage_guardfile import guardfile_forensics
 
     repo_prefix = cfg["assignment"].get("repo_prefix", "")
     basename = repo_dir.name
@@ -111,11 +132,26 @@ def _score_one(repo_dir, cfg, roster):
         repo_url = ""
 
     score, reasoning, bucket = score_repo(repo_dir, cfg, profile=cfg["profile"])
+
+    # Guard-file integrity — a Part A fact, deliberately outside the score.
+    guard_facts = guardfile_forensics(repo_dir, cfg.get("guard_files"))
+    guard = ";".join(f.summary() for f in guard_facts)
+    notable = [f for f in guard_facts if f.notable]
+    detail = "; ".join(
+        f"`{f.path or f.pattern}` {f.status}"
+        + (f" in {', '.join(t.sha for t in f.touches if not t.is_bot)}"
+           if any(not t.is_bot for t in f.touches) else "")
+        for f in notable
+    )
+
     return {
         "name": display_name,
         "repo_url": repo_url,
         "triage": bucket,
         "score": score,
+        "guard": guard,
+        "guard_notable": bool(notable),
+        "guard_detail": detail,
         "grade": "",
         "reasoning": reasoning,
     }
@@ -266,7 +302,8 @@ def _cmd_sweep(args):
         try:
             row = _score_one(repo_dir, cfg, roster)
             rows.append(row)
-            print(f"  {row['triage']:6s} {row['score']:3d}  {row['name']}")
+            mark = "  guard:" + row["guard"] if row.get("guard_notable") else ""
+            print(f"  {row['triage']:6s} {row['score']:3d}  {row['name']}{mark}")
         except Exception as e:
             print(f"  SKIP {repo_dir.name}: {e}", file=sys.stderr)
             continue
@@ -286,6 +323,9 @@ def _cmd_sweep(args):
         f"REVIEW {counts.get('REVIEW', 0)} / "
         f"PASS {counts.get('PASS', 0)}"
     )
+    guard_notable = sum(1 for r in rows if r.get("guard_notable"))
+    if guard_notable:
+        print(f"  guard files edited or deleted in {guard_notable} repo(s) — see TRIAGE.md")
     print(f"  wrote {csv_path}")
     print(f"  wrote {md_path}")
     return 0
@@ -332,6 +372,7 @@ def _cmd_report(args):
     from lectern.triage_manifest import load_manifest
     from lectern.triage_engine import load_profile, score_repo
     from lectern.triage_report import deliverable_forensics, render_report
+    from lectern.triage_guardfile import guardfile_forensics
     from lectern.triage_signals import RepoFacts
 
     cfg = load_manifest(args.manifest)
@@ -377,10 +418,13 @@ def _cmd_report(args):
     facts = RepoFacts.from_repo(repo)
     forensics = deliverable_forensics(repo, cfg.get("deliverables", []),
                                       grading_ref=grading_ref)
+    guard_facts = guardfile_forensics(repo, cfg.get("guard_files"),
+                                      grading_ref=grading_ref)
     score = score_repo(repo, cfg, profile=cfg["profile"])
 
     md = render_report(student, cfg, facts, forensics, score,
-                       release=args.release, grading_ref=grading_ref)
+                       release=args.release, grading_ref=grading_ref,
+                       guard_facts=guard_facts)
 
     out = Path(args.out)
     out.write_text(md)
@@ -453,6 +497,11 @@ def _cmd_init(args):
 profile: {args.profile}
 thresholds: {{}}
 deliverables: []
+# Instructor-authored files the student is not asked to edit. A change is
+# reported as a fact and never scored. Add `sha256:` (of the file as
+# distributed) to catch an edit made inside a squashed initial commit.
+guard_files:
+  - AGENTS.md
 """
     Path(args.out).write_text(stub)
     print(f"wrote {args.out}")
