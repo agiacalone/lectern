@@ -25,6 +25,7 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-lms-grades-import` | lms_grades | Normalize a Canvas grades.csv export |
 | `reg-lms-roster-import` | lms_roster | Normalize a CSULB faculty-center roster export |
 | `reg-c50` | c50 | **Classroom 50** — the GitHub Classroom successor (legacy sunset 2026-08-28). `classroom-add` creates one classroom per section from the term-spec · `codes` mints the per-section self-enrollment codes · `roster-import` turns collected GitHub usernames into a roster + org invitations · `post` registers a lab as an assignment in every section that teaches it, binds it into the class notes, and writes the Canvas announcement · `status` reads back what is actually registered. Resolves org, classroom, slug, template, points and due date from the vault rather than the command line |
+| `reg-guardcheck` | guardcheck | **In-CI course-file notification.** `stamp` records the expected digests of a template's guard files; `check` runs inside the lab's own autograde workflow and tells the *student* when one has changed. ==Notifies, never grades==: no points, no pass/fail, always exits 0 (`--strict` opts out). Stdlib-only so a template can vendor the single file. The authoritative check is instructor-side `reg-triage`, which reads git history from outside the student's control |
 | `reg-classroom-roster-seed` | classroom_seed | ==**RETIRED** — legacy GitHub Classroom, and it never worked live== (it POSTed to a read-only endpoint). Kept only so old runbooks resolve. Use `reg-c50 roster-import` |
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
@@ -302,6 +303,16 @@ and moves no triage bucket, because there are innocuous reasons to touch these
 files. Declare a guard file as `{path, sha256}` to compare against the template
 **as distributed**. Otherwise the baseline is the file's first appearance in
 that repo, which a squashed initial commit hides.
+
+==The two audiences get opposite volumes, on purpose.== The **student** gets a
+quiet notice from `reg-guardcheck` inside their own CI run: what changed, that
+it costs them nothing, and how to put it back. The **instructor** gets a red
+flag: a changed guard file sorts to the top of `TRIAGE.md`, `FACTS.md` and the
+console summary *regardless of score*, under a `[!warning]` banner naming the
+repos, and the per-student report carries the same banner above Part A. A score
+cannot deliver that, because the change deliberately has none, and it is the
+score's job to stay clean of adverse automation. Sorting is how attention gets
+directed without a penalty attached.
 
 **Stamp the template before distributing it:** `pa-lab-stamp <repo>`
 (`--check` verifies, non-zero on drift). It hashes the **tracked** tree,

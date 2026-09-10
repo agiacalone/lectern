@@ -148,6 +148,51 @@ hashes the tracked tree, so the per-file digest is a `sha256sum` away.
 > at all. There are innocuous reasons to touch these files, so the tool names the
 > commit and stops. Read it, then decide.
 
+**But it is loud where it should be.** A change with no score attached would
+otherwise be invisible in a sweep sorted by score, so it drives ordering
+instead: a flagged repo sorts to the top of `TRIAGE.md`, `FACTS.md` and the
+console summary whatever it scored, under a `[!warning]` banner naming the
+repos, with a `⚑` on the row. The per-student report carries the same banner
+above Part A. Sorting directs attention; only a score penalizes, and this does
+not score.
+
+### Telling the student: `reg-guardcheck`
+
+The instructor-side check reads git history from outside the student's control
+and is the record. The other half is a notice **the student actually sees**, in
+the CI run they already look at. Stamp the template once, vendor the checker,
+and add one step to `autograde.yml`:
+
+```sh
+reg-guardcheck stamp AGENTS.md                    # writes grading/guard.sha256
+cp <lectern>/lectern/guardcheck.py grading/guardcheck.py
+```
+
+```yaml
+      - name: Course-file check
+        if: always()
+        run: python3 grading/guardcheck.py check --result grading/result.json
+```
+
+`guardcheck.py` is stdlib-only, so it runs on the bare runner Python with no
+install step; the snippet lives at
+[`lectern/references/guardcheck.workflow.yml`](../lectern/references/guardcheck.workflow.yml).
+The manifest is `sha256sum`-format, so `sha256sum -c grading/guard.sha256`
+verifies it with no tooling at all.
+
+What the student reads is deliberately unaccusing: what changed, that it does
+not affect the assignment or the grade, that the instructor can see it in the
+history, and the `git checkout` line that restores it. In GitHub Actions it also
+posts as a run annotation.
+
+> [!warning] The CI check is a courtesy, not evidence
+> ==A student controls their own repo, including `autograde.yml` and
+> `grading/guard.sha256`.== The in-CI check can be edited away. It always exits
+> 0 (`--strict` opts out) so it cannot fail a student's build over a file that
+> does not affect their program, and it never invents a `result.json`: a result
+> file conjured from nothing reads downstream as a zero-point run. Trust the
+> sweep, not the workflow.
+
 ## Step 1c — Stamp the serial
 
 Before a template is distributed, stamp it:

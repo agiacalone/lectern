@@ -20,9 +20,24 @@ _BUCKET_ORDER = {"FLAG": 0, "REVIEW": 1, "PASS": 2}
 _FIELDS = ["name", "repo_url", "triage", "score", "guard", "grade", "reasoning"]
 
 
+def _plural(n, noun):
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
+
 def _sorted_rows(rows):
-    """Sort rows by triage bucket (FLAG first) then descending score."""
-    return sorted(rows, key=lambda r: (_BUCKET_ORDER[r["triage"]], -r["score"]))
+    """Sort guard-file changes first, then by triage bucket (FLAG first), then
+    by descending score.
+
+    A changed guard file carries no score, so it cannot reach the top by
+    scoring badly. It is sorted there deliberately: the whole point of a sweep
+    is to direct a human's attention, and a repo that edited or deleted an
+    instructor-authored file is the first thing worth reading, whatever it
+    scored."""
+    return sorted(rows, key=lambda r: (
+        not r.get("guard_notable"),
+        _BUCKET_ORDER[r["triage"]],
+        -r["score"],
+    ))
 
 
 def write_results_csv(rows, path):
@@ -38,24 +53,47 @@ def write_triage_md(rows, path, cfg):
     """Write a Markdown broadsheet triage report, sorted FLAG→REVIEW→PASS."""
     name = cfg["assignment"].get("name", "Results")
     rows = _sorted_rows(rows)
+    notable = [r for r in rows if r.get("guard_notable")]
+
     lines = [
         f"# Authenticity Triage — {name}",
         "",
         "> 100% triage. A flag is a prompt to look, not a verdict. "
         "No student is penalized without human review.",
         "",
-        "| Triage | Score | Guard | Student | Reasoning |",
-        "|---|---|---|---|---|",
+    ]
+
+    # The banner sits above the table on purpose. A guard-file change carries no
+    # score, so nothing else in this document would make it prominent.
+    if notable:
+        who = " · ".join(
+            f"**{r['name']}** ({r.get('guard', '')})" for r in notable
+        )
+        lines += [
+            f"> [!warning] {_plural(len(notable), 'repo')} changed a course file",
+            f"> {who}",
+            ">",
+            "> Read these first. They are listed at the top of the table "
+            "regardless of score, because the change carries none: it moves no "
+            "bucket and costs no points. It is a deliberate, visible act with "
+            "innocuous explanations as well as concerning ones, so read the "
+            "commit before drawing a conclusion.",
+            "",
+        ]
+
+    lines += [
+        "| ⚑ | Triage | Score | Guard | Student | Reasoning |",
+        "|:-:|---|---|---|---|---|",
     ]
     for r in rows:
         # Reasoning joins its clauses with " | ", which would end the table cell.
         reasoning = str(r["reasoning"]).replace("|", "\\|")
+        flag = "⚑" if r.get("guard_notable") else ""
         lines.append(
-            f"| {r['triage']} | {r['score']} | {r.get('guard', '')} | "
+            f"| {flag} | {r['triage']} | {r['score']} | {r.get('guard', '')} | "
             f"{r['name']} | {reasoning} |"
         )
 
-    notable = [r for r in rows if r.get("guard_notable")]
     lines += ["", "## Guard files", ""]
     if notable:
         lines += [
@@ -323,11 +361,15 @@ def _cmd_sweep(args):
         f"REVIEW {counts.get('REVIEW', 0)} / "
         f"PASS {counts.get('PASS', 0)}"
     )
-    guard_notable = sum(1 for r in rows if r.get("guard_notable"))
-    if guard_notable:
-        print(f"  guard files edited or deleted in {guard_notable} repo(s) — see TRIAGE.md")
     print(f"  wrote {csv_path}")
     print(f"  wrote {md_path}")
+
+    flagged = [r for r in rows if r.get("guard_notable")]
+    if flagged:
+        print(f"\n⚑ {_plural(len(flagged), 'repo')} changed a course file "
+              f"(no score attached; read the commit):")
+        for r in flagged:
+            print(f"    {r['name']}: {r.get('guard_detail') or r.get('guard', '')}")
     return 0
 
 

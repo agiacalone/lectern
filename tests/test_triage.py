@@ -40,17 +40,28 @@ def test_sweep_writers_emit_csv_and_md(tmp_path):
     write_triage_md(rows, md_p, cfg)
 
     body = md_p.read_text()
-    # All three buckets present and in FLAG < REVIEW < PASS order
-    assert body.index("FLAG") < body.index("REVIEW") < body.index("PASS")
     assert "Lab 02" in body and "schema_version" in body    # pinned footer
-    # A guard-file change is rolled up by name, and framed as a fact
+
+    # B changed a guard file, so it is read first even though it scored PASS.
+    # Its change carries no score: it is still in the PASS bucket at 90.
+    table = body[body.index("| ⚑ |"):]
+    assert table.index("| B |") < table.index("| A |") < table.index("| C |")
+    assert "| ⚑ | PASS | 90 | deleted(1) | B |" in table
+
+    # A banner names them above the table, and says the change costs nothing
+    assert body.index("1 repo changed a course file") < body.index("| ⚑ |")
+    assert "**B** (deleted(1))" in body
+    assert "costs no points" in body
+
+    # ...and the roll-up still carries the commit, framed as a fact
     assert "## Guard files" in body
     assert "`AGENTS.md` deleted in abc1234" in body
 
     csv_text = csv_p.read_text()
     assert csv_text.splitlines()[0] == "name,repo_url,triage,score,guard,grade,reasoning"
-    # CSV body is sorted: FLAG row before REVIEW row before PASS row
-    assert csv_text.index("FLAG") < csv_text.index("REVIEW") < csv_text.index("PASS")
+    rows = csv_text.splitlines()[1:]
+    # Same order in the CSV; among unflagged rows, FLAG still precedes REVIEW
+    assert [r.split(",")[0] for r in rows] == ["B", "A", "C"]
 
 
 # ---------------------------------------------------------------------------

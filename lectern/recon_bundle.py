@@ -44,16 +44,37 @@ def _write_cohort_csv(records: list[RepoRecord], path: Path) -> None:
                 "repo_url": r.links.get("repo",""), "feedback_pr": r.links.get("feedback_pr","")})
 
 def _write_facts_md(records: list[RepoRecord], path: Path, *, lab_name: str, total_points: int) -> None:
+    touched = [r for r in records if r.git and r.git.guard_notable]
     lines = [f"# {lab_name} — Recon Facts (Part A)", "",
              f"Population: **{len(records)}** repos · max **{total_points}** pts", "",
-             "> Verified record. Each row is reproducible from the repo + commit.", "",
-             "| Student | Auto pts | Honor | Commits | Spread (d) | Triage | Guard | Doc | Feedback |",
-             "| --- | --: | :-: | --: | --: | :-: | :-: | :-: | :-: |"]
-    for r in sorted(records, key=lambda x: (x.autograde.points if x.autograde else -1)):
+             "> Verified record. Each row is reproducible from the repo + commit.", ""]
+
+    # Above the table: a guard-file change carries no points, so nothing about
+    # the scoring would ever make it visible.
+    if touched:
+        who = " · ".join(f"**{r.github_id}** ({r.git.guard_detail})" for r in touched)
+        n = len(touched)
+        lines += [
+            f"> [!warning] {n} repo{'' if n == 1 else 's'} changed a course file",
+            f"> {who}",
+            ">",
+            "> Listed first below, regardless of points. The change carries no "
+            "score and no penalty; it is a deliberate, visible act with innocuous "
+            "explanations as well as concerning ones. Read the commit.",
+            "",
+        ]
+
+    lines += ["| ⚑ | Student | Auto pts | Honor | Commits | Spread (d) | Triage | Guard | Doc | Feedback |",
+              "|:-:| --- | --: | :-: | --: | --: | :-: | :-: | :-: | :-: |"]
+    # Guard-file changes sort to the top; the rest stay in ascending-points order.
+    for r in sorted(records, key=lambda x: (
+            not (x.git and x.git.guard_notable),
+            x.autograde.points if x.autograde else -1)):
         ag, g = r.autograde, r.git
         doc = next(iter(r.docs.values()), None)
         fb = r.links.get("feedback_pr","")
-        lines.append("| {gid} | {pts} | {h} | {c} | {s} | {t} | {gu} | {d} | {fb} |".format(
+        lines.append("| {fl} | {gid} | {pts} | {h} | {c} | {s} | {t} | {gu} | {d} | {fb} |".format(
+            fl="⚑" if (g and g.guard_notable) else "",
             gid=r.github_id, pts=ag.points if ag else "—",
             h="✓" if (ag and ag.honor_ok) else "✗", c=g.commits if g else "—",
             s=g.spread_days if g else "—", t=(g.triage_bucket or "—") if g else "—",
@@ -61,7 +82,6 @@ def _write_facts_md(records: list[RepoRecord], path: Path, *, lab_name: str, tot
             d="✓" if (doc and doc.present) else "✗",
             fb=f"[PR]({fb})" if fb else "—"))
 
-    touched = [r for r in records if r.git and r.git.guard_notable]
     lines += ["", "## Guard files", ""]
     if touched:
         lines += ["Repos that edited or deleted an instructor-authored file "

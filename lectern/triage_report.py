@@ -586,6 +586,16 @@ audit. The advisory screen (Part B) is a heuristic signal bounded by the limitat
 in Part C. Nothing in Part B is used adversely against the student without independent
 human review."""
 
+    changed = [f for f in (guard_facts or []) if f.notable]
+    if changed:
+        what = ", ".join(f"`{f.path or f.pattern}` **{f.status}**" for f in changed)
+        preamble += f"""
+
+> [!warning] A course file was changed
+> {what}. This is a Part A fact carrying no score: it moves no bucket and costs
+> no points. It is recorded in **A.6** with the commits that made the change and
+> the commands to verify them. Read the commit before drawing a conclusion."""
+
     part_a = _part_a(student, cfg, facts, forensics, release=release,
                      grading_ref=grading_ref, guard_facts=guard_facts)
     part_b = _part_b(student, cfg, score)

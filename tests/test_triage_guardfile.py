@@ -231,3 +231,67 @@ def test_report_a6_states_the_change_carries_no_score(lab_repo):
 def test_report_a6_is_omitted_when_no_guard_files_declared():
     from lectern.triage_report import _part_a6
     assert _part_a6([]) == ""
+
+
+# ---------------------------------------------------------------------------
+# Prominence: no score, but it must be the first thing a human reads
+# ---------------------------------------------------------------------------
+
+def test_a_guard_change_outranks_the_score_in_the_sweep_order():
+    from lectern.triage import _sorted_rows
+    rows = [
+        {"name": "clean-flag", "triage": "FLAG", "score": 5},
+        {"name": "clean-pass", "triage": "PASS", "score": 95},
+        {"name": "touched", "triage": "PASS", "score": 90, "guard_notable": True},
+    ]
+    # The flagged repo scored PASS at 90 and still sorts first; among the rest
+    # the usual FLAG-before-PASS order is untouched.
+    assert [r["name"] for r in _sorted_rows(rows)] == [
+        "touched", "clean-flag", "clean-pass"]
+
+
+def test_the_recon_bundle_banners_and_flags_a_changed_guard_file(lab_repo, tmp_path):
+    from lectern.recon_bundle import write_bundle
+    from lectern.recon_git import recon_git
+    from lectern.recon_record import RepoRecord
+
+    clean = lab_repo("clean")
+    gone = lab_repo("gone")
+    _git(gone, "rm", "-q", "AGENTS.md")
+    _git(gone, "commit", "-qm", "remove agents")
+
+    out = tmp_path / "bundle"
+    write_bundle(
+        [RepoRecord(github_id="clean", student="C", repo="r1", git=recon_git(clean)),
+         RepoRecord(github_id="gone", student="G", repo="r2", git=recon_git(gone))],
+        out, lab_name="Lab 02", total_points=100)
+
+    facts = (out / "FACTS.md").read_text()
+    assert "1 repo changed a course file" in facts
+    assert facts.index("changed a course file") < facts.index("| ⚑ |")
+    table = facts[facts.index("| ⚑ |"):]
+    assert table.index("| gone |") < table.index("| clean |")
+    assert "no score and no penalty" in facts
+
+    header = (out / "cohort.csv").read_text().splitlines()[0]
+    assert "guard" in header.split(",")
+
+
+def test_the_report_banners_a_changed_guard_file_before_part_a(lab_repo):
+    from lectern.triage_report import render_report
+    from lectern.triage_signals import RepoFacts
+
+    repo = lab_repo("banner")
+    _git(repo, "rm", "-q", "AGENTS.md")
+    _git(repo, "commit", "-qm", "remove agents")
+
+    md = render_report(
+        {"display_name": "Stu", "student_id": "000", "github_username": "stu"},
+        {"assignment": {}, "profile": "short-project"},
+        RepoFacts.from_repo(repo), [], (50, "reasoning", "REVIEW"),
+        guard_facts=guardfile_forensics(repo))
+
+    assert "A course file was changed" in md
+    assert md.index("A course file was changed") < md.index("# Part A")
+    assert "costs\n> no points" in md or "costs no points" in md
+

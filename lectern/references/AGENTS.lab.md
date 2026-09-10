@@ -61,8 +61,9 @@ Worth telling the student if it comes up.
 {{STRUCTURAL}}
 
 Commit history is reviewed, and that includes this file: grading records
-whether `AGENTS.md` was edited or deleted, and in which commit. Nothing happens
-automatically if it was. I read the commit. Deleting the file does not remove the
+whether `AGENTS.md` was edited or deleted, and in which commit. The autograder
+says so in its own output too, so nobody finds out about it late. Nothing
+happens automatically. I read the commit. Deleting the file does not remove the
 policy, it just means I notice.
 
 None of that is a threat. It is the reason the fastest path really is to
