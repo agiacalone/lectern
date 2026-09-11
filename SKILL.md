@@ -1,6 +1,6 @@
 ---
 name: lectern
-description: Course/teaching operations for a CSULB lecturer — the Registrar. Term + section lifecycle (create/finalize/archive), gradebook consolidation, exam build/verify with per-student serials, ISA Drive publishing, GitHub Classroom binding, LMS roster/grade import. Trigger on grading close-out, starting a new term, building/verifying exams, importing rosters or grades, publishing to ISAs, or any reg-* command.
+description: Course/teaching operations for a CSULB lecturer, the Registrar. Term + section lifecycle (create/finalize/archive); Classroom 50 self-enrollment and rosters (reg-c50 classroom-add/codes/roster-import/post/status) after GitHub Classroom's 2026-08-28 sunset; lab grading in three layers (reg-lab-recon, reg-lab-digest, reg-lab-report) plus commit-authenticity triage and guard-file checks (reg-triage, reg-guardcheck); gradebook consolidation; exam build/verify with per-student serials and Gradescope item analysis; syllabus generation; ISA Drive publishing; LMS roster/grade import; campus admin forms (/timeoff). Trigger on student enrollment or roster questions, posting or grading a lab, grading close-out, starting or closing a term, building/verifying exams, syllabus work, publishing to ISAs, or any reg-* command.
 ---
 
 # Lectern — Course Operations Skill
