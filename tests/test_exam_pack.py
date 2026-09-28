@@ -375,11 +375,37 @@ def test_run_determinism_same_split(tmp_path):
 
 
 @needs_latex
-def test_run_register_sorted_by_canonical_name(tmp_path):
+def test_run_register_sorted_by_surname(tmp_path):
     m = load_manifest(_manifest(tmp_path, two_forms=True, individualized=True))
     res = run(m, tmp_path)
-    canon = [row["canonical_name"] for row in csv.DictReader(res.register_csv.open())]
-    assert canon == sorted(canon)
+    names = [row["name"] for row in csv.DictReader(res.register_csv.open())]
+    # roster4 has no lms_name column: the last token is the surname
+    assert names == ["Lucius Fox", "Barbara Gordon", "Pamela Isley", "Kate Kane"]
+
+
+@needs_latex
+def test_run_print_order_uses_lms_name_surname(tmp_path):
+    """lms_name ("Last,First") keeps a two-word surname whole, so "Ramirez
+    Wayne" files under R, not under W as the last token would put it."""
+    man = _manifest(tmp_path, individualized=True)
+    (tmp_path / "roster4.csv").write_text(
+        "name,student_id,lms_name\n"
+        "Renee Ramirez Wayne,000000001,\"Ramirez Wayne,Renee\"\n"
+        "Harvey Dent,000000002,\"Dent,Harvey\"\n"
+        "Selina Kyle,000000003,\"Kyle,Selina\"\n"
+    )
+    res = run(load_manifest(man), tmp_path)
+    names = [row["name"] for row in csv.DictReader(res.register_csv.open())]
+    assert names == ["Harvey Dent", "Selina Kyle", "Renee Ramirez Wayne"]
+
+
+def test_emit_gradescope_roster_prefers_lms_name(tmp_path):
+    roster = tmp_path / "roster.csv"
+    roster.write_text('name,student_id,lms_name\n'
+                      'Leslie Ann Thompkins Vale,001,"Thompkins Vale,Leslie Ann"\n')
+    rows = list(csv.DictReader(emit_gradescope_roster(roster, tmp_path).open()))
+    assert rows[0]["First Name"] == "Leslie Ann"
+    assert rows[0]["Last Name"] == "Thompkins Vale"
 
 
 @needs_latex
@@ -408,11 +434,11 @@ def test_single_layout_is_default_one_combined_pdf(tmp_path):
     # combined page count == sum of the per-student copies (all four merged)
     assert _pdf_page_count(res.combined_pdf) == sum(_pdf_page_count(p) for p in student_pdfs)
 
-    # register is the index INTO the combined PDF: output_pdf points at .parts/, roster order
+    # register is the index INTO the combined PDF: output_pdf points at .parts/, surname order
     rows = list(csv.DictReader(res.register_csv.open()))
     assert len(rows) == 4
     assert all(r["output_pdf"].startswith(".parts/") for r in rows)
-    assert [r["canonical_name"] for r in rows] == sorted(r["canonical_name"] for r in rows)
+    assert [r["name"] for r in rows] == ["Lucius Fox", "Barbara Gordon", "Pamela Isley", "Kate Kane"]
     # output_pdf must resolve relative to build/ (what reg-exam-verify --dir build/ does)
     assert all((res.build_dir / r["output_pdf"]).is_file() for r in rows)
 

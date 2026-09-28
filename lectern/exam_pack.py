@@ -270,6 +270,24 @@ def emit_bubble_products(form_id, outline, gs_dir):
     return [key, _write_outline_csv(form_id, outline, gs_dir)]
 
 
+def _split_first_last(name: str, lms_name: str | None = None) -> tuple[str, str]:
+    """(first, last) for one roster row.
+
+    The registrar's ``lms_name`` ("Last,First Middle") is authoritative when
+    present: it keeps a multi-word surname such as "Ramirez Wayne" whole. Without
+    it, the last token of ``name`` is taken as the surname, which is wrong for
+    those names but is the best a display name alone allows.
+    """
+    lms = (lms_name or "").strip()
+    if "," in lms:
+        last, first = lms.split(",", 1)
+        return first.strip(), last.strip()
+    parts = name.split()
+    if len(parts) > 1:
+        return " ".join(parts[:-1]), parts[-1]
+    return name, ""
+
+
 def emit_gradescope_roster(roster_path, gs_dir):
     gs_dir.mkdir(parents=True, exist_ok=True)
     out = gs_dir / "gradescope_roster.csv"
@@ -280,9 +298,7 @@ def emit_gradescope_roster(roster_path, gs_dir):
         for r in src:
             name = (r.get("name") or "").strip()
             sid = (r.get("student_id") or "").strip()
-            parts = name.split()
-            first = " ".join(parts[:-1]) if len(parts) > 1 else name
-            last = parts[-1] if len(parts) > 1 else ""
+            first, last = _split_first_last(name, r.get("lms_name"))
             w.writerow([first, last, sid, ""])  # Email intentionally blank — see README caveat
     return out
 
@@ -375,6 +391,22 @@ def _read_names(roster_path: Path) -> list[str]:
     return [(r.get("name") or "").strip() for r in rows if (r.get("name") or "").strip()]
 
 
+def _print_order_by_name(roster_path: Path) -> dict[str, tuple[str, str]]:
+    """Map roster name -> sort key for the print stack and the register.
+
+    Rows are ordered by surname, then given names, so the combined PDF comes off
+    the printer in the same order as the registrar's class list. The surname
+    comes from ``lms_name`` when the roster carries it (see _split_first_last).
+    """
+    out: dict[str, tuple[str, str]] = {}
+    for r in csv.DictReader(roster_path.open()):
+        name = (r.get("name") or "").strip()
+        if name:
+            first, last = _split_first_last(name, r.get("lms_name"))
+            out[name] = (canonical_name(last), canonical_name(first))
+    return out
+
+
 def _student_id_by_name(roster_path: Path) -> dict[str, str]:
     """Map roster name -> student_id (empty string when the column is absent)."""
     rows = list(csv.DictReader(roster_path.open()))
@@ -441,13 +473,18 @@ def run(manifest, workdir):
             sub_roster.unlink(missing_ok=True)
 
     # print_layout: single — one combined PDF for the whole roster (all forms),
-    # in roster (canonical-name) order. The per-student copies are build
+    # in surname order (see _print_order_by_name). The per-student copies are build
     # intermediates, tucked under build/.parts/ rather than shipped loose, so the
     # printable deliverable is exactly one file. (per-form keeps the legacy
     # <form>_combined.pdf stacks emitted by build_roster above.)
     combined_pdf: Path | None = None
+    order = _print_order_by_name(manifest.roster) if manifest.individualized else {}
+
+    def _print_key(row):
+        return order.get(row.get("name", ""), (row.get("canonical_name", ""), ""))
+
     if manifest.individualized and manifest.print_layout == "single" and register_rows:
-        register_rows.sort(key=lambda r: r.get("canonical_name", ""))
+        register_rows.sort(key=_print_key)
         parts_dir = build_dir / ".parts"
         parts_dir.mkdir(exist_ok=True)
         ordered_pdfs: list[Path] = []
@@ -467,7 +504,7 @@ def run(manifest, workdir):
         fields = ["name", "form", "canonical_name", "source_serial", "student_serial", "output_pdf"]
         with register_csv.open("w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
-            register_rows.sort(key=lambda r: r.get("canonical_name", ""))
+            register_rows.sort(key=_print_key)
             w.writeheader()
             w.writerows(register_rows)
 
