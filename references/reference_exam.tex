@@ -137,8 +137,13 @@
   \noindent\rule{\linewidth}{0.3pt}\par}
 
 % --- Section heading ---
+% \needspace keeps the heading with the start of its first question: it asks for
+% the heading's own height (~4 lines) plus \qreserve, the room each question
+% reserves for itself. Without it a heading that fits at the foot of a page is
+% stranded there while its first question moves to the next page.
 \newcommand{\examsection}[1]{%
-  \par\vspace{1.4em}%
+  \par\needspace{\dimexpr\qreserve+4\baselineskip\relax}%
+  \vspace{1.4em}%
   \noindent\rule{\linewidth}{0.3pt}\par\vspace{2pt}%
   \noindent{\textsc{\large #1}}%
   \par\vspace{0.4em}}
