@@ -339,6 +339,14 @@ parsing are unaffected — the break control lives only in list metrics.
 questions with the pre-#29 template and **0** with the current template, at the
 same page count.
 
+
+**Section headings keep with their first question.** `\examsection` opens with
+`\needspace{\dimexpr\qreserve+4\baselineskip\relax}`: the heading's own
+height plus the room each question reserves. Without it a heading that fits at
+the foot of a page is stranded there while its first question moves on. Found on
+CECS 326 Fa26 Exam 1, where *Code Interpretation* sat alone at the foot of
+page 4.
+
 ## Compile discipline
 
 Delete derived files before regenerating — synced binary files have a race
