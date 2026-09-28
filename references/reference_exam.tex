@@ -4,6 +4,8 @@
 %   1. Copy this file to your exam directory and rename it (e.g. cecs378-midterm1-fa26.tex).
 %   2. Edit the \metastrip{}{}{}{} arguments: course, term, exam name, total points.
 %   3. Edit the running header (\fancyhead lines) to match course/term/exam.
+%   3a. Edit the cover page's Exam Information block: points, question count and
+%       types, time allowed. Page numbers fill themselves in.
 %   4. Replace the placeholder sections below with your actual questions.
 %   5. Build: reg-exam-build --roster roster.csv cecs378-midterm1-fa26.tex
 %
@@ -103,8 +105,12 @@
 \fancyhead[L]{\textit{\small CECS NNN · Term YYYY}}   % <-- edit course/term
 \fancyhead[R]{\textit{\small Exam Name}}               % <-- edit exam name
 \fancyfoot[L]{\textit{\footnotesize Generated \buildtime}}
-\fancyfoot[C]{\textit{\small p.~\thepage}}
+\fancyfoot[C]{\textit{\small Page \thepage\ of \pageref{examlastpage}}}
 \makeatletter
+% Student ID (never the name) in the header centre of every page of a pre-filled
+% copy, so a page that comes loose from the cover can be matched to its student
+% while the inner pages stay anonymous. Blank copies and the key leave it empty.
+\fancyhead[C]{\ifx\studentid\@empty\else\textit{\small Student ID} \texttt{\small\studentid}\fi}
 \fancyfoot[R]{\textit{\footnotesize Serial \texttt{\examserial}%
   \ifx\studentserial\@empty\else
     \ \textperiodcentered\ ID \texttt{\studentserial}%
@@ -193,15 +199,25 @@
   xrightmargin=12pt,
 }
 
-% --- Even-page padding for duplex printing ---
+% --- Booklet layout for duplex printing ---
+% Page 1 is a cover with no exam material (see the document body). The last page
+% is always a blank back cover on an even page, so a closed booklet shows no
+% questions on either side. If the questions end on an even page, a scratch page
+% fills the odd page before it. Both keep the fancy style so the header student
+% ID and the footer Serial/ID print on them too.
+\newcommand{\blankpage}{%
+  \thispagestyle{fancy}%
+  \null\vfill%
+  \begin{center}\textit{\small This page intentionally left blank.}\end{center}%
+  \vfill\null\label{examlastpage}\clearpage}
+\newcommand{\scratchpage}{%
+  \thispagestyle{fancy}%
+  \noindent{\sffamily\bfseries SCRATCH WORK}\hfill\textit{\small Nothing on this page is graded.}%
+  \par\noindent\rule{\linewidth}{0.3pt}\par\clearpage}
 \AtEndDocument{%
   \clearpage%
-  \ifodd\value{page}\else%
-    \thispagestyle{plain}%
-    \null\vfill%
-    \begin{center}\textit{\small This page intentionally left blank.}\end{center}%
-    \vfill\null%
-  \fi%
+  \ifodd\value{page}\scratchpage\fi%
+  \blankpage%
 }
 
 \setlength{\emergencystretch}{2em}
@@ -232,9 +248,34 @@
 
 \ifanswers\par\vspace{0.4em}\noindent\colorbox{keyred}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\centering\color{white}\sffamily\bfseries\large $\star$~~ANSWER KEY~~---~~NOT FOR DISTRIBUTION~~$\star$}}\par\vspace{0.4em}\fi
 
-\par\vspace{0.6em}
-\noindent\ding{43}~\textbf{Directions.}~\textit{Write on the exam paper. You may use one 3''$\times$5'' card of notes (both sides, handwritten only). \textbf{No electronic devices of any kind are allowed on your desk during the exam.}}
+% --- Cover page: no exam material. Exam information, rules, directions, and an
+% honor pledge the student signs before opening. ---
+\par\vspace{1.4em}
+\examsection{Exam Information}
+\begin{tabbing}
+\hspace{9em}\=\kill
+\textsc{points}\>100\\[2pt]                                          % <-- edit
+\textsc{questions}\>NN (multiple choice, true/false, short answer)\\[2pt]  % <-- edit
+\textsc{time}\>75 minutes\\[2pt]                                    % <-- edit
+\textsc{pages}\>1--\pageref{examlastpage}. Questions are on pages 2--\pageref{examlastq}. Tell the proctor if a page is missing.\\[2pt]
+\textsc{note card}\>Optional: one 3\,$''$\,$\times$\,5\,$''$ note card, handwritten by you. Printed, typed or\\
+\>photocopied cards are not allowed. You may write on both sides.\\[2pt]
+\textsc{devices}\>No unauthorized electronic devices. Turn off phones, smartwatches and\\
+\>earbuds and put them away.
+\end{tabbing}
 \par\vspace{0.4em}
+\noindent\ding{43}~\textbf{Directions.}~\textit{Answer every question on the exam paper. \textbf{Multiple choice:} circle the single best answer. \textbf{True/False:} circle (a) True or (b) False.}   % <-- edit per exam
+\examsection{Honor Pledge}
+\noindent I will complete this exam on my own. I will not give or receive help, and I will use only the materials permitted above. I understand that a violation is handled under the CSULB Academic Integrity Policy.
+\par\vspace{28pt}
+\noindent{\sffamily\bfseries\large SIGNATURE:}~\rule[-3pt]{11.2cm}{0.8pt}
+\par\vfill
+\begin{center}
+{\sffamily\bfseries\large\ding{43}~~SIGN THE PLEDGE ABOVE BEFORE YOU OPEN THIS EXAM.}\\[6pt]
+{\sffamily\bfseries An exam without a signed pledge will not be graded.}\\[6pt]
+{\sffamily\small Do not turn this page until the proctor tells you to begin.}
+\end{center}
+\clearpage
 
 % ============================================================
 %  QUESTION BODY — replace the placeholders below with your
@@ -290,6 +331,6 @@
 \end{enumerate}
 
 \par\vfill
-\begin{center}\small\textit{End of exam.}\end{center}
+\begin{center}\small\label{examlastq}\textit{End of exam.}\end{center}
 
 \end{document}
