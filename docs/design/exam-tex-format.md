@@ -121,8 +121,11 @@ the standard; do not re-add a background fill.
 Every page of every printed exam carries a three-part footer:
 
 ```
-[L] Generated YYYY-MM-DD HH:MM    [C] p. N    [R] Serial XXXXXXXX
+[L] Generated YYYY-MM-DD HH:MM    [C] Page N of X    [R] Serial XXXXXXXX
 ```
+
+X is the booklet's last page (`\pageref{examlastpage}`), so a missing page is
+visible at a glance.
 
 In individualized builds the right element extends to:
 
@@ -157,12 +160,52 @@ used by `reg-exam-verify` so verification always round-trips.
 
 ```latex
 \fancyfoot[L]{\textit{\footnotesize Generated \buildtime}}
-\fancyfoot[C]{\thepage}
+\fancyfoot[C]{\textit{\small Page \thepage\ of \pageref{examlastpage}}}
 \fancyfoot[R]{\textit{\footnotesize
   Serial \texttt{\examserial}%
   \ifx\studentserial\@empty\else~\textperiodcentered~ID \texttt{\studentserial}\fi
 }}
 ```
+
+---
+
+## Booklet layout — cover, header student ID, blank back
+
+Exams print double-sided as a closed booklet. Added 2026-09-28 (CECS 378 Fa26
+Exam 1).
+
+| Page | Content |
+|---|---|
+| 1 (cover) | Title block, NAME / STUDENT ID / DATE, *Exam Information* (points, questions, time, page range, note-card rule, device rule), directions, *Honor Pledge* with a signature line, and "sign the pledge before you open this exam". **No exam material.** |
+| 2 … n | Questions. |
+| n+1 (only if n is even) | *Scratch work*, not graded. Fills the odd page so the back cover lands on an even page. |
+| last (always even) | *This page intentionally left blank*: the back cover. |
+
+A closed booklet therefore shows no questions on either side. The padding runs
+in `\AtEndDocument` (`\scratchpage`, `\blankpage`), and both keep the `fancy`
+page style so the header and footer print on them too. The cover's page range
+uses `\pageref{examlastpage}` and `\pageref{examlastq}`, so it needs the
+builder's second pdflatex pass.
+
+**Header student ID.** On pre-filled copies the header centre prints
+`Student ID <nnnnnnnnn>` on every page, so a page that comes loose from the
+cover can still be matched to its student. The name appears on the cover only,
+which keeps the inner pages anonymous. Blank copies and the key leave the centre
+empty.
+
+```latex
+\fancyhead[C]{\ifx\studentid\@empty\else\textit{\small Student ID} \texttt{\small\studentid}\fi}
+```
+
+**Honor pledge.** The signed pledge is required for a grade. The cover says so:
+"An exam without a signed pledge will not be graded."
+
+**Print order.** The single-layout combined PDF is sorted by surname (from the
+roster's `lms_name` column when present). See `CHANGELOG.md`.
+
+**Gradescope.** The template is the blank form, so it carries the cover, the
+scratch page and the back page. Set the assignment length to the booklet's page
+count; `GRADING_NOTE.md` reports it.
 
 ---
 
