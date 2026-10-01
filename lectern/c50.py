@@ -150,7 +150,9 @@ def find_lab(vault_root: Path, course: str, lab_number: int) -> Lab:
             continue
         if fm.get("type") != "lab-index":
             continue
-        if fm.get("course") != course:
+        # A cross-listed lab names every course it serves: `course: [CECS 378, CECS 478]`.
+        courses = fm.get("course")
+        if course not in (courses if isinstance(courses, list) else [courses]):
             continue
         if fm.get("lab-number") != lab_number:
             continue
@@ -182,6 +184,9 @@ def find_lab(vault_root: Path, course: str, lab_number: int) -> Lab:
 
     lab_slug = fm.get("lab-slug") or index.parent.name
     points, canvas_title = _schema_points(vault_root, course, lab_number)
+    column = fm.get("gradebook-column")
+    if isinstance(column, dict):  # cross-listed: one Canvas column per course
+        column = column.get(course)
 
     return Lab(
         number=lab_number,
@@ -191,7 +196,7 @@ def find_lab(vault_root: Path, course: str, lab_number: int) -> Lab:
         assignment_slug=fm.get("c50-slug") or derive_assignment_slug(lab_number, lab_slug),
         template=template,
         points=points if points is not None else fm.get("points"),
-        canvas_column=canvas_title or fm.get("gradebook-column"),
+        canvas_column=canvas_title or column,
         announce_note=fm.get("announce-note"),
         index_path=index,
     )
@@ -471,9 +476,20 @@ def classroom_url(org: str, short_name: str) -> str:
 
 
 def announcement(
-    org: str, short_name: str, lab: Lab, sec: dict, due: str | None
+    org: str, short_name: str, lab: Lab, sec: dict, due: str | None,
+    submission_mode: str = "every-push",
 ) -> str:
     """Render the Canvas-pasteable announcement for one section."""
+    if submission_mode == "tag":
+        # In tag mode a plain push is not graded, so "your last push is graded"
+        # would be false. The lab README carries the exact tag command.
+        submit = ("Clone it, do the work there, and commit and push as you go. "
+                  "**To submit, push a `submit/` tag**: the README's \"Pushing and "
+                  "Grading\" section has the command. Your last commit before the "
+                  "deadline is graded either way.")
+    else:
+        submit = ("Clone it, do the work there, and commit and push. **Your last "
+                  "push before the deadline is what gets graded.**")
     due_line = _human_due(due) if due else "announced in class"
     points = f"{lab.points} points" if lab.points else "see the README"
     heading = lab.canvas_column or lab.title
@@ -487,7 +503,7 @@ def announcement(
 
 **{sec['course']} §{sec['section']}** · due **{due_line}** · {points}
 
-Lab 1 is posted. It is distributed through Classroom 50, so you accept it from
+Lab {lab.number} is posted. It is distributed through Classroom 50, so you accept it from
 the command line and it creates a private repository for you under our course
 organization.
 
@@ -502,9 +518,8 @@ login` and `gh extension install foundation50/gh-student` once. After that the
 accept command above is all you need, for this lab and every later one.
 
 Accepting creates `{org}/{short_name}-{lab.assignment_slug}-<your-username>`.
-Clone it, do the work there, and commit and push. **Your last push before the
-deadline is what gets graded.** Read the repository's `README.md` first: it
-carries the task, the deliverable paths, and the grading breakdown.
+{submit} Read the repository's `README.md` first: it carries the task, the
+deliverable paths, and the grading breakdown.
 {note}
 Bring questions to class or office hours.
 """
@@ -609,7 +624,7 @@ def cmd_post(args) -> int:
         if write_back(note, args.org, short, args.dry_run):
             print(f"  bound in {note.relative_to(vault_root)}")
 
-        text = announcement(args.org, short, lab, sec, args.due)
+        text = announcement(args.org, short, lab, sec, args.due, args.submission_mode)
         if args.stdout_only:
             print()
             print(text)

@@ -149,6 +149,21 @@ def test_a_c50_slug_override_in_the_note_wins(vault):
     assert c50.find_lab(vault, "CECS 326", 1).assignment_slug == "lab-01-thread-questions"
 
 
+def test_a_cross_listed_note_resolves_for_each_course(vault):
+    index = vault / "classes" / "326" / "labs" / "threads" / "index.md"
+    index.write_text(index.read_text()
+        .replace('course: "CECS 326"', 'course: ["CECS 326", "CECS 327"]')
+        .replace('gradebook-column: "Lab 1 - Threads"',
+                 'gradebook-column:\n  CECS 326: "Lab 1 - Threads"\n  CECS 327: "Lab 1 - Other"'))
+    assert c50.find_lab(vault, "CECS 326", 1).slug == "threads"
+    # Without a schema, the note's per-course column is the one used.
+    for schema in (vault / "classes" / "326").glob("gradebook-schema*.yaml"):
+        schema.unlink()
+    assert c50.find_lab(vault, "CECS 326", 1).canvas_column == "Lab 1 - Threads"
+    index.write_text(index.read_text().replace('CECS 326: "Lab 1 - Threads"', 'CECS 326: "Lab 1 - Mine"'))
+    assert c50.find_lab(vault, "CECS 326", 1).canvas_column == "Lab 1 - Mine"
+
+
 def test_find_lab_is_explicit_when_no_note_matches(vault):
     with pytest.raises(c50.C50Error, match="no lab-index note"):
         c50.find_lab(vault, "CECS 326", 7)
@@ -642,3 +657,14 @@ def test_pulse_survives_the_github_api_being_down(vault, monkeypatch, capsys):
                         lambda *a, **k: sp.CompletedProcess(a, 1, "", "boom"))
     assert c50.main(["pulse", "--term", "fa26", "--vault-root", str(vault)]) == 0
     assert "CLASSROOM PULSE" in capsys.readouterr().out
+
+
+def test_announcement_names_the_lab_and_the_tag_submission(vault):
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    lab.number = 4
+    sec = {"course": "CECS 326", "section": "01"}
+    text = c50.announcement("Giacalone-CECS", "cecs-326-fa26-01", lab, sec, None, "tag")
+    assert "Lab 4 is posted" in text
+    assert "submit/" in text and "last push before" not in text
+    plain = c50.announcement("Giacalone-CECS", "cecs-326-fa26-01", lab, sec, None)
+    assert "last push before the deadline" in plain
