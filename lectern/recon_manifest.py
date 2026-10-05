@@ -13,6 +13,11 @@ class AutogradeSpec:
     result_path: str = "grading/result.json"   # filename inside the artifact (and legacy in-repo path)
     result_artifact: str = "grading-result"    # CI run-artifact name carrying result.json (durable home)
     steps: list = field(default_factory=list)  # legacy scrape: [{name,key,points,optional?}]
+    # source: "ci" (default: artifact -> in-repo -> log scrape) or "gradebox" (read
+    # <gradebox_out>/<github_id>/result.json written by an instructor-side gradebox run)
+    source: str = "ci"
+    gradebox_out: str | None = None
+    exact_score: list = field(default_factory=list)  # gradebox: regexes for an exact score
 
 @dataclass
 class DocSpec:
@@ -46,7 +51,8 @@ def load_manifest(path: Path) -> ReconManifest:
             + ", ".join(f"assignment.{m}" for m in missing))
     ag = data.get("autograde")
     autograde = AutogradeSpec(**{k: ag[k] for k in
-                ("workflow","branch","result_path","result_artifact","steps") if k in ag}) if ag else None
+                ("workflow","branch","result_path","result_artifact","steps",
+                 "source","gradebox_out","exact_score") if k in ag}) if ag else None
     docs = [DocSpec(file=d["file"], label=d["label"],
                     summarize=d.get("summarize", False), points=d.get("points", 0))
             for d in (data.get("docs") or [])]

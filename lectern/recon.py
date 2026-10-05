@@ -7,7 +7,7 @@ import argparse, tempfile, shutil
 from lectern.recon_manifest import load_manifest
 from lectern.recon_discover import discover_repos, RepoRef
 from lectern.recon_autograde import (fetch_autograde, fetch_autograde_artifact,
-                                     scrape_autograde, AutogradeResult)
+                                     fetch_gradebox, scrape_autograde, AutogradeResult)
 from lectern.recon_git import recon_git
 from lectern.recon_docs import recon_doc, resolve_doc_path
 from lectern.recon_links import repo_links
@@ -29,6 +29,11 @@ def run_recon(*, manifest_path: Path, roster_csv: Path, out_dir: Path,
     def _default_auto(ref: RepoRef) -> AutogradeResult | None:
         if not m.autograde:
             return None
+        if m.autograde.source == "gradebox":
+            out = Path(m.autograde.gradebox_out or "").expanduser()
+            if not out.is_absolute():
+                out = manifest_path.parent / out
+            return fetch_gradebox(out, ref.github_id, exact_score=m.autograde.exact_score)
         # 1. preferred: the durable CI run-artifact contract (result.json)
         r = fetch_autograde_artifact(
             m.org, ref.repo, workflow=m.autograde.workflow, branch=m.autograde.branch,

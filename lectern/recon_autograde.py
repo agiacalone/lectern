@@ -29,6 +29,13 @@ def parse_result_json(text: str) -> AutogradeResult | None:
                            points=int(d.get("points", 0)), max=int(d.get("max", 0)),
                            challenges=chals, commit=d.get("commit"))
 
+def _graded_runs(runs: list[dict]) -> list[dict]:
+    """Drop runs that never graded anything. A run cancelled before it got a runner
+    (Actions out of minutes, 2026-10-05) is still status=completed but has no log
+    and no artifact; taking it as "the latest run" silently loses a real result."""
+    return [r for r in runs if r.get("conclusion") not in ("cancelled", "skipped")]
+
+
 def _default_gh(args: list[str]) -> str:
     proc = subprocess.run(["gh", *args], capture_output=True, text=True)
     if proc.returncode != 0:
@@ -85,8 +92,8 @@ def fetch_autograde_artifact(org: str, repo: str, *, workflow: str = "autograde.
     try:
         runs_raw = gh(["api",
                        f"/repos/{org}/{repo}/actions/workflows/{workflow}/runs"
-                       f"?branch={branch}&status=completed&per_page=1"])
-        runs = json.loads(runs_raw).get("workflow_runs") or []
+                       f"?branch={branch}&status=completed&per_page=10"])
+        runs = _graded_runs(json.loads(runs_raw).get("workflow_runs") or [])
     except (RuntimeError, ValueError, TypeError):
         return None
     if not runs:
@@ -119,8 +126,8 @@ def scrape_autograde(org: str, repo: str, workflow: str, steps: list[dict], *,
     try:
         runs_raw = gh(["api",
                        f"/repos/{org}/{repo}/actions/workflows/{workflow}/runs"
-                       f"?branch={branch}&status=completed&per_page=1"])
-        runs = json.loads(runs_raw).get("workflow_runs") or []
+                       f"?branch={branch}&status=completed&per_page=10"])
+        runs = _graded_runs(json.loads(runs_raw).get("workflow_runs") or [])
     except (RuntimeError, ValueError, TypeError):
         return None
     if not runs:
@@ -143,3 +150,50 @@ def scrape_autograde(org: str, repo: str, workflow: str, steps: list[dict], *,
     max_pts = sum(c.max for c in chals.values())
     return AutogradeResult(honor_ok=honor_ok, points=total, max=max_pts,
                            challenges=chals, commit=head_sha)
+
+
+def fetch_gradebox(out_dir, github_id: str, *, exact_score: list | None = None,
+                   commit: str | None = None) -> AutogradeResult | None:
+    """Read one student's gradebox result (``<out_dir>/<github_id>/result.json``).
+
+    gradebox grades on the instructor's host, so this needs no Actions minutes and
+    no network. Each scored test becomes a challenge. ``exact_score`` is an optional
+    list of regexes tried in order against the tests' stdout; the first capture
+    group that matches replaces the banded total (capped at the spec's max), for
+    labs whose program prints its own exact score."""
+    from pathlib import Path
+    p = Path(out_dir) / github_id / "result.json"
+    if not p.is_file():
+        return None
+    try:
+        d = json.loads(p.read_text())
+    except (OSError, ValueError):
+        return None
+    mx = int(d.get("max", 0))
+    chals: dict[str, Challenge] = {}
+    bp = d.get("build_points")
+    if bp is None and d.get("build_passed"):
+        # Older gradebox results lack build_points: it is whatever the score holds
+        # beyond the passed tests.
+        passed = sum(int(t.get("points") or 0) for t in d.get("tests") or [] if t.get("passed"))
+        bp = max(int(d.get("score", 0)) - passed, 0)
+    if bp:
+        bp = int(bp)
+        chals["build"] = Challenge("build", bool(d.get("build_passed")),
+                                   bp if d.get("build_passed") else 0, bp)
+    for t in d.get("tests") or []:
+        pts = int(t.get("points") or 0)
+        if pts <= 0:
+            continue
+        ok = bool(t.get("passed"))
+        chals[t["name"]] = Challenge(t["name"], ok, pts if ok else 0, pts)
+    points = int(d.get("score", 0))
+    if exact_score:
+        text = "\n".join(t.get("stdout") or "" for t in d.get("tests") or [])
+        for pat in exact_score:
+            m = re.search(pat, text)
+            if m:
+                points = min(int(m.group(1)), mx)
+                break
+    return AutogradeResult(honor_ok=True, points=points, max=mx,
+                           challenges=chals, commit=commit)

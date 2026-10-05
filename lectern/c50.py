@@ -75,6 +75,8 @@ class Lab:
     canvas_column: str | None
     announce_note: str | None   # regeneration-safe extra paragraph
     index_path: Path
+    grader: str | None = None          # c50 | gradebox | lab-ci | manual (see check_grader)
+    grader_detail: str | None = None   # gradebox spec path, or the lab-ci workflow file
 
 
 def spec_path(vault_root: Path, term: str) -> Path:
@@ -199,6 +201,8 @@ def find_lab(vault_root: Path, course: str, lab_number: int) -> Lab:
         canvas_column=canvas_title or column,
         announce_note=fm.get("announce-note"),
         index_path=index,
+        grader=(str(fm["grader"]).strip().lower() if fm.get("grader") else None),
+        grader_detail=fm.get("gradebox-spec") or fm.get("grader-workflow"),
     )
 
 
@@ -253,6 +257,80 @@ def ensure_classroom(
     if "already exists" in out.lower() or "exists in the repo" in out.lower():
         return "exists"
     raise C50Error(f"classroom add {short_name} failed:\n{out}")
+
+
+# ── grader guard ─────────────────────────────────────────────────────────────
+#
+# Fall 2026 Lab 1 was registered with C50's "default" autograder and no tests in
+# both courses. Every submission then scored 0/0 "success", nothing was collected,
+# and nobody noticed until grading (classroom-50-gotchas.md, 2026-09-24 and
+# 2026-10-05). So every lab must now say who grades it, and post checks that the
+# grader it names exists before students can accept the assignment.
+
+GRADERS = {
+    "c50": "Classroom 50 runs tests or an autograder.py from the config repo",
+    "gradebox": "the instructor runs a gradebox spec on reason (gradebox-spec: <path>)",
+    "lab-ci": "the template's own workflow grades (grader-workflow: <file>)",
+    "manual": "hand-graded from the rubric; C50 only distributes",
+}
+
+
+def _resolve_spec(lab: Lab) -> Path:
+    p = Path(str(lab.grader_detail)).expanduser()
+    return p if p.is_absolute() else (lab.index_path.parent / p)
+
+
+def check_grader(lab: Lab) -> list[str]:
+    """Local checks on the lab's grader declaration. Returns problems; empty = ok."""
+    where = f"{lab.index_path}"
+    if not lab.grader:
+        opts = "; ".join(f"`{k}` ({v})" for k, v in GRADERS.items())
+        return [f"{where}: no `grader:` in the frontmatter. Declare who grades this lab: {opts}."]
+    if lab.grader not in GRADERS:
+        return [f"{where}: `grader: {lab.grader}` is not one of {', '.join(GRADERS)}."]
+    if lab.grader == "gradebox":
+        if not lab.grader_detail:
+            return [f"{where}: `grader: gradebox` needs `gradebox-spec: <path to the spec yaml>`."]
+        spec = _resolve_spec(lab)
+        if not spec.is_file():
+            return [f"{where}: gradebox spec {spec} does not exist."]
+        try:
+            data = yaml.safe_load(spec.read_text()) or {}
+        except yaml.YAMLError as e:
+            return [f"{spec}: not valid YAML ({e})."]
+        scored = [t for t in (data.get("tests") or []) if int(t.get("points") or 0) > 0]
+        build_pts = int((data.get("build") or {}).get("points") or 0)
+        if not scored and not build_pts:
+            return [f"{spec}: no test or build step carries points, so every run would score 0."]
+    if lab.grader == "lab-ci" and not lab.grader_detail:
+        return [f"{where}: `grader: lab-ci` needs `grader-workflow: <workflow file>`."]
+    return []
+
+
+def _gh_ok(path: str) -> bool:
+    return subprocess.run(["gh", "api", path, "--silent"], capture_output=True).returncode == 0
+
+
+def check_grader_live(org: str, short_name: str, lab: Lab, *, gh_ok=_gh_ok,
+                      assignments=None) -> list[str]:
+    """Remote checks after registration: the grader the note names really exists."""
+    if lab.grader == "c50":
+        entries = assignments if assignments is not None else read_assignments(org, short_name)
+        entry = next((a for a in entries if a.get("slug") == lab.assignment_slug), {})
+        if entry.get("tests"):
+            return []
+        if gh_ok(f"repos/{org}/{CONFIG_REPO}/contents/{short_name}/autograders/"
+                 f"{lab.assignment_slug}/autograder.py"):
+            return []
+        return [f"{short_name}/{lab.assignment_slug}: `grader: c50` but the assignment has no "
+                "tests block and no autograder.py, so every submission will score 0/0. Add tests "
+                f"(gh teacher assignment test add {org} {short_name} {lab.assignment_slug} ...), "
+                "then push one deliberately wrong submission and confirm it comes back red."]
+    if lab.grader == "lab-ci":
+        wf = lab.grader_detail
+        if not gh_ok(f"repos/{lab.template}/contents/.github/workflows/{wf}"):
+            return [f"{lab.template}: `grader-workflow: {wf}` is not in .github/workflows/."]
+    return []
 
 
 def register_assignment(
@@ -603,6 +681,15 @@ def cmd_post(args) -> int:
     print(f"  template  {lab.template}")
     print(f"  slug      {lab.assignment_slug}")
     print(f"  points    {lab.points if lab.points is not None else '(unknown)'}")
+    print(f"  grader    {lab.grader or '(undeclared)'}"
+          + (f" ({lab.grader_detail})" if lab.grader_detail else ""))
+    problems = check_grader(lab)
+    if problems:
+        if not args.allow_ungraded:
+            raise C50Error("refusing to post a lab nobody grades:\n  " + "\n  ".join(problems)
+                           + "\n(--allow-ungraded overrides, on your own head)")
+        for p in problems:
+            print(f"  WARNING  {p}")
     if lab.canvas_column:
         print(f"  canvas    {lab.canvas_column}")
     print()
@@ -619,6 +706,12 @@ def cmd_post(args) -> int:
             args.submission_mode, args.dry_run,
         )
         print(f"{short}: classroom {state}, assignment {lab.assignment_slug} registered")
+        if not args.dry_run:
+            live = check_grader_live(args.org, short, lab)
+            if live and not args.allow_ungraded:
+                raise C50Error("registered, but the grader is missing:\n  " + "\n  ".join(live))
+            for p in live:
+                print(f"  WARNING  {p}")
 
         note = class_note_path(vault_root, sec, args.term)
         if write_back(note, args.org, short, args.dry_run):
@@ -945,6 +1038,8 @@ def main(argv=None) -> int:
     po.add_argument("--out", help="announcement output directory")
     po.add_argument("--stdout-only", action="store_true", help="print announcements only")
     po.add_argument("--dry-run", action="store_true")
+    po.add_argument("--allow-ungraded", action="store_true",
+                    help="post even if the lab's grader is undeclared or missing (not advised)")
     po.set_defaults(func=cmd_post)
 
     ri = sub.add_parser(

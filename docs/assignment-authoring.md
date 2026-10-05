@@ -50,6 +50,28 @@ says 20/20/15/20/25 is a defect — reconcile at authoring time, across README, 
 > spec and pair it with something that does not. Worked example:
 > `~/git/326/cecs-326-lab-threads-dev/gradebox/`.
 
+### Declare the grader in the lab note (required)
+
+Every lab-index note names who grades it. `reg-c50 post` refuses a lab without
+one, and checks that the named grader exists before students can accept:
+
+| `grader:` | Also needs | Checked at post |
+|---|---|---|
+| `c50` | nothing | the assignment has a C50 `tests` block or an `autograder.py` in the config repo |
+| `gradebox` | `gradebox-spec: <path>` | the spec exists and some test or the build carries points |
+| `lab-ci` | `grader-workflow: <file>` | the workflow is in the template's `.github/workflows/` |
+| `manual` | nothing | nothing; C50 only distributes |
+
+==Why it is required:== Fall 2026 Lab 1 went out in both courses with C50's
+`"autograder": "default"` and no tests. Every submission scored 0/0 "success",
+nothing was collected, and nobody noticed until grading. A threads gradebox
+spec had been written and was never run. Naming the grader turns that from a
+silent gap into a refusal. `--allow-ungraded` overrides it.
+
+A `gradebox` or `lab-ci` lab still shows 0/0 in C50, because C50 is not its
+grader. Read scores through `reg-lab-recon` (`autograde.source: gradebox` reads
+`<gradebox_out>/<github_id>/result.json`; `source: ci` reads the lab's workflow).
+
 Pick the smallest mechanism that covers each deliverable. Don't try to autograde an inherently
 visual or subjective deliverable — that is false confidence. Autograde what is *decidable*; emit
 *evidence* for the rest.
@@ -247,10 +269,21 @@ baked **into the image** as lab content, not added to the gradebox engine.
 4. **Run-doc** (ships with the lab):
    ```sh
    python -m gradebox doctor                       # verify isolation controls
-   python -m gradebox run --spec <lab>.yaml \
-       --submissions ./repos --out ./out --jobs 4  # → out/gradebook.csv
-   reg-gradebook import …                           # lectern boundary
+   python -m gradebox run --spec <lab>.yaml --term <code> \
+       --submissions ./repos --roster roster.csv \
+       --out ./out --jobs 4                         # → out/gradebook.csv
+   reg-lab-recon --manifest lab01.recon.yaml …      # autograde.source: gradebox
    ```
+   - Write per-student seeds as `seed_template: "...-{term}-...-{github_id}"`. A literal
+     term (`cecs-326-fa26-...`) silently reuses one term's seeds in the next; gradebox
+     refuses to run a `{term}` template without `--term`.
+   - Pass `--roster` (`dir,github_id`). Without it the github_id is the last hyphen
+     segment of the folder name, which breaks logins such as `ab-lx`.
+   - Grading runs on the instructor's host, so it needs no GitHub Actions minutes.
+     Fall 2026 ran out of minutes at the Lab 1 deadline.
+   - **Prove it before posting:** a reference solution must score full marks and the
+     unmodified starter must score 0. Then add a partial submission and check that no
+     band awards more than the program's own score.
 
 Authoritative reference: `oracle` repo `docs/gradebox-authoring.md` + `docs/gradebox.md`.
 

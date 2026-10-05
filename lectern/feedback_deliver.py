@@ -59,8 +59,8 @@ def render_feedback_md(row, manifest) -> str:
     return (f"# {manifest.lab} — Feedback\n\n"
             f"**Total: {total} / {_grand(manifest)}**\n\n"
             f"| Component | Score |\n| --- | --: |\n"
-            f"| Wards (autograder) | {row['points']} / {manifest.auto_max} |\n"
-            f"| Grimoire (writeup) | {row['writeup_score']} / {manifest.writeup_max} |\n\n"
+            f"| {manifest.auto_label} | {row['points']} / {manifest.auto_max} |\n"
+            f"| {manifest.writeup_label} | {row['writeup_score']} / {manifest.writeup_max} |\n\n"
             f"## Comments\n{comment}\n\n---\n"
             f"*{manifest.course} · {manifest.term} · §{manifest.section} — graded by Prof. Giacalone*\n")
 

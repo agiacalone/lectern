@@ -53,6 +53,7 @@ LAB_INDEX = textwrap.dedent("""\
     github-template: cecs-326-reading-processes_and_threads
     github-template-url: https://github.com/agiacalone/cecs-326-reading-processes_and_threads
     points: 20
+    grader: manual
     ---
 
     # CECS 326 — Lab 1 — Threads
@@ -668,3 +669,85 @@ def test_announcement_names_the_lab_and_the_tag_submission(vault):
     assert "submit/" in text and "last push before" not in text
     plain = c50.announcement("Giacalone-CECS", "cecs-326-fa26-01", lab, sec, None)
     assert "last push before the deadline" in plain
+
+
+# ── grader guard ─────────────────────────────────────────────────────────────
+
+
+def _set_frontmatter(vault: Path, extra: str) -> None:
+    p = vault / "classes" / "326" / "labs" / "threads" / "index.md"
+    p.write_text(p.read_text().replace("grader: manual\n", extra))
+
+
+def test_a_lab_with_no_grader_is_refused(vault):
+    _set_frontmatter(vault, "")
+    problems = c50.check_grader(c50.find_lab(vault, "CECS 326", 1))
+    assert problems and "no `grader:`" in problems[0]
+
+
+def test_an_unknown_grader_is_refused(vault):
+    _set_frontmatter(vault, "grader: vibes\n")
+    assert "not one of" in c50.check_grader(c50.find_lab(vault, "CECS 326", 1))[0]
+
+
+def test_manual_grading_is_a_valid_declaration(vault):
+    _set_frontmatter(vault, "grader: manual\n")
+    assert c50.check_grader(c50.find_lab(vault, "CECS 326", 1)) == []
+
+
+def test_gradebox_needs_a_spec_that_exists(vault):
+    _set_frontmatter(vault, "grader: gradebox\ngradebox-spec: missing.yaml\n")
+    assert "does not exist" in c50.check_grader(c50.find_lab(vault, "CECS 326", 1))[0]
+
+
+def test_a_gradebox_spec_that_scores_nothing_is_refused(vault):
+    labdir = vault / "classes" / "326" / "labs" / "threads"
+    (labdir / "spec.yaml").write_text("points: 60\nbuild: {cmd: [make]}\ntests:\n  - {name: t, points: 0}\n")
+    _set_frontmatter(vault, "grader: gradebox\ngradebox-spec: spec.yaml\n")
+    assert "score 0" in c50.check_grader(c50.find_lab(vault, "CECS 326", 1))[0]
+
+
+def test_a_scoring_gradebox_spec_passes(vault):
+    labdir = vault / "classes" / "326" / "labs" / "threads"
+    (labdir / "spec.yaml").write_text("points: 60\nbuild: {cmd: [make], points: 5}\ntests:\n  - {name: t, points: 55}\n")
+    _set_frontmatter(vault, "grader: gradebox\ngradebox-spec: spec.yaml\n")
+    assert c50.check_grader(c50.find_lab(vault, "CECS 326", 1)) == []
+
+
+def test_c50_grader_with_no_tests_and_no_autograder_fails_live(vault):
+    _set_frontmatter(vault, "grader: c50\n")
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    reg = [{"slug": lab.assignment_slug, "autograder": "default"}]
+    out = c50.check_grader_live("org", "cecs-326-fa26-01", lab, gh_ok=lambda p: False, assignments=reg)
+    assert out and "0/0" in out[0]
+
+
+def test_c50_grader_with_a_tests_block_passes_live(vault):
+    _set_frontmatter(vault, "grader: c50\n")
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    reg = [{"slug": lab.assignment_slug, "tests": [{"name": "builds", "points": 5}]}]
+    assert c50.check_grader_live("org", "x", lab, gh_ok=lambda p: False, assignments=reg) == []
+
+
+def test_c50_grader_with_an_autograder_py_passes_live(vault):
+    _set_frontmatter(vault, "grader: c50\n")
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    seen = []
+    ok = c50.check_grader_live("org", "x", lab, gh_ok=lambda p: seen.append(p) or True,
+                               assignments=[{"slug": lab.assignment_slug}])
+    assert ok == [] and seen[0].endswith(f"autograders/{lab.assignment_slug}/autograder.py")
+
+
+def test_lab_ci_needs_the_workflow_in_the_template(vault):
+    _set_frontmatter(vault, "grader: lab-ci\ngrader-workflow: autograde.yml\n")
+    lab = c50.find_lab(vault, "CECS 326", 1)
+    assert c50.check_grader(lab) == []
+    out = c50.check_grader_live("org", "x", lab, gh_ok=lambda p: False)
+    assert out and "autograde.yml" in out[0]
+
+
+def test_post_refuses_an_ungraded_lab(vault, capsys):
+    _set_frontmatter(vault, "")
+    rc = c50.main(["post", "--vault-root", str(vault), "--term", "fa26",
+                   "--course", "CECS 326", "--lab", "1", "--dry-run"])
+    assert rc == 2 and "nobody grades" in capsys.readouterr().err

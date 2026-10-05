@@ -30,6 +30,10 @@ class ReportManifest:
     feedback_branch: str
     feedback_pr: int
     default_branch: str = "main"
+    # Student-facing component labels in FEEDBACK.md. The defaults are the
+    # Spellbreaker terms; a lab with no wards (e.g. 326 threads) overrides them.
+    auto_label: str = "Wards (autograder)"
+    writeup_label: str = "Grimoire (writeup)"
 
 
 def load_report_manifest(path: str) -> ReportManifest:
@@ -48,4 +52,6 @@ def load_report_manifest(path: str) -> ReportManifest:
         feedback_branch=d.get("feedback_branch", "feedback"),
         feedback_pr=int(d.get("feedback_pr", 1)),
         default_branch=d.get("default_branch", "main"),
+        auto_label=d.get("auto_label", "Wards (autograder)"),
+        writeup_label=d.get("writeup_label", "Grimoire (writeup)"),
     )

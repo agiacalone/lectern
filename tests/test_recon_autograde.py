@@ -118,3 +118,56 @@ def test_fetch_autograde_artifact_missing_returns_none():
     def fake_gh(args): return json.dumps({"workflow_runs":[{"id":1,"head_sha":"x"}]})
     def fake_dl(*a): return None       # artifact absent
     assert fetch_autograde_artifact("O","r", gh=fake_gh, download=fake_dl) is None
+
+
+# ── gradebox source + cancelled-run filter (2026-10-05) ──────────────────────
+import json as _json
+from lectern.recon_autograde import fetch_gradebox, _graded_runs
+
+
+def _gb(tmp_path, gid, **d):
+    p = tmp_path / gid
+    p.mkdir()
+    (p / "result.json").write_text(_json.dumps(d))
+    return tmp_path
+
+
+def test_gradebox_result_maps_scored_tests_to_challenges(tmp_path):
+    out = _gb(tmp_path, "alice", score=65, max=360, build_passed=True, build_points=20,
+              tests=[{"name": "runs", "points": 40, "passed": True, "stdout": ""},
+                     {"name": "treasure", "points": 100, "passed": False, "stdout": ""},
+                     {"name": "evidence", "points": 0, "passed": True, "stdout": ""}])
+    r = fetch_gradebox(out, "alice")
+    assert r.points == 65 and r.max == 360
+    assert set(r.challenges) == {"build", "runs", "treasure"}      # 0-point evidence dropped
+    assert r.challenges["build"].points == 20 and r.challenges["treasure"].points == 0
+
+
+def test_gradebox_exact_score_overrides_the_bands(tmp_path):
+    out = _gb(tmp_path, "bob", score=60, max=360, build_passed=True, build_points=20,
+              tests=[{"name": "evidence", "points": 0, "passed": True,
+                      "stdout": "Score before semaphores: 140/140\nTotal score: 305/360"}])
+    r = fetch_gradebox(out, "bob", exact_score=[r"Total score: (\d+)/", r"before semaphores: (\d+)/"])
+    assert r.points == 305
+
+
+def test_gradebox_exact_score_is_capped_at_max(tmp_path):
+    out = _gb(tmp_path, "eve", score=0, max=60, build_passed=True, build_points=0,
+              tests=[{"name": "e", "points": 0, "passed": True, "stdout": "Total score: 999/60"}])
+    assert fetch_gradebox(out, "eve", exact_score=[r"Total score: (\d+)/"]).points == 60
+
+
+def test_gradebox_infers_build_points_from_older_results(tmp_path):
+    out = _gb(tmp_path, "old", score=60, max=360, build_passed=True,
+              tests=[{"name": "runs", "points": 40, "passed": True, "stdout": ""}])
+    assert fetch_gradebox(out, "old").challenges["build"].points == 20
+
+
+def test_gradebox_missing_student_is_none(tmp_path):
+    assert fetch_gradebox(tmp_path, "nobody") is None
+
+
+def test_cancelled_runs_are_never_the_latest_graded_run():
+    runs = [{"id": 3, "conclusion": "cancelled"}, {"id": 2, "conclusion": "skipped"},
+            {"id": 1, "conclusion": "success"}]
+    assert [r["id"] for r in _graded_runs(runs)] == [1]

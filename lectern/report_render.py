@@ -124,7 +124,10 @@ def render_report(bundle_dir, cohort_csv, manifest, *, standing_csv=None):
         out.append(f"### {r['student']} — **{grade}**")
         out.append(f"*github: `{r['github_id']}` · Auto {r['points']}/{manifest.auto_max} · "
                    f"Writeup {wr}/{manifest.writeup_max}*\n")
-        out.append(f"> {sc}\n" if graded
+        # Quote every line: a multi-line comment otherwise leaves the quote block
+        # after its first line, and the rest reads as report text, not feedback.
+        quoted = "\n".join(f"> {ln}" if ln else ">" for ln in sc.splitlines())
+        out.append(f"{quoted}\n" if graded
                    else "> _Comments:_ \n" if submitted
                    else "> _no submission_\n")
         if ic or flags:
