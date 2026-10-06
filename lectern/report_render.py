@@ -122,8 +122,14 @@ def render_report(bundle_dir, cohort_csv, manifest, *, standing_csv=None):
                  else f"0 / {total_max}")
         wr = "__" if (submitted and not graded) else r["writeup_score"]
         out.append(f"### {r['student']} — **{grade}**")
-        out.append(f"*github: `{r['github_id']}` · Auto {r['points']}/{manifest.auto_max} · "
-                   f"Writeup {wr}/{manifest.writeup_max}*\n")
+        # Link the repo (and its Feedback PR) so the reviewer can open the work while
+        # reading the feedback. The backticked id stays first: the note parser keys on it.
+        url = (r.get("repo_url") or "").strip()
+        gh = f"[`{r['github_id']}`]({url})" if url else f"`{r['github_id']}`"
+        pr = (r.get("feedback_pr") or "").strip()
+        pr_link = f" · [Feedback PR]({pr})" if pr.startswith("http") else ""
+        out.append(f"*github: {gh} · Auto {r['points']}/{manifest.auto_max} · "
+                   f"Writeup {wr}/{manifest.writeup_max}{pr_link}*\n")
         # Quote every line: a multi-line comment otherwise leaves the quote block
         # after its first line, and the rest reads as report text, not feedback.
         quoted = "\n".join(f"> {ln}" if ln else ">" for ln in sc.splitlines())
