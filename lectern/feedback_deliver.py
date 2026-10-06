@@ -52,10 +52,15 @@ _NO_SUBMISSION = ("No submission was recorded for this lab. If you believe this 
 
 def render_feedback_md(row, manifest) -> str:
     total = row["points"] + row["writeup_score"]
-    if not row.get("honor_ok", True) or total == 0:
+    # A written comment always wins. The no-submission text is only the fallback
+    # for a zero with nothing written: a student who submitted work and earned 0
+    # (fa26 378 Lab 1) must not be told nothing was recorded.
+    if row.get("student_comment"):
+        comment = row["student_comment"]
+    elif not row.get("honor_ok", True) or total == 0:
         comment = _NO_SUBMISSION
     else:
-        comment = row.get("student_comment") or "_See the score breakdown above._"
+        comment = "_See the score breakdown above._"
     return (f"# {manifest.lab} — Feedback\n\n"
             f"**Total: {total} / {_grand(manifest)}**\n\n"
             f"| Component | Score |\n| --- | --: |\n"

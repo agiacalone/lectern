@@ -37,6 +37,35 @@ stay visibly separated. A FLAG is a prompt to look, never a verdict.
 - ➊ confirm the grade table → feed `reg-gradebook` (component file).
 - ➋ open the feedback PR per flagged repo to read/leave inline comments.
 
+## 5b. Optional: `reg-lab-digest draft` (LLM-drafted feedback)
+
+Off by default, because it calls a language model. Enable it in
+`~/.config/lectern/config.toml`:
+
+```toml
+[feedback_drafts]
+enabled  = true
+llm_cmd  = "claude -p"            # any command that reads the prompt on stdin
+doctrine = "/path/to/vault/notes/feedback-doctrine.md"
+
+[feedback_drafts.check_labels]    # optional: autograde keys -> words students see
+map = "assembling the map"
+```
+
+```sh
+reg-lab-digest draft --bundle recon-lab1 --rubric lab01.rubric.yaml \
+    --manifest lab01.report.yaml          # also renders REPORT.md
+```
+
+It emits the tasks, sends each one to `llm_cmd` with the grader contract, the
+feedback doctrine and a deterministic fact sheet (autograded checks, points,
+writeup status; never triage), validates the reply (schema, sanitize lint, no em
+dashes), retries once, and abstains if it still fails. The closing verdict is then
+appended from the score by the doctrine's verdict ladder, so it never depends on
+the model. Results merge into `cohort.csv` as usual, and `DRAFTS.md` lists what
+needs a human read and every judgment call. Drafts may ship verbatim; review
+`DRAFTS.md` first.
+
 ## 6. Per-student feedback — scaffold → LLM fill → deliver (standard practice)
 `reg-lab-report render` always emits a **`## Per-student feedback & grades`** section, so
 `REPORT.md` is a complete "report + feedback" document. Each student block is a **grading

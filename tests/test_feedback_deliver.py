@@ -223,3 +223,14 @@ def test_execute_skips_unclonable_repo_and_continues(tmp_path):
     by = {e["github_id"]: e for e in entries}
     assert by["bwayne"]["main_state"] == "no-repo" and by["bwayne"]["posted"] is False
     assert by["skyle"]["posted"] is True   # run continued; next repo delivered
+
+
+def test_a_written_comment_wins_over_the_no_submission_fallback():
+    from lectern.feedback_deliver import render_feedback_md, _NO_SUBMISSION
+    from types import SimpleNamespace
+    m = SimpleNamespace(lab="Lab 1", auto_max=70, writeup_max=30, auto_label="Wards (autograder)",
+                        writeup_label="Grimoire (writeup)", course="CECS 378", term="fa26", section="01")
+    zero = {"points": 0, "writeup_score": 0, "honor_ok": True}
+    assert _NO_SUBMISSION in render_feedback_md(dict(zero, student_comment=""), m)
+    md = render_feedback_md(dict(zero, student_comment="You signed the pledge but no ward fell."), m)
+    assert "no ward fell" in md and _NO_SUBMISSION not in md

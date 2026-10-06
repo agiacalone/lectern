@@ -152,6 +152,7 @@ Rules:
   This is the **internal instructor note** — terse shorthand, one sentence per
   weak section (e.g. "Ward II: explains outcome only, no byte-alignment
   mechanism; craft: no sources cited.").
+- **Read the vault's `notes/feedback-doctrine.md` before writing any `student_comment`.** It sets the four-step shape (autograded result, specific strengths, each gap with what would earn it, a short verdict), the length, the voice and the special cases. The rules below are the lint-enforced minimum.
 - `student_comment` must be ≤ `student_comment_max_chars`. This is the
   **student-facing** feedback that gets delivered verbatim to the student's
   repo. Write it accordingly:
