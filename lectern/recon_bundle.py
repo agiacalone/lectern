@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import csv, json
 from lectern.recon_record import RepoRecord, record_to_dict
+from lectern._frontmatter import frontmatter
 
 def write_bundle(records: list[RepoRecord], out_dir: Path, *,
                  lab_name: str, total_points: int) -> None:
@@ -97,4 +98,5 @@ def _write_facts_md(records: list[RepoRecord], path: Path, *, lab_name: str, tot
     else:
         lines.append("No repo edited or deleted an instructor-authored file.")
 
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text(frontmatter(path, note_type="lab-recon-facts", extra_tags=("lab",))
+                    + "\n".join(lines) + "\n")

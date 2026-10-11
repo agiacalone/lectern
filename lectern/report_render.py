@@ -6,9 +6,11 @@ helpers; no jinja2, no network.
 """
 import csv
 import statistics
+from pathlib import Path
 from lectern.report_charts import bar_chart, histogram, funnel
 from lectern.report_recommend import recommend
 from lectern.report_manifest import load_report_manifest
+from lectern._frontmatter import frontmatter
 
 
 def _read_cohort(path):
@@ -165,6 +167,6 @@ def main(argv=None):
     m = load_report_manifest(a.manifest)
     text = render_report(a.bundle, a.cohort, m, standing_csv=a.standing)
     with open(a.out, "w") as f:
-        f.write(text + "\n")
+        f.write(frontmatter(Path(a.out), note_type="lab-report", extra_tags=("lab",)) + text + "\n")
     print(f"wrote {a.out}")
     return 0

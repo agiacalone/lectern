@@ -30,6 +30,7 @@ from pathlib import Path
 from lectern.digest_rubric import Rubric
 from lectern.digest_schema import validate_result
 from lectern.feedback_sanitize import lint_student_comment
+from lectern._frontmatter import frontmatter
 
 CONFIG = Path(os.environ.get("LECTERN_CONFIG", "~/.config/lectern/config.toml")).expanduser()
 CONTRACT = Path(__file__).resolve().parent.parent / "docs" / "lab-digest-grader-prompt.md"
@@ -246,4 +247,5 @@ def write_summary(bundle: Path, results: list[dict], out: Path) -> None:
                  [f"- **{r['github_id']}** ({r['confidence']}): {r['comment']}" for r in low] + [""]
     lines += ["## Internal notes, all students", ""] + \
              [f"- **{r['github_id']}**: {r['comment']}" for r in results if not r.get("abstain")]
-    Path(out).write_text("\n".join(lines) + "\n")
+    Path(out).write_text(frontmatter(Path(out), note_type="lab-feedback-drafts", extra_tags=("lab", "feedback"))
+                         + "\n".join(lines) + "\n")

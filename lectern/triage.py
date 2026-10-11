@@ -11,6 +11,7 @@ from collections import Counter
 from pathlib import Path
 
 from lectern.triage_version import SCHEMA_VERSION, SIGNAL_SET_VERSION
+from lectern._frontmatter import frontmatter
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +115,8 @@ def write_triage_md(rows, path, cfg):
         f"*schema_version {cfg.get('schema_version', 1)} · signal_set {cfg.get('signal_set_version', 1)} · profile "
         f"{cfg.get('profile')} · engine {cfg.get('engine_sha', 'n/a')}*",
     ]
-    Path(path).write_text("\n".join(lines) + "\n")
+    Path(path).write_text(frontmatter(Path(path), note_type="lab-triage", extra_tags=("lab", "integrity"))
+                          + "\n".join(lines) + "\n")
 
 
 def engine_sha():
