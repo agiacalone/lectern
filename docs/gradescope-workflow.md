@@ -34,10 +34,11 @@ Set `gradescope: region` or `gradescope: bubble` in `exam.build.yaml`, then run
   `print_layout: per-form` for the legacy per-form `<id>_combined.pdf` stacks.)*
 - **`gradescope/`** — the import products covered in this document.
 - **`GRADING_NOTE.md`** — the grading note (next to the manifest). One Markdown
-  file per exam: exam identity, the Gradescope setup steps, and a per-form
-  answer-key + rubric table. Gradescope imports no key or rubric, so this is the
-  human crib a grader works from — and it is self-contained enough to hand to a
-  TA/ISA who did not author the exam. See §1a.
+  file per exam: exam identity, the Gradescope setup steps, and for every
+  question **one rubric row per possible outcome**, with its points. Gradescope
+  imports no key or rubric, so this is the work order a grader enters and then
+  grades from. It is self-contained enough to hand to a TA/ISA who did not
+  author the exam. See §1a.
 
 ### 1a. The grading note (`GRADING_NOTE.md`)
 
@@ -54,7 +55,30 @@ comments authored directly above each question's `\item` in the exam `.tex`:
 question number). `% rubric:` is required on `fib` and `code` questions and
 optional on `mc`/`tf` (which default to "correct choice = full points, else 0").
 The note collects all forms, so an A/B exam yields one note with a `## Form A` and
-`## Form B` section, each a `Q · Name · Pts · Type · Answer · Rubric` table.
+`## Form B` section.
+
+**Every outcome gets a row.** Each question is a `#### <Form>·Q<n> · name · pts ·
+TYPE` heading over a `| Pts | Key | Rubric item |` table. The grader enters every
+row into Gradescope as a rubric item and then only decides which one applies, so a
+grader who did not write the question applies points the same way, and a student
+can see that every alternative was considered.
+
+| Type | Rows |
+|---|---|
+| `mc` | one per choice, `(a)`…; only the `\correctchoice` carries `+N` |
+| `tf` | `True` and `False`; the keyed side carries `+N` |
+| `fib` | one per blank (`+N` each when the points divide evenly, else `·` and the *Scoring* caption rules), plus an `order` row for multi-blank fills unless `% order: any` precedes the question |
+| `code` / written | the question's authored **Gradescope rubric** block, item for item, with its category as a `[Group]` tag (see `docs/design/exam-tex-format.md`); a code question whose answer is True/False gets the two T/F rows |
+
+Every question also ends with a `none` row (*No answer / multiple marks*) unless
+its authored rubric has its own catch-all. Credit is carried by the points: `+N`
+rows credit, `0` rows do not and exist for feedback and statistics. Each row's
+`form·Qn·slot` key is what `reg-gradescope-stats` joins to Gradescope's *Export
+Evaluations* columns for per-distractor item analysis.
+
+To refresh the note after editing an exam that is already printed, run
+`reg-exam-build exam.build.yaml --grading-note-only`. It reads the form sources
+and rewrites only `GRADING_NOTE.md`; no PDFs are rebuilt.
 
 ### Region target (fixed-template, rubric grading) — the standard
 

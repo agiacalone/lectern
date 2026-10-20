@@ -417,6 +417,15 @@ Produced only when `gradescope:` is `region` or `bubble`. **region** → per-for
 versions) + outline; plus `gradescope_roster.csv` (Email column blank — see README
 caveat; prefer LMS/LTI sync). Full details in README `### Gradescope products`.
 
+Every Gradescope build also writes **`GRADING_NOTE.md`** next to the manifest: the
+ISA work order, with **one rubric row per possible outcome** of every question
+(each MC choice, both T/F sides, each FIB blank + a wrong-order row, every item of
+an authored `Gradescope rubric` block on written questions), its points, and a
+`form·Qn·slot` key that `reg-gradescope-stats` joins back to the evaluations
+export. Graders enter the rows verbatim and only pick which applies. For an exam
+already printed, `reg-exam-build exam.build.yaml --grading-note-only` rewrites just
+the note.
+
 > **How to grade the result in Gradescope** — step-by-step (region/bubble setup, A/B
 > Version Sets, roster, the per-student-serial identity/appeals integration):
 > `notes/gradescope-exam-workflow.md`.

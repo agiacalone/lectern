@@ -101,7 +101,7 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 
 **Grade-appeal reproducibility:** a build is fully deterministic. Given the same manifest, `.tex` sources, roster, and `assign_seed`, re-running `reg-exam-build` regenerates byte-identical content. This means a disputed paper can always be reproduced from archived sources — even weeks after the exam. See [docs/design/exam-tex-format.md](docs/design/exam-tex-format.md) for the full appeals runbook.
 
-**Gradescope products:** set `gradescope: region` or `gradescope: bubble` in the manifest to emit a `gradescope/` directory with per-form template PDFs, answer-key PDFs, and outline CSVs ready for Gradescope import. See [docs/gradescope-workflow.md](docs/gradescope-workflow.md).
+**Gradescope products:** set `gradescope: region` or `gradescope: bubble` in the manifest to emit a `gradescope/` directory with per-form template PDFs, answer-key PDFs, and outline CSVs ready for Gradescope import, plus a per-outcome `GRADING_NOTE.md`: every question's Gradescope rubric items with their points, for graders to enter and apply. `--grading-note-only` refreshes just the note. See [docs/gradescope-workflow.md](docs/gradescope-workflow.md).
 
 ### Term lifecycle
 
