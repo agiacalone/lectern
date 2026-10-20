@@ -376,6 +376,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="(with --roster) write register CSV here (default: <stem>_serials.csv next to source)",
     )
+    p.add_argument(
+        "--grading-note-only",
+        action="store_true",
+        help="(with a .yaml manifest) rewrite only GRADING_NOTE.md; no PDFs are rebuilt",
+    )
     return p
 
 
@@ -389,6 +394,10 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--roster/--combined/--register are not valid with a .yaml manifest "
                          "(configure them in the manifest instead)")
         manifest = exam_pack.load_manifest(args.source)
+        if args.grading_note_only:
+            note = exam_pack.write_grading_note(manifest, args.source.parent)
+            print(f"  + {note.name}  (per-outcome rubric, {len(manifest.forms)} form(s))")
+            return 0
         result = exam_pack.run(manifest, args.source.parent)
         print(f"  forms: {', '.join(result.forms)}")
         print(f"  + build/  ({result.student_pdf_count} student PDF(s))")
@@ -403,8 +412,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  + {shown}")
         if result.gradescope_dir:
             print(f"  + gradescope/  ({manifest.gradescope})")
+        if result.grading_note:
+            print(f"  + {result.grading_note.name}  (per-outcome rubric)")
         return 0
 
+    if args.grading_note_only:
+        parser.error("--grading-note-only requires a .yaml manifest")
     if args.combined and args.roster is None:
         parser.error("--combined requires --roster")
     if args.register is not None and args.roster is None:

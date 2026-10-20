@@ -233,29 +233,96 @@ def test_emit_gradescope_roster_columns(tmp_path):
     assert rows[0]["Email"] == ""                # email not carried — left blank
 
 
+MC_BLOCK = r"""\textit{(2 pts)} Which property?
+  \begin{enumerate}[label=(\alph*)]
+    \item \wrongchoice{Confidentiality}
+    \item \correctchoice{Availability}
+    \item \wrongchoice{Integrity \texttt{x}}
+  \end{enumerate}
+"""
+
+CODE_BLOCK = r"""\textit{(3 pts)} Explain.
+  \ifanswers \par\smallskip \textbf{Gradescope rubric} \textit{(additive, 3 pts):}
+    \begin{itemize}[noitemsep]
+      \item \textbf{+1}~Names deadlock \textit{(Outcome)}
+      \item \textbf{+0}~Calls it ``starvation'' \textit{(Outcome)}
+      \item \textbf{+2}~Global lock order \textit{(Fix)} \textit{(only one counts)}
+      \item \textbf{+0}~Blank / off-topic \textit{(catchall)}
+    \end{itemize}
+  \fi
+"""
+
+
+def _note(tmp_path, a, b=None, orders=None):
+    forms = [FormSpec("A", tmp_path / "A.tex")] + ([FormSpec("B", tmp_path / "B.tex")] if b else [])
+    man = ExamManifest(course="CECS 378", term="su26", exam="Exam 1", forms=forms,
+                       gradescope="region", points=4)
+    outlines = {"A": a, **({"B": b} if b else {})}
+    return emit_grading_note(man, outlines, {"A": 4, "B": 4}, tmp_path, orders).read_text()
+
+
 def test_emit_grading_note_structure(tmp_path):
     a = [
-        OutlineRow(1, 2, "mc", "a", "CIA — confidentiality", "Correct = a (2 pts)."),
+        OutlineRow(1, 2, "mc", "b", "CIA — availability", "", block=MC_BLOCK),
         OutlineRow(2, 2, "fib", "confusion; diffusion", "FIB — Shannon", "1 pt/blank."),
     ]
-    b = [OutlineRow(1, 2, "mc", "c", "CIA — availability", "Correct = c (2 pts).")]
-    man = ExamManifest(course="CECS 378", term="su26", exam="Exam 1",
-                       forms=[FormSpec("A", tmp_path / "A.tex"),
-                              FormSpec("B", tmp_path / "B.tex")],
-                       gradescope="region", points=4)
-    note = emit_grading_note(
-        man, {"A": a, "B": b}, {"A": 4, "B": 4}, tmp_path
-    )
-    assert note == tmp_path / "GRADING_NOTE.md"
-    text = note.read_text()
+    b = [OutlineRow(1, 2, "mc", "c", "CIA — availability", "")]
+    text = _note(tmp_path, a, b)
     assert "type: grading-note" in text
     assert "tags: [teaching, cecs-378, exam, gradescope, answer-key, internal]" in text
     assert "## Form A" in text and "## Form B" in text
-    assert "CIA — confidentiality" in text
-    assert "confusion; diffusion" in text          # FIB full answer in table
-    assert "4 pts · 3 questions · 2 forms · 4/exam" in text
-    assert "length = 4 pages" in text
+    assert "4 pts · 2 questions · 2 forms (A/B) · 4 pages/exam" in text
+    assert "Version Set" in text and "length = 4 pages" in text
     assert "[!warning] Internal" in text
+    # every MC choice is a row; only the keyed one carries credit
+    assert "#### A·Q1 · CIA — availability · 2 pts · MC" in text
+    assert "| 0 | `A·Q1·a` | (a) Confidentiality |" in text
+    assert "| +2 | `A·Q1·b` | (b) Availability |" in text
+    assert "| 0 | `A·Q1·c` | (c) Integrity x |" in text
+    assert "| 0 | `A·Q1·none` | No answer / multiple marks |" in text
+    # FIB: one credited row per blank, plus the strict-order row
+    assert "*Scoring:* 1 pt/blank." in text
+    assert "| +1 | `A·Q2·b1` | blank 1 = “confusion” |" in text
+    assert "| +1 | `A·Q2·b2` | blank 2 = “diffusion” |" in text
+    assert "`A·Q2·order`" in text
+
+
+def test_grading_note_single_form_and_order_any(tmp_path):
+    a = [OutlineRow(1, 2, "fib", "56; 128", "FIB — key sizes", "1 pt/blank.")]
+    text = _note(tmp_path, a, orders={"A": {1: "any"}})
+    assert "single form A" in text and "Version Set" not in text
+    assert "`A·Q1·order`" not in text
+
+
+def test_grading_note_tf_and_code_true_false(tmp_path):
+    a = [OutlineRow(1, 1, "tf", "False", "T/F", ""),
+         OutlineRow(2, 2, "code", "False", "Code T/F", "2 pts, all-or-nothing.")]
+    text = _note(tmp_path, a)
+    assert "| 0 | `A·Q1·T` | True |" in text and "| +1 | `A·Q1·F` | False |" in text
+    assert "| +2 | `A·Q2·false` | False |" in text and "| 0 | `A·Q2·true` | True |" in text
+
+
+def test_grading_note_uses_authored_gradescope_rubric(tmp_path):
+    a = [OutlineRow(1, 3, "code", "deadlock", "Code — lock order", "3 pts additive.",
+                    block=CODE_BLOCK)]
+    text = _note(tmp_path, a)
+    assert "| +1 | `A·Q1·r1` | Names deadlock [Outcome] |" in text
+    assert "| 0 | `A·Q1·r2` | Calls it “starvation” [Outcome] |" in text
+    assert "| +2 | `A·Q1·r3` | Global lock order [Fix; only one counts] |" in text
+    assert "| 0 | `A·Q1·r4` | Blank / off-topic [catchall] |" in text
+    assert "`A·Q1·none`" not in text   # the authored catchall replaces it
+    assert "\\" not in text
+
+
+def test_grading_note_round_trips_through_stats_parser(tmp_path):
+    from lectern.gradescope_stats import parse_grading_note
+    a = [OutlineRow(1, 2, "mc", "b", "CIA — availability", "", block=MC_BLOCK),
+         OutlineRow(2, 3, "code", "deadlock", "Code — lock order", "3 pts.", block=CODE_BLOCK)]
+    _note(tmp_path, a)
+    parsed = parse_grading_note(tmp_path / "GRADING_NOTE.md")
+    assert parsed["A"][1]["pts"] == 2 and parsed["A"][1]["type"] == "MC"
+    assert [k for _, k, _ in parsed["A"][1]["items"]] == ["A·Q1·a", "A·Q1·b", "A·Q1·c", "A·Q1·none"]
+    assert len(parsed["A"][2]["items"]) == 4
 
 
 def test_emit_region_products_copies_and_outlines(tmp_path):
@@ -505,3 +572,22 @@ def test_cli_relative_manifest_path(tmp_path, monkeypatch):
     rc = main(["exam.build.yaml"])   # relative path
     assert rc == 0
     assert (tmp_path / "build" / "register.csv").exists()
+
+
+def test_grading_note_only_cli_writes_note_without_pdfs(tmp_path):
+    from lectern.exam_build import main as build_main
+    shutil.copytree(FIX, tmp_path / "fix")
+    fixd = tmp_path / "fix"
+    assert build_main([str(fixd / "manifest_ab.yaml"), "--grading-note-only"]) == 0
+    text = (fixd / "GRADING_NOTE.md").read_text()
+    assert "## Form A" in text and "## Form B" in text
+    assert "| Pts | Key | Rubric item (paste into Gradescope) |" in text
+    assert not (fixd / "build").exists()
+
+
+def test_grading_note_sanitize_math():
+    from lectern.grading_note import sanitize
+    assert sanitize(r"$2^{n}$") == "2^n"
+    assert sanitize(r"$2^{2n}$") == "2^(2n)"
+    assert sanitize(r"$2^{n/2}$") == "2^(n/2)"
+    assert sanitize(r"\texttt{fork()} returns ``0''") == "fork() returns “0”"

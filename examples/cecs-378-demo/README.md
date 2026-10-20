@@ -441,12 +441,10 @@ reg-gradescope-stats \
 counts, and flags **dead** distractors (chosen by nobody) and possible **miskeys**
 (a distractor chosen more than the key).
 
-> **Known format gap.** `reg-exam-build` emits a *summary-table* `GRADING_NOTE.md`
-> (`| Q | Name | Pts | Type | Answer | Rubric |`), but `reg-gradescope-stats`
-> consumes the richer *per-question* form (`#### <Form>·Q<n> · <name> · <pts> · <TYPE>`
-> with `| Pts | Key | Rubric item |` tables). They do not yet match, so this stage
-> uses a hand-authored stats-compatible note at `gradescope-stats/GRADING_NOTE.md`.
-> Bridging the two formats is a tracked follow-up.
+> **Note format.** `reg-exam-build` now emits the per-outcome `GRADING_NOTE.md`
+> that `reg-gradescope-stats` reads, so the build's own note can be passed with
+> `--grading-note`. This stage keeps its hand-authored note at
+> `gradescope-stats/GRADING_NOTE.md` so the sample evaluation CSVs stay matched to it.
 
 ---
 

@@ -14,12 +14,13 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 from lectern.exam_serial import canonical_name
 from lectern.exam_build import ExamBuildConfig, build_variant, build_roster, _concat_pdfs
+from lectern import grading_note
 
 _VALID_ASSIGN = {"alternating", "seeded-random", "every-form"}
 _VALID_GRADESCOPE = {"region", "bubble", "none"}
@@ -60,6 +61,7 @@ class OutlineRow:
     answer: str
     name: str = ""
     rubric: str = ""
+    block: str = field(default="", repr=False, compare=False)  # raw .tex, for the grading note
 
 
 @dataclass
@@ -239,7 +241,7 @@ def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
                 )
             rubric = f"Correct = {answer} ({int(m_pts.group(1))} pts, all-or-nothing)."
         rows.append(OutlineRow(q_num=q, points=int(m_pts.group(1)), type=qtype,
-                               answer=answer, name=name, rubric=rubric))
+                               answer=answer, name=name, rubric=rubric, block=block))
     return rows
 
 
@@ -326,64 +328,26 @@ def _pdf_page_count(pdf_path: Path) -> int:
     return 0
 
 
-def _course_tag(course: str) -> str:
-    return course.strip().lower().replace(" ", "-")
+def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root,
+                      per_form_orders=None) -> Path:
+    """Write the per-outcome GRADING_NOTE.md (see lectern.grading_note)."""
+    return grading_note.emit(manifest, per_form_outline, per_form_pages, exam_root,
+                             per_form_orders)
 
 
-def _grading_note_table(rows) -> str:
-    head = "| Q | Name | Pts | Type | Answer | Rubric |\n| -: | --- | -: | --- | --- | --- |"
-    body = "\n".join(
-        f"| {r.q_num} | {r.name} | {r.points} | {r.type} | {r.answer} | "
-        f"{r.rubric.replace(chr(10), ' ')} |"
-        for r in rows
-    )
-    return head + "\n" + body
+def write_grading_note(manifest, workdir: Path) -> Path:
+    """Regenerate only GRADING_NOTE.md from the form sources (no LaTeX run).
 
-
-def emit_grading_note(manifest, per_form_outline, per_form_pages, exam_root) -> Path:
-    exam_root = Path(exam_root)
-    out = exam_root / "GRADING_NOTE.md"
-    forms = [f.id for f in manifest.forms]
-    total_pts = sum(r.points for r in next(iter(per_form_outline.values())))
-    nq = sum(len(v) for v in per_form_outline.values())
-    pages = per_form_pages.get(forms[0], 0)
-    tag = _course_tag(manifest.course)
-
-    fm = (
-        "---\n"
-        f"type: grading-note\n"
-        f"tags: [teaching, {tag}, exam, gradescope, answer-key, internal]\n"
-        "visibility: private\n"
-        "icon: LiClipboardCheck\n"
-        "iconColor: var(--color-red)\n"
-        "---\n"
-    )
-    parts = [
-        fm,
-        f"# {manifest.exam} — Gradescope Grading Note ({manifest.course} {manifest.term})\n",
-        "> [!warning] Internal — answer key\n"
-        "> Grader/ISA only. Never student-facing. Serials/register are grader "
-        "infra (see [[project_exam_serial_internal_only]]).\n",
-        f"{total_pts} pts · {nq} questions · {len(forms)} forms · {pages}/exam\n",
-        "## Gradescope setup\n"
-        "1. Two assignments — one per form — linked as a **Version Set**.\n"
-        "2. Upload `gradescope/<form>_template.pdf` (the BLANK form) as each template.\n"
-        "3. Build the outline: one region per question, points from the table.\n"
-        "4. Enter the key in-UI (Gradescope imports nothing); keep "
-        "`gradescope/<form>_answer_key.pdf` open.\n"
-        f"5. Upload each form's scanned stack to its own version; length = {pages} pages.\n",
-    ]
-    for fid in forms:
-        parts.append(f"## Form {fid}\n" + _grading_note_table(per_form_outline[fid]) + "\n")
-    # verify dir is always build/ — register.csv's output_pdf carries the
-    # .parts/ prefix in single layout, so it resolves relative to build/.
-    parts.append(
-        "## Appeals\n"
-        "Each paper's footer `Serial · ID` resolves to one student + form via "
-        "`reg-exam-verify --register build/register.csv --dir build/`.\n"
-    )
-    out.write_text("\n".join(parts), encoding="utf-8")
-    return out
+    Page counts come from the existing blank ``build/<form>.pdf``; 0 if absent.
+    """
+    workdir = Path(workdir)
+    outlines, pages, orders = {}, {}, {}
+    for form in manifest.forms:
+        tex = form.source.read_text()
+        outlines[form.id] = parse_outline_from_tex(tex)
+        orders[form.id] = grading_note.parse_orders(tex)
+        pages[form.id] = _pdf_page_count(workdir / "build" / f"{form.id}.pdf")
+    return emit_grading_note(manifest, outlines, pages, workdir, orders)
 
 
 def _read_names(roster_path: Path) -> list[str]:
@@ -509,15 +473,18 @@ def run(manifest, workdir):
             w.writerows(register_rows)
 
     gs_dir = None
-    grading_note = None
+    grading_note_path = None
     if manifest.gradescope != "none":
         gs_dir = workdir / "gradescope"
         gs_dir.mkdir(parents=True, exist_ok=True)
         per_form_outline = {}
         per_form_pages = {}
+        per_form_orders = {}
         for form in manifest.forms:
-            outline = parse_outline_from_tex(form.source.read_text())
+            tex = form.source.read_text()
+            outline = parse_outline_from_tex(tex)
             per_form_outline[form.id] = outline
+            per_form_orders[form.id] = grading_note.parse_orders(tex)
             per_form_pages[form.id] = _pdf_page_count(blank_pdfs[form.id])
             if manifest.gradescope == "region":
                 emit_region_products(form.id, blank_pdfs[form.id], key_pdfs[form.id], outline, gs_dir)
@@ -525,11 +492,12 @@ def run(manifest, workdir):
                 emit_bubble_products(form.id, outline, gs_dir)
         if manifest.roster is not None:
             emit_gradescope_roster(manifest.roster, gs_dir)
-        grading_note = emit_grading_note(manifest, per_form_outline, per_form_pages, workdir)
+        grading_note_path = emit_grading_note(manifest, per_form_outline, per_form_pages, workdir,
+                                               per_form_orders)
 
     return PackResult(
         forms=[f.id for f in manifest.forms], build_dir=build_dir,
         gradescope_dir=gs_dir, register_csv=register_csv,
-        student_pdf_count=student_pdf_count, grading_note=grading_note,
+        student_pdf_count=student_pdf_count, grading_note=grading_note_path,
         combined_pdf=combined_pdf,
     )
