@@ -26,7 +26,7 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-lms-roster-import` | lms_roster | Normalize a CSULB faculty-center roster export |
 | `reg-c50` | c50 | **Classroom 50** — the GitHub Classroom successor (legacy sunset 2026-08-28). `classroom-add` creates one classroom per section from the term-spec · `codes` mints the per-section self-enrollment codes · `roster-import` turns collected GitHub usernames into a roster + org invitations · `post` registers a lab as an assignment in every section that teaches it, binds it into the class notes, and writes the Canvas announcement · `status` reads back what is actually registered. Resolves org, classroom, slug, template, points and due date from the vault rather than the command line |
 | `reg-guardcheck` | guardcheck | **In-CI course-file notification.** `stamp` records the expected digests of a template's guard files; `check` runs inside the lab's own autograde workflow and tells the *student* when one has changed. ==Notifies, never grades==: no points, no pass/fail, always exits 0 (`--strict` opts out). Stdlib-only so a template can vendor the single file. The authoritative check is instructor-side `reg-triage`, which reads git history from outside the student's control |
-| `reg-canvas` | canvas | **Canvas API.** Reads: `whoami`, `courses` (`--bind` records each section's `canvas.course-id` in its class note), `grades-export` (the gradebook as the same CSV Canvas's *Export* writes, into `archives/<term>-<sec>/canvas/`, `--import` chains `reg-lms-grades-import`), `roster-check` (Canvas vs registrar roster). Writes, ==dry run unless `--apply`==: `grades-push` (a Canvas-format import CSV, changed cells only), `announce`, `discussion` (unpublished by default), `assignment` (`--lab N` fills name + points from the vault), `syllabus` (refuses a file without the class note's serial). Token: `~/.config/lectern/canvas-token`, mode 600, never in argv, logs or the vault. Runbook: `docs/canvas-api.md` |
+| `reg-canvas` | canvas | **Canvas API.** Reads: `whoami`, `courses` (`--bind` records each section's `canvas.course-id` in its class note), `grades-export` (the gradebook as the same CSV Canvas's *Export* writes, into `archives/<term>-<sec>/canvas/`, `--import` chains `reg-lms-grades-import`), `roster-check` (Canvas vs registrar roster), `audit` (ungraded/unposted work, empty weighted groups, missing policy off). Writes, ==dry run unless `--apply`==: `grades-push` (a Canvas-format import CSV, changed cells only), `announce`, `discussion` (unpublished by default), `assignment` (`--lab N` fills name + points from the vault), `syllabus` (refuses a file without the class note's serial), `discussions review|apply` (grade discussions by post count: 2+ = 5, 1 = 3; a vault note lists only the posts to judge, each with a deny box; likes, no comments; `--post` reveals hidden grades). Token: `~/.config/lectern/canvas-token`, mode 600, never in argv, logs or the vault. Runbook: `docs/canvas-api.md` |
 | `reg-classroom-roster-seed` | classroom_seed | ==**RETIRED** — legacy GitHub Classroom, and it never worked live== (it POSTed to a read-only endpoint). Kept only so old runbooks resolve. Use `reg-c50 roster-import` |
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
@@ -280,6 +280,11 @@ reg-canvas grades-push --term fa26 --vault-root <V> --course "CECS 326" --sectio
     --file canvas-lab2-import.csv --only "Lab 2 - …"            # dry run; add --apply
 reg-canvas announce --term fa26 --vault-root <V> --course "CECS 326" \
     --file '<lab>/posted/fa26-{section}-ANNOUNCE.md'            # dry run; add --apply
+reg-canvas audit --term fa26 --vault-root <V>                   # what was never graded or posted
+reg-canvas discussions review --term fa26 --vault-root <V> --week "Week 7" \
+    --workdir ~/tmp/canvas-discussions/fa26-w7                  # writes the vault note to judge
+reg-canvas discussions apply --workdir ~/tmp/canvas-discussions/fa26-w7 \
+    --note <V>/classes/semesters/fa26-discussions-w7-grading.md --post   # dry run; add --apply
 ```
 
 ==Every write is a dry run until `--apply`.== An agent shows the dry run and
@@ -289,6 +294,11 @@ sandbox) bypasses the vault for testing. ==Never read the token file.==
 
 **Data scope** matches what was promised to CSULB IT on 2026-10-16: course
 content, plus names, student IDs and grades for the instructor's own sections.
+`discussions review` also reads discussion posts, the same reading done by
+hand in SpeedGrader: the text is reduced to counts and writing metrics in
+memory and never written. The metrics are prompts to read a post, ==never an
+AI-detection verdict==; the course discussion rules promise "no checker, no
+accusations".
 `grades-export` reads scores from the submissions endpoint but keeps only
 score fields, dropping submission content on arrival. Exports are written
 mode 600.

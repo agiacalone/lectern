@@ -13,6 +13,9 @@ Read-only:
                      writes, so ``reg-lms-grades-import`` and
                      ``reg-gradebook export-canvas --template`` take it unchanged
 - ``roster-check``   diff Canvas enrolments against the registrar roster
+- ``audit``          find ungraded or unposted work and gradebook settings
+                     that skew the weighted score
+                     (:mod:`lectern.canvas_grading`)
 
 Writes (**dry run unless ``--apply``**):
 
@@ -21,9 +24,12 @@ Writes (**dry run unless ``--apply``**):
 - ``discussion``     create a discussion topic, unpublished by default
 - ``assignment``     create an assignment (``--lab N`` fills it from the vault)
 - ``syllabus``       set the syllabus page, refusing a file without its serial
+- ``discussions``    grade discussion assignments by post count: ``review``
+                     writes the short list to judge, ``apply`` sets scores
+                     and likes (:mod:`lectern.canvas_grading`)
 
-Data scope is what the instructor already exports by hand: roster and grades
-for their own sections. ``grades-export`` reads scores through the
+Data scope is what the instructor already does by hand: roster and grades
+for their own sections, and reading discussion posts to grade them. ``grades-export`` reads scores through the
 submissions endpoint but keeps only score fields (:data:`SCORE_FIELDS`);
 submission content is dropped as each page arrives and never written.
 
@@ -42,6 +48,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from lectern import canvas_grading
 from lectern.canvas_api import CanvasClient, CanvasError
 from lectern.c50 import C50Error, class_note_path, sections_for, spec_path
 from lectern.student_id import pad_student_id
@@ -660,6 +667,15 @@ def cmd_syllabus(client: CanvasClient, args) -> int:
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
 
+def cmd_audit(client: CanvasClient, args) -> int:
+    return canvas_grading.cmd_audit(client, args, resolve_targets(args))
+
+
+def cmd_discussions(client: CanvasClient, args) -> int:
+    targets = resolve_targets(args) if args.action == "review" else []
+    return canvas_grading.cmd_discussions(client, args, targets)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="reg-canvas",
@@ -706,6 +722,12 @@ def build_parser() -> argparse.ArgumentParser:
                     help="reg-lms-roster-import CSV ({section}/{term}/{course} expand)")
     sp.set_defaults(func=cmd_roster_check)
 
+    sp = sub.add_parser("audit", help="find ungraded/unposted work and skewed settings")
+    target(sp)
+    sp.add_argument("--exclude-sis", nargs="+", default=[], metavar="SIS[@SEC]",
+                    help="course staff enrolled as students; @326-03 limits to one section")
+    sp.set_defaults(func=cmd_audit)
+
     sp = sub.add_parser("grades-push", help="apply a Canvas-format import CSV (changed cells)")
     target(sp, need_section=True)
     sp.add_argument("--file", required=True,
@@ -743,6 +765,31 @@ def build_parser() -> argparse.ArgumentParser:
     writes(sp)
     sp.set_defaults(func=cmd_assignment)
 
+    sp = sub.add_parser("discussions", help="grade discussion assignments by post count")
+    act = sp.add_subparsers(dest="action", required=True)
+    r = act.add_parser("review", help="write the short list to judge (reads only)")
+    target(r)
+    r.add_argument("--week", action="append", required=True,
+                   help='assignment name prefix, e.g. "Week 5" (repeatable)')
+    r.add_argument("--workdir", required=True, help="private working dir (mode 700); "
+                   "holds student records, delete after apply")
+    r.add_argument("--exclude-sis", nargs="+", default=[], metavar="SIS[@SEC]",
+                   help="staff enrolled as students; not graded")
+    r.add_argument("--full-credit-sis", nargs="+", default=[], metavar="SIS[@SEC]",
+                   help="full credit whatever the count (an agreed arrangement)")
+    r.add_argument("--note", help="vault note to write (default with --term/--vault-root: "
+                   "classes/semesters/<term>-discussions-<weeks>-grading.md)")
+    r.add_argument("--no-note", action="store_true", help="write no vault note")
+    r.add_argument("--force", action="store_true", help="overwrite an existing note")
+    r.set_defaults(func=cmd_discussions)
+    ap_ = act.add_parser("apply", help="set scores and likes from the review")
+    ap_.add_argument("--workdir", required=True)
+    ap_.add_argument("--note", help="read the ticked deny boxes from this note")
+    ap_.add_argument("--post", action="store_true",
+                     help="also post the grades (shows students every hidden grade)")
+    writes(ap_)
+    ap_.set_defaults(func=cmd_discussions)
+
     sp = sub.add_parser("syllabus", help="set the course syllabus page")
     target(sp)
     sp.add_argument("--file", required=True,
@@ -758,7 +805,8 @@ def main(argv=None, client: CanvasClient | None = None) -> int:
     try:
         client = client or CanvasClient.from_config()
         return args.func(client, args)
-    except (CanvasError, CanvasCmdError, C50Error, TermSpecError) as e:
+    except (CanvasError, CanvasCmdError, C50Error, TermSpecError,
+            canvas_grading.GradingError) as e:
         print(f"reg-canvas: {e}", file=sys.stderr)
         return 2
 

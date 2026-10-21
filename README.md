@@ -70,7 +70,7 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 | `reg-exam-build` | `exam_build` | Assemble exam PDFs — single-source `.tex` mode or pack-mode `.yaml` manifest (multi-form A/B/C, per-student individualized, Gradescope products). See below. |
 | `reg-exam-verify` | `exam_verify` | Verify a student exam serial against the register. Confirms which form and which student a paper belongs to. |
 | `reg-lms-grades-import` | `lms_grades` | Normalize a Canvas `grades.csv` export to Lectern's canonical format. |
-| `reg-canvas` | `canvas` + `canvas_api` | **Canvas API.** Reads: `whoami`, `courses` (`--bind` links each section to its Canvas course in the class note), `grades-export` (the gradebook in Canvas's own export layout, so `reg-lms-grades-import` and `reg-gradebook export-canvas --template` take it unchanged), `roster-check` (Canvas compared with the registrar roster). Writes, each a **dry run until `--apply`**: `grades-push` (an overlay CSV, changed cells only; a blank never clears a grade), `announce`, `discussion` and `assignment` (both unpublished by default), and `syllabus` (refuses a file without its serial). The token lives in one mode-600 file and is sent to one host. See [docs/canvas-api.md](docs/canvas-api.md). |
+| `reg-canvas` | `canvas` + `canvas_api` | **Canvas API.** Reads: `whoami`, `courses` (`--bind` links each section to its Canvas course in the class note), `grades-export` (the gradebook in Canvas's own export layout, so `reg-lms-grades-import` and `reg-gradebook export-canvas --template` take it unchanged), `roster-check` (Canvas compared with the registrar roster), `audit` (ungraded or unposted work, empty weighted groups, a missing-submission policy that is off). Writes, each a **dry run until `--apply`**: `grades-push` (an overlay CSV, changed cells only; a blank never clears a grade), `announce`, `discussion` and `assignment` (both unpublished by default), `syllabus` (refuses a file without its serial), and `discussions` (grades discussion assignments by post count: `review` writes the short list to judge as a vault note with a deny box per post, `apply` sets scores and likes). The token lives in one mode-600 file and is sent to one host. See [docs/canvas-api.md](docs/canvas-api.md). |
 | `reg-lms-roster-import` | `lms_roster` | Normalize a faculty-center enrollment roster (`.xls`/`.xlsx`) to Lectern's canonical format. |
 | `reg-classroom-roster-seed` | `classroom_seed` | Pre-seed a GitHub Classroom roster from a normalized roster CSV, using the 9-digit student ID as the identifier. |
 | `reg-github-bind` | `github_bind` | Bind student GitHub usernames to roster entries — from a Google Form CSV, a GitHub Classroom roster CSV, or org-scrape mode. |
@@ -142,6 +142,7 @@ lectern/
   lms_roster.py         enrollment roster normalization (.xls → .csv)
   canvas_api.py         Canvas REST client: the only module that reads the token
   canvas.py             reg-canvas: gradebook export/push, roster check, content posting
+  canvas_grading.py     reg-canvas audit + discussions: gradebook audit, discussion grading
   classroom_seed.py     GitHub Classroom roster pre-seeding
   github_bind.py        student-id → GitHub username binding
   isa_publish.py        Drive publishing (rclone/service-account backend)
