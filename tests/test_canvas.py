@@ -405,3 +405,22 @@ def test_syllabus_refuses_a_file_without_the_notes_serial(vault, tmp_path, capsy
                       "--course", "CECS 326", "--section", "01", "--file", str(f), "--apply"],
                      client=client)
     assert rc == 2 and "487BD388" in capsys.readouterr().err and fake.writes() == []
+
+
+def test_a_dropped_connection_is_retried_only_when_safe():
+    calls = []
+
+    def flaky(method, url, headers, body):
+        calls.append(method)
+        if len(calls) == 1:
+            raise CanvasError("cannot reach Canvas: timed out")
+        return 200, {}, b"{}"
+
+    c = CanvasClient(BASE, TOKEN, transport=flaky, sleep=lambda s: None)
+    assert c.get("courses") == {} and calls == ["GET", "GET"]
+    calls.clear()
+    assert c.post("x/rating", {"rating": 1}, idempotent=True) == {} and len(calls) == 2
+    calls.clear()
+    with pytest.raises(CanvasError):
+        c.post("courses/1/discussion_topics", {"is_announcement": True})
+    assert calls == ["POST"]

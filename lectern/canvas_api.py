@@ -185,8 +185,14 @@ class CanvasClient:
     def _scrub(self, text: str) -> str:
         return text.replace(self.token, "[token]") if self.token else text
 
-    def request(self, method: str, path: str, params=None, data=None):
-        """One call. Returns ``(parsed JSON, response headers)``."""
+    def request(self, method: str, path: str, params=None, data=None, idempotent=None):
+        """One call. Returns ``(parsed JSON, response headers)``.
+
+        A dropped connection is retried for a GET, or for a write the caller
+        marks ``idempotent`` (setting a grade or a like). Other writes are not
+        retried: a timeout can arrive after Canvas has acted, and a second
+        announcement would notify students twice.
+        """
         url = self._url(path, params)
         if urllib.parse.urlsplit(url).netloc != self.host:
             raise CanvasError(f"refusing to send the token to {urllib.parse.urlsplit(url).netloc}")
@@ -196,8 +202,15 @@ class CanvasClient:
             body = json.dumps(data).encode("utf-8")
             headers["Content-Type"] = "application/json"
 
+        safe = method == "GET" if idempotent is None else idempotent
         for attempt in range(self.retries + 1):
-            status, rh, raw = self.transport(method, url, headers, body)
+            try:
+                status, rh, raw = self.transport(method, url, headers, body)
+            except CanvasError as e:
+                if e.status is None and safe and attempt < self.retries:
+                    self.sleep(2 ** attempt)
+                    continue
+                raise
             text = raw.decode("utf-8", errors="replace")
             # Canvas throttles with 403 + "Rate Limit Exceeded"; 429 on some hosts.
             throttled = status == 429 or (status == 403 and "Rate Limit Exceeded" in text)
@@ -255,11 +268,11 @@ class CanvasClient:
                 return
             page, headers = self.request("GET", nxt)
 
-    def post(self, path: str, data: dict):
-        return self.request("POST", path, data=data)[0]
+    def post(self, path: str, data: dict, idempotent: bool = False):
+        return self.request("POST", path, data=data, idempotent=idempotent)[0]
 
-    def put(self, path: str, data: dict):
-        return self.request("PUT", path, data=data)[0]
+    def put(self, path: str, data: dict, idempotent: bool = False):
+        return self.request("PUT", path, data=data, idempotent=idempotent)[0]
 
     def wait_progress(self, progress: dict, timeout: float = 120.0) -> dict:
         """Poll a Canvas Progress object until it completes or fails."""

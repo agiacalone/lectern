@@ -58,7 +58,7 @@ def run_review(tmp_path, argv=()):
 def run_apply(tmp_path, argv=(), extra=None):
     client, fake = client_for(routes(extra))
     ns = canvas.build_parser().parse_args(
-        ["discussions", "apply", "--workdir", str(tmp_path / "wd"), *argv])
+        ["discussions", "apply", "--workdir", str(tmp_path / "wd"), "--week", "Week 5", *argv])
     assert ns.func(client, ns) == 0
     return fake
 
@@ -118,13 +118,22 @@ def test_staff_are_excluded_and_full_credit_is_honoured(tmp_path):
     assert "Able, Bo" not in (tmp_path / "wd" / "REVIEW.md").read_text()
 
 
-def test_review_will_not_overwrite_a_ticked_note(tmp_path):
+def test_a_rerun_keeps_ticks_and_force_drops_them(tmp_path):
     note = tmp_path / "note.md"
-    note.write_text("- [x] deny entry `101`")
-    client, _ = client_for(routes())
-    rc = canvas.main(["discussions", "review", "--course-id", "7", "--week", "Week 5",
-                      "--workdir", str(tmp_path / "wd"), "--note", str(note)], client=client)
-    assert rc == 2 and "[x]" in note.read_text()
+    run_review(tmp_path, ["--note", str(note)])
+    note.write_text(note.read_text().replace("- [ ] deny entry `101`", "- [x] deny entry `101`"))
+    run_review(tmp_path, ["--note", str(note)])
+    assert "- [x] deny entry `101`" in note.read_text()
+    run_review(tmp_path, ["--note", str(note), "--force"])
+    assert "[x]" not in note.read_text()
+
+
+def test_a_ticked_student_stays_listed_after_more_posts(tmp_path):
+    note = tmp_path / "note.md"
+    note.write_text("    - [x] deny entry `100` (...)\n")
+    run_review(tmp_path, ["--note", str(note)])  # Ann has 2 normal posts, so is normally unlisted
+    text = note.read_text()
+    assert "Zed, Ann: denied in an earlier review" in text and "- [x] deny entry `100`" in text
 
 
 # ── apply ────────────────────────────────────────────────────────────────────
@@ -191,3 +200,31 @@ def test_audit_flags_empty_groups_policy_and_hidden_grades():
     assert "1 submitted, not graded" in text and "past due, 1 ungraded" in text
     assert "1 student(s) see a score that differs" in text
     assert n >= 3 and not fake.writes()
+
+
+def test_without_week_every_week_gets_its_own_section(tmp_path):
+    extra = {("GET", "courses/7/assignments"): [
+                {"id": 50, "name": "Week 5 - Memory", "discussion_topic": {"id": 70}},
+                {"id": 52, "name": "Week 10 - Files", "discussion_topic": {"id": 72}},
+                {"id": 51, "name": "Exam 1", "discussion_topic": {"id": 71}}],
+             ("GET", "courses/7/discussion_topics/72/view"): {"view": []}}
+    client, _ = client_for(routes(extra))
+    note = tmp_path / "term.md"
+    ns = canvas.build_parser().parse_args(
+        ["discussions", "review", "--course-id", "7", "--workdir", str(tmp_path / "wd"),
+         "--exclude-sis", "999", "--note", str(note)])
+    ns.func(client, ns)
+    text = note.read_text()
+    assert text.index("## Week 5") < text.index("## Week 10") and "Exam 1" not in text
+
+
+def test_apply_week_limits_the_writes(tmp_path):
+    run_review(tmp_path)
+    client, fake = client_for(routes())
+    ns = canvas.build_parser().parse_args(
+        ["discussions", "apply", "--workdir", str(tmp_path / "wd"), "--week", "Week 9", "--apply"])
+    ns.func(client, ns)
+    assert not fake.writes()
+    rc = canvas.main(["discussions", "apply", "--workdir", str(tmp_path / "wd"), "--apply"],
+                     client=client)
+    assert rc == 2 and not fake.writes()

@@ -769,8 +769,9 @@ def build_parser() -> argparse.ArgumentParser:
     act = sp.add_subparsers(dest="action", required=True)
     r = act.add_parser("review", help="write the short list to judge (reads only)")
     target(r)
-    r.add_argument("--week", action="append", required=True,
-                   help='assignment name prefix, e.g. "Week 5" (repeatable)')
+    r.add_argument("--week", action="append",
+                   help='assignment name prefix, e.g. "Week 5" (repeatable; '
+                        'default: every "Week N" discussion)')
     r.add_argument("--workdir", required=True, help="private working dir (mode 700); "
                    "holds student records, delete after apply")
     r.add_argument("--exclude-sis", nargs="+", default=[], metavar="SIS[@SEC]",
@@ -778,13 +779,16 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--full-credit-sis", nargs="+", default=[], metavar="SIS[@SEC]",
                    help="full credit whatever the count (an agreed arrangement)")
     r.add_argument("--note", help="vault note to write (default with --term/--vault-root: "
-                   "classes/semesters/<term>-discussions-<weeks>-grading.md)")
+                   "classes/semesters/<term>-discussions-grading.md, one section per week)")
     r.add_argument("--no-note", action="store_true", help="write no vault note")
-    r.add_argument("--force", action="store_true", help="overwrite an existing note")
+    r.add_argument("--force", action="store_true",
+                   help="start the note fresh, dropping ticks (default: a rerun keeps them)")
     r.set_defaults(func=cmd_discussions)
     ap_ = act.add_parser("apply", help="set scores and likes from the review")
     ap_.add_argument("--workdir", required=True)
     ap_.add_argument("--note", help="read the ticked deny boxes from this note")
+    ap_.add_argument("--week", action="append",
+                     help='the week to apply, e.g. "Week 7" (required; repeatable)')
     ap_.add_argument("--post", action="store_true",
                      help="also post the grades (shows students every hidden grade)")
     writes(ap_)

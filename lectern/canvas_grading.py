@@ -304,14 +304,38 @@ def _private_write(path: Path, text: str) -> None:
     os.chmod(path, 0o600)
 
 
-def default_note(vault: Path, term: str, weeks: list[str]) -> Path:
+_WEEK = re.compile(r"^(Week \d+)\b")
+
+
+def week_of(name: str, wanted: list[str] | None) -> str | None:
+    """The week an assignment belongs to: a ``--week`` prefix, or its own ``Week N``."""
+    if wanted:
+        return next((w for w in wanted if name.startswith(w)), None)
+    m = _WEEK.match(name)
+    return m.group(1) if m else None
+
+
+def _week_order(week: str):
+    m = re.search(r"\d+", week)
+    return (int(m.group()) if m else 0, week)
+
+
+def default_note(vault: Path, term: str, weeks: list[str] | None = None) -> Path:
+    if not weeks:  # the term's running report, one section per week
+        return vault / "classes" / "semesters" / f"{term}-discussions-grading.md"
     slug = "-".join(re.sub(r"[^a-z0-9]+", "", w.lower()).replace("week", "w") for w in weeks)
     return vault / "classes" / "semesters" / f"{term}-discussions-{slug}-grading.md"
 
 
 def review(client: CanvasClient, args, targets) -> int:
     wd = _private_dir(Path(args.workdir).expanduser())
-    plan, flagged, rows = [], [], []
+    plan, rows = [], []
+    flagged: dict[str, list[str]] = defaultdict(list)
+    summary: dict[str, list[str]] = defaultdict(list)
+    note = note_path(args)
+    # A rerun refreshes the note and keeps every deny already ticked in it, so
+    # the review can run mid-week and again after the due date.
+    kept = set() if args.force or not note else denials(wd, note) - _file_denials(wd)
     for t in targets:
         studs = students(client, t.course_id, scoped(args.exclude_sis, t))
         full = scoped(args.full_credit_sis, t)
@@ -319,7 +343,7 @@ def review(client: CanvasClient, args, targets) -> int:
         firsts = {k: v for k, v in firsts.items() if v}
         key = section_key(t)
         for a in client.get_all(f"courses/{t.course_id}/assignments"):
-            week = next((w for w in args.week if a["name"].startswith(w)), None)
+            week = week_of(a["name"], args.week)
             topic = a.get("discussion_topic")
             if not week or not topic:
                 continue
@@ -344,29 +368,41 @@ def review(client: CanvasClient, args, targets) -> int:
                 tally[score_for(len(ents), forced)] += 1
                 short = sum(1 for _, m in ents if m["words"] < SHORT_WORDS)
                 copied = sum(1 for _, m in ents if m["max_overlap"] >= OVERLAP)
-                if forced or (len(ents) >= 2 and not short and not copied):
+                ticked = any(e in kept for e, _ in ents)
+                if forced or (len(ents) >= 2 and not short and not copied and not ticked):
                     continue
-                why = [f"one post only ({PARTIAL} pt)" if len(ents) == 1 else "",
+                why = ["denied in an earlier review" if ticked and len(ents) >= 2
+                       and not short and not copied else "",
+                       f"one post only ({PARTIAL} pt)" if len(ents) == 1 else "",
                        f"{short} post(s) under {SHORT_WORDS} words" if short else "",
                        f"{copied} post(s) sharing {OVERLAP:.0%}+ phrasing with another student"
                        if copied else ""]
                 sg = (f"{client.base}/courses/{t.course_id}/gradebook/speed_grader"
                       f"?assignment_id={a['id']}&student_id={uid}")
-                flagged.append(f"- **{key} {week}**, {s['name']}: "
+                flagged[week].append(f"- **{key}**, {s['name']}: "
                                f"{'; '.join(x for x in why if x)}. [SpeedGrader]({sg})")
                 for eid, m in ents:
-                    flagged.append(f"    - [ ] deny entry `{eid}` ({describe(m)}): {client.base}"
+                    box = "x" if eid in kept else " "
+                    flagged[week].append(f"    - [{box}] deny entry `{eid}` ({describe(m)}): {client.base}"
                                    f"/courses/{t.course_id}/discussion_topics/{topic['id']}"
                                    f"?entry_id={eid}")
-            print(f"{t.label} {week}: {len(per)} of {len(studs)} posted; "
-                  f"{tally[FULL]} at {FULL}, {tally[PARTIAL]} at {PARTIAL}")
+            line = (f"{len(per)} of {len(studs)} posted; "
+                    f"{tally[FULL]} at {FULL}, {tally[PARTIAL]} at {PARTIAL}")
+            print(f"{t.label} {week}: {line}")
+            summary[week].append(f"- {key}: {line}")
 
-    body = [f"# Discussion grading: {', '.join(args.week)}", "",
+    title = (f"Discussion grading: {', '.join(args.week)}" if args.week
+             else f"Discussion grading {args.term or ''}".strip())
+    body = [f"# {title}", "",
             f"Rule: 2+ credited posts = {FULL}, 1 = {PARTIAL}, 0 = 0. Every credited post "
             "gets a like; no comments are written.",
             "Everyone not listed has 2+ posts of normal length.", "",
             "Tick **deny** on any post that does not earn credit.", ""]
-    body += flagged or ["Nobody needs review."]
+    for week in sorted(summary, key=_week_order):
+        body += [f"## {week}", ""] + summary[week] + [""]
+        body += (flagged[week] or ["Nobody needs review."]) + [""]
+    if not summary:
+        body.append("No discussion assignments matched.")
     text = "\n".join(body) + "\n"
     _private_write(wd / "plan.json", json.dumps(plan))
     _private_write(wd / "REVIEW.md", text)
@@ -376,16 +412,16 @@ def review(client: CanvasClient, args, targets) -> int:
         w.writeheader()
         w.writerows(rows)
         _private_write(wd / "METRICS.csv", buf.getvalue())
-    n = sum(1 for line in flagged if line.startswith("- "))
+    n = sum(1 for lines in flagged.values() for line in lines if line.startswith("- **"))
     print(f"\n{n} to review: {wd / 'REVIEW.md'}")
 
-    note = note_path(args)
     if note:
-        if note.exists() and not args.force:
-            raise GradingError(f"{note} exists and may hold your ticks; pass --force to overwrite")
+        lost = kept - {e for p in plan for e in p["entries"]}
+        if lost:
+            print(f"warning: ticked entries no longer in Canvas (deleted posts?): {sorted(lost)}")
         stamp = datetime.now().astimezone().isoformat(timespec="seconds")
         fm = ("---\n"
-              f"title: \"Discussion grading: {', '.join(args.week)}\"\n"
+              f"title: \"{title}\"\n"
               "type: report\n"
               f"term: {args.term or ''}\n"
               "tags: [teaching, discussion, grading, internal]\n"
@@ -393,19 +429,19 @@ def review(client: CanvasClient, args, targets) -> int:
               f"created: {stamp}\n---\n")
         how = ("> [!info] How to use this\n"
                "> Tick **deny** on a post that does not earn credit, then run "
-               f"`reg-canvas discussions apply --workdir {args.workdir} --note '{note}'` "
-               "for the dry run.\n")
+               f"`reg-canvas discussions apply --workdir {args.workdir} --note '{note}' "
+               "--week \"Week N\"` for that week's dry run. Rerun `review` any time: "
+               "it adds new posts and keeps your ticks.\n")
         head, rest = text.split("\n", 1)
         _private_write(note, fm + head + "\n\n" + how + rest)
-        print(f"Vault note: {note}")
+        print(f"Vault note: {note}" + (f" (kept {len(kept)} tick(s))" if kept else ""))
     return 0
 
 
 def note_path(args) -> Path | None:
     if getattr(args, "note", None):
         return Path(args.note).expanduser()
-    if getattr(args, "no_note", False) or not (args.vault_root and args.term
-                                                and getattr(args, "week", None)):
+    if getattr(args, "no_note", False) or not (args.vault_root and args.term):
         return None
     return default_note(Path(args.vault_root), args.term, args.week)
 
@@ -413,10 +449,14 @@ def note_path(args) -> Path | None:
 _TICK = re.compile(r"^\s*- \[[xX]\] deny entry `(\d+)`", re.M)
 
 
+def _file_denials(wd: Path) -> set[int]:
+    if not (wd / "deny.txt").exists():
+        return set()
+    return {int(t) for t in (wd / "deny.txt").read_text().split()}
+
+
 def denials(wd: Path, note: Path | None) -> set[int]:
-    deny = set()
-    if (wd / "deny.txt").exists():
-        deny |= {int(t) for t in (wd / "deny.txt").read_text().split()}
+    deny = _file_denials(wd)
     if note and note.exists():
         deny |= {int(x) for x in _TICK.findall(note.read_text(encoding="utf-8"))}
     return deny
@@ -432,6 +472,11 @@ def apply(client: CanvasClient, args) -> int:
         plan = json.loads((wd / "plan.json").read_text())
     except FileNotFoundError:
         raise GradingError(f"no plan in {wd}; run reg-canvas discussions review first") from None
+    if not args.week:
+        weeks = sorted({p["week"] for p in plan}, key=_week_order)
+        raise GradingError("name the week(s) to apply with --week, e.g. --week \"Week 7\"; "
+                           f"this review covers {', '.join(weeks) or 'nothing'}. Applying "
+                           "an older week overwrites the grades already entered for it.")
     note = Path(args.note).expanduser() if args.note else None
     deny = denials(wd, note)
     if deny:
@@ -439,6 +484,8 @@ def apply(client: CanvasClient, args) -> int:
 
     groups: dict[tuple, list] = defaultdict(list)
     for p in plan:
+        if args.week and not any(p["week"].startswith(w) for w in args.week):
+            continue
         credited = [e for e in p["entries"] if e not in deny]
         groups[(p["course"], p["label"], p["assignment"], p["topic"], p["week"])].append(
             (p, credited, score_for(len(credited), p["full_credit"])))
@@ -460,12 +507,14 @@ def apply(client: CanvasClient, args) -> int:
         if grades:
             client.wait_progress(client.post(
                 f"courses/{cid}/assignments/{aid}/submissions/update_grades",
-                {"grade_data": grades}))
+                {"grade_data": grades}, idempotent=True))
         for e in likes:
-            client.post(f"courses/{cid}/discussion_topics/{tid}/entries/{e}/rating", {"rating": 1})
+            client.post(f"courses/{cid}/discussion_topics/{tid}/entries/{e}/rating", {"rating": 1},
+                        idempotent=True)
         if args.post:
             r, _ = client.request("POST", f"{client.base}/api/graphql",
-                                  data={"query": POST_GRADES, "variables": {"id": str(aid)}})
+                                  data={"query": POST_GRADES, "variables": {"id": str(aid)}},
+                                  idempotent=True)
             errs = (((r or {}).get("data") or {}).get("postAssignmentGrades") or {}).get("errors")
             if errs:
                 raise GradingError(f"{label} {week}: posting failed: {errs}")
