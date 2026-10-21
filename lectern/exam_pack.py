@@ -203,6 +203,31 @@ def _parse_annotations(tex_content: str) -> dict[int, tuple[str, str]]:
     return out
 
 
+# The verdict must lead the reveal: "True", "a (True)", "b) False --- why".
+# A code answer that only mentions "true" later is not a verdict.
+_VERDICT_RE = re.compile(r"^(?:[a-d][.)]?\s*)?\(?(true|false)\b", re.I)
+
+
+def _outline_answer(raw: str, qtype: str) -> str:
+    """The ``_outline.csv`` answer for one question's ``\\textbf{Answer:}`` text.
+
+    FIB keeps every ``;``-joined blank. TF and code verdict items give the word
+    ``True``/``False`` even when the reveal is letter-prefixed (``a (True)``),
+    because the grading note keys credit on that word. A bare ``T``/``F`` on a
+    TF item counts too. Everything else takes the first token.
+    """
+    if qtype == "fib":
+        return raw
+    first = raw.split()[0].rstrip(".") if raw else ""
+    if qtype in ("tf", "code"):
+        m = _VERDICT_RE.match(raw)
+        if m:
+            return m.group(1).capitalize()
+        if qtype == "tf" and first.upper() in ("T", "F"):
+            return "True" if first.upper() == "T" else "False"
+    return first
+
+
 def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
     body = tex_content.split("\\begin{document}", 1)[-1]
     # Split at every \item, then REGROUP: a question starts at a fragment that
@@ -229,8 +254,7 @@ def parse_outline_from_tex(tex_content: str) -> list[OutlineRow]:
         qtype = _classify(block)
         ans_m = _ANS_RE.search(block)
         raw = ans_m.group(1).strip() if ans_m else ""
-        # type-aware: FIB keeps all ;-joined blanks; others take first token
-        answer = raw if qtype == "fib" else (raw.split()[0].rstrip(".") if raw else "")
+        answer = _outline_answer(raw, qtype)
         name, rubric = annotations.get(q, ("", ""))
         if not name:
             raise SystemExit(f"exam_pack: question {q} is missing a '% name:' annotation")
