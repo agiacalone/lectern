@@ -10,7 +10,7 @@ from lectern.exam_pack import (
     ExamManifest, FormSpec, OutlineRow, PackResult,
     assign_forms, emit_bubble_products, emit_gradescope_roster,
     emit_grading_note, emit_region_products, load_manifest,
-    parse_outline_from_tex, run,
+    _outline_answer, parse_outline_from_tex, run,
 )
 
 FIX = Path(__file__).parent / "fixtures" / "exam_pack"
@@ -201,6 +201,37 @@ def test_mc_default_rubric_when_unannotated():
     )
     rows = parse_outline_from_tex(tex)
     assert rows[0].rubric == "Correct = b (3 pts, all-or-nothing)."
+
+
+
+@pytest.mark.parametrize("raw,qtype,want", [
+    ("True", "tf", "True"),
+    ("a (True)", "tf", "True"),
+    ("b (False) --- 2^128 is out of reach", "tf", "False"),
+    ("F", "tf", "False"),
+    ("a (True)", "code", "True"),
+    ("b) false", "code", "False"),
+    # a code answer that only mentions "true" later is not a verdict
+    ("deadlock, since the condition stays true", "code", "deadlock,"),
+    ("b", "mc", "b"),
+    ("confusion; diffusion", "fib", "confusion; diffusion"),
+])
+def test_outline_answer_normalizes_verdicts(raw, qtype, want):
+    assert _outline_answer(raw, qtype) == want
+
+
+def test_letter_prefixed_tf_reveal_gets_credit_in_grading_note(tmp_path):
+    tex = (
+        "\\begin{document}\\begin{enumerate}\n"
+        "% name: Shor vs. AES-256\n"
+        "\\item \\textit{(1 pts)}~Shor breaks AES-256. \\textsc{T / F}\n"
+        "  \\ifanswers \\textbf{Answer:} b (False) \\fi\n"
+        "\\end{enumerate}\\end{document}"
+    )
+    rows = parse_outline_from_tex(tex)
+    assert rows[0].type == "tf" and rows[0].answer == "False"
+    text = _note(tmp_path, rows)
+    assert "| 0 | `A·Q1·T` | True |" in text and "| +1 | `A·Q1·F` | False |" in text
 
 
 OUTLINE = [
