@@ -279,14 +279,20 @@ flowchart LR
 ```
 
 ```sh
-W=~/tmp/canvas-discussions/fa26-w7
-reg-canvas discussions review --term fa26 --vault-root <V> --week "Week 7" --workdir $W \
+W=~/tmp/canvas-discussions/fa26
+reg-canvas discussions review --term fa26 --vault-root <V> --workdir $W \
     --exclude-sis <staff-id>@326-03 --full-credit-sis <id>@326-01
 ```
 
-`review` writes the vault note
-`classes/semesters/<term>-discussions-<weeks>-grading.md`. The note lists only
-these students, each with a SpeedGrader link:
+`review` writes one running report per term,
+`classes/semesters/<term>-discussions-grading.md`, with a section for each
+"Week N" discussion. Run it whenever you like: mid-week to see who has posted,
+and again after the due date. ==A rerun adds new posts and keeps every box you
+have ticked.== `--week "Week 7"` limits it to one week, and then it writes a
+separate note for that week. `--force` starts the note fresh.
+
+In each week's section, the note lists only these students, each with a
+SpeedGrader link:
 
 - students who made one post
 - students with a post under 25 words
@@ -298,10 +304,14 @@ Each listed post has a **deny** box. Tick it when the post does not earn
 credit, and that student drops one tier.
 
 ```sh
-reg-canvas discussions apply --workdir $W --note <that note> --post            # dry run
-reg-canvas discussions apply --workdir $W --note <that note> --post --apply    # send
-rm -rf $W
+N=<V>/classes/semesters/fa26-discussions-grading.md
+reg-canvas discussions apply --workdir $W --note $N --week "Week 7" --post            # dry run
+reg-canvas discussions apply --workdir $W --note $N --week "Week 7" --post --apply    # send
+rm -rf $W                                        # at the end of the term
 ```
+
+`apply` needs `--week`. The report covers every week, including any you graded
+by hand, and applying a week overwrites the grades already entered for it.
 
 `--exclude-sis` leaves course staff who hold a student enrolment out of
 grading. `--full-credit-sis` gives a student full credit whatever the count,
@@ -359,6 +369,7 @@ and tell your Canvas administrators the same day.
 | `expected one Canvas course, found …` | `reg-canvas courses` lists two courses with the same class number, or none. | Write the `canvas:` block into the class note by hand. |
 | `names assignments this course does not have` | The import file's `(id)` columns come from another section's export. | Export that section again, rebuild the overlay, and push it. |
 | `discussions apply` says "no plan in …" | `ls <workdir>` shows no `plan.json`. | Run `discussions review` with the same `--workdir` first. |
-| `review` refuses to overwrite the note | The note already exists and may hold your ticks. | Finish that round, or pass `--force` to start again. |
+| `apply` says "name the week(s) to apply" | You left out `--week`. | Add `--week "Week N"` for the week you reviewed. |
+| `apply` stops with "cannot reach Canvas" | A dropped connection that outlasted the retries. | Run the same command again. Grades and likes are only set once. |
 | A like fails with `HTTP 403` | The topic does not allow liking. | Turn on **Allow liking** in the discussion's settings. |
 | An export has fewer columns than Canvas's own | `reg-canvas grades-export --stdout --course-id <id> \| head -1` lists the assignment columns. Unpublished and hidden assignments are left out. | Publish the assignment, or ignore the column if it is not graded yet. |

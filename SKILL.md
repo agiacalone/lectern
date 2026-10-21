@@ -281,10 +281,10 @@ reg-canvas grades-push --term fa26 --vault-root <V> --course "CECS 326" --sectio
 reg-canvas announce --term fa26 --vault-root <V> --course "CECS 326" \
     --file '<lab>/posted/fa26-{section}-ANNOUNCE.md'            # dry run; add --apply
 reg-canvas audit --term fa26 --vault-root <V>                   # what was never graded or posted
-reg-canvas discussions review --term fa26 --vault-root <V> --week "Week 7" \
-    --workdir ~/tmp/canvas-discussions/fa26-w7                  # writes the vault note to judge
-reg-canvas discussions apply --workdir ~/tmp/canvas-discussions/fa26-w7 \
-    --note <V>/classes/semesters/fa26-discussions-w7-grading.md --post   # dry run; add --apply
+reg-canvas discussions review --term fa26 --vault-root <V> \
+    --workdir ~/tmp/canvas-discussions/fa26                     # term report, a section per week; rerun keeps ticks
+reg-canvas discussions apply --workdir ~/tmp/canvas-discussions/fa26 --week "Week 7" \
+    --note <V>/classes/semesters/fa26-discussions-grading.md --post      # dry run; add --apply
 ```
 
 ==Every write is a dry run until `--apply`.== An agent shows the dry run and
