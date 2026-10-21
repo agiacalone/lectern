@@ -26,6 +26,7 @@ records of running courses. All tools are vault-aware via an explicit
 | `reg-lms-roster-import` | lms_roster | Normalize a CSULB faculty-center roster export |
 | `reg-c50` | c50 | **Classroom 50** — the GitHub Classroom successor (legacy sunset 2026-08-28). `classroom-add` creates one classroom per section from the term-spec · `codes` mints the per-section self-enrollment codes · `roster-import` turns collected GitHub usernames into a roster + org invitations · `post` registers a lab as an assignment in every section that teaches it, binds it into the class notes, and writes the Canvas announcement · `status` reads back what is actually registered. Resolves org, classroom, slug, template, points and due date from the vault rather than the command line |
 | `reg-guardcheck` | guardcheck | **In-CI course-file notification.** `stamp` records the expected digests of a template's guard files; `check` runs inside the lab's own autograde workflow and tells the *student* when one has changed. ==Notifies, never grades==: no points, no pass/fail, always exits 0 (`--strict` opts out). Stdlib-only so a template can vendor the single file. The authoritative check is instructor-side `reg-triage`, which reads git history from outside the student's control |
+| `reg-canvas` | canvas | **Canvas API.** Reads: `whoami`, `courses` (`--bind` records each section's `canvas.course-id` in its class note), `grades-export` (the gradebook as the same CSV Canvas's *Export* writes, into `archives/<term>-<sec>/canvas/`, `--import` chains `reg-lms-grades-import`), `roster-check` (Canvas vs registrar roster). Writes, ==dry run unless `--apply`==: `grades-push` (a Canvas-format import CSV, changed cells only), `announce`, `discussion` (unpublished by default), `assignment` (`--lab N` fills name + points from the vault), `syllabus` (refuses a file without the class note's serial). Token: `~/.config/lectern/canvas-token`, mode 600, never in argv, logs or the vault. Runbook: `docs/canvas-api.md` |
 | `reg-classroom-roster-seed` | classroom_seed | ==**RETIRED** — legacy GitHub Classroom, and it never worked live== (it POSTed to a read-only endpoint). Kept only so old runbooks resolve. Use `reg-c50 roster-import` |
 | `reg-github-bind` | github_bind | Bind student GitHub IDs to roster entries |
 | `reg-isa-publish` | isa_publish | Publish ISA grading artifacts to Drive (rclone/gdrive backend) |
@@ -208,7 +209,7 @@ At CSULB an instructor can obtain **neither** identifier for their own students:
 | Canvas gradebook export | No — `SIS Login ID` is the 9-digit student number |
 | MyCSULB faculty-center roster | No — "Notify" is a mail-merge checkbox, not an address |
 | Canvas People page or its export | Not shown, and not offered to instructors |
-| Canvas API | "New Access Token" is disabled for instructor accounts |
+| Canvas API | Not used for this. Instructors cannot mint tokens; ATS issues one on request (granted 2026-10-21, see `reg-canvas`), and lectern reads only names and student IDs through it |
 
 Deriving `first.last@student.csulb.edu` does not rescue it either: of 171 Fa26
 students only **69** have unambiguous two-token names, and six collide outright.
@@ -261,6 +262,42 @@ but real* username silently invites a stranger.
 6. `reg-c50 status --term <t> --vault-root <V>` any time to see what is registered.
 
 Runbook: `notes/c50-self-enrollment.md`. Gotchas: `notes/classroom-50-gotchas.md`.
+
+## Canvas API (`reg-canvas`)
+
+ATS issued a personal Canvas token on 2026-10-21 (Instructure caps it at 90
+days, so it expires **2027-01-19**). Lectern holds the token in one module,
+`canvas_api`, which reads it from `~/.config/lectern/canvas-token`, checks the
+file is mode 600, sends it only to the configured Canvas host, refuses
+redirects, and scrubs it from every error.
+
+```sh
+reg-canvas whoami
+reg-canvas courses --bind --term fa26 --vault-root <V>          # once per term
+reg-canvas grades-export --term fa26 --vault-root <V> --import  # all sections
+reg-canvas roster-check --term fa26 --vault-root <V> --roster '<V>/…/fa26-{section}/roster.csv'
+reg-canvas grades-push --term fa26 --vault-root <V> --course "CECS 326" --section 01 \
+    --file canvas-lab2-import.csv --only "Lab 2 - …"            # dry run; add --apply
+reg-canvas announce --term fa26 --vault-root <V> --course "CECS 326" \
+    --file '<lab>/posted/fa26-{section}-ANNOUNCE.md'            # dry run; add --apply
+```
+
+==Every write is a dry run until `--apply`.== An agent shows the dry run and
+waits for the instructor's go-ahead before applying to a live section:
+announcements notify students the moment they post. `--course-id 14635` (the
+sandbox) bypasses the vault for testing. ==Never read the token file.==
+
+**Data scope** matches what was promised to CSULB IT on 2026-10-16: course
+content, plus names, student IDs and grades for the instructor's own sections.
+`grades-export` reads scores from the submissions endpoint but keeps only
+score fields, dropping submission content on arrival. Exports are written
+mode 600.
+
+The grade push reuses the existing overlay: `reg-canvas grades-export` →
+`reg-gradebook export-canvas --template <that export> --only <component>` →
+`reg-canvas grades-push`. The push re-reads live Canvas and posts only the
+cells that differ, never clears a grade from a blank cell, and refuses a file
+whose assignment ids belong to another course. Runbook: `docs/canvas-api.md`.
 
 ## Authoring assignments
 

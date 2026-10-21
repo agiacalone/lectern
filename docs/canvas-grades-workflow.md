@@ -30,6 +30,12 @@ reg-gradebook export-canvas \
 # 3. In Canvas: Grades → Import → upload canvas-<lab2>-import.csv → review → save.
 ```
 
+> [!TIP]
+> **With a Canvas API token**, `reg-canvas grades-export` replaces step 1 and
+> `reg-canvas grades-push` replaces step 3. The push re-reads live Canvas, lists
+> each change, and writes nothing until you add `--apply`. See [canvas-api.md](canvas-api.md#push-grades). The manual steps
+> below still work and need no token.
+
 Step 2 changes only the cells whose value actually moved. Everything else — the
 identity columns, the other assignment columns, the points/posting row — is passed
 through byte-for-byte.

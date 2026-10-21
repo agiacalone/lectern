@@ -16,8 +16,9 @@ Four verbs:
     each account exists, then send the organization invitations. Needed because
     ==nothing enrols a student automatically==: C50 will not add someone to the
     org just because they signed in, and at CSULB an instructor can obtain
-    neither student email addresses nor a Canvas API token, so usernames
-    collected from the students are the only identifier available.
+    no student email addresses (the Canvas API, available since 2026-10-21,
+    does not change that: lectern reads names and student IDs only), so
+    usernames collected from the students are the only identifier available.
 
 ``post``
     Register a lab as an assignment in every section that teaches it, then emit
