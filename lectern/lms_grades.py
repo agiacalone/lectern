@@ -12,6 +12,8 @@ This module:
 
   - parses the raw CSV, skipping metadata rows 1 + 2
   - filters ISA accounts (SIS User ID ending in 'SA') to a side file
+  - filters course staff enrolled with a student role (``--exclude-sis``),
+    such as a grad assistant who needs the student view in every section
   - normalizes into GradeRow dataclasses with per-assignment scores
     collapsed into a JSON object string
   - writes grades.csv, grades.filtered.csv, grades.points-possible.json,
@@ -114,9 +116,15 @@ _RESERVED_COLS = {
 }
 
 
-def normalize_grades(parsed: dict) -> NormalizedGrades:
-    """Apply schema + ISA filter to a parse_canvas_csv() result."""
+def normalize_grades(parsed: dict, exclude_sis: set[str] | None = None) -> NormalizedGrades:
+    """Apply schema + ISA filter to a parse_canvas_csv() result.
+
+    ``exclude_sis`` names course staff who hold a student enrolment in Canvas
+    (their own SIS IDs, any padding). They go to the filtered side file with
+    reason ``staff`` instead of the gradebook.
+    """
     norm = NormalizedGrades(points_possible=dict(parsed["points_possible"]))
+    staff = {pad_student_id(s) for s in (exclude_sis or ())}
 
     for raw in parsed["students"]:
         sid_raw = (raw.get("SIS User ID") or "").strip()
@@ -147,6 +155,14 @@ def normalize_grades(parsed: dict) -> NormalizedGrades:
         # Defensive zero-pad: Excel/Sheets silently drop the CSULB leading-0
         # on CSV round-trip; we re-pad to 9 digits at every read boundary.
         sid = pad_student_id(sid_raw)
+
+        if sid in staff:
+            norm.filtered.append(FilteredRow(
+                student_id=sid,
+                display_name=display,
+                reason="staff",
+            ))
+            continue
 
         # Build assignment_scores from columns matching "<title> (<digits>)"
         scores: dict[str, str] = {}
@@ -214,10 +230,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("csv", type=Path, help="path to Canvas gradebook .csv")
     parser.add_argument("--out", type=Path, required=True, help="output grades.csv path")
+    parser.add_argument("--exclude-sis", nargs="+", default=[], metavar="SIS_ID",
+                        help="course staff enrolled as students in Canvas (e.g. a grad "
+                             "assistant); filtered with reason 'staff'")
     args = parser.parse_args(argv)
 
     parsed = parse_canvas_csv(args.csv)
-    norm = normalize_grades(parsed)
+    norm = normalize_grades(parsed, exclude_sis=set(args.exclude_sis))
 
     write_grades_csv(norm, args.out)
     filtered_out = args.out.with_name("grades.filtered.csv")
@@ -229,7 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     args.out.with_suffix(".raw.csv").write_bytes(args.csv.read_bytes())
 
     n_filtered = len(norm.filtered)
-    suffix = "" if n_filtered == 0 else f", {n_filtered} filtered (ISA accounts)"
+    reasons = sorted({f.reason for f in norm.filtered})
+    suffix = "" if n_filtered == 0 else f", {n_filtered} filtered ({', '.join(reasons)})"
     print(f"→ {args.out} ({len(norm.grades)} students normalized{suffix})")
     return 0
 

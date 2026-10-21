@@ -90,3 +90,14 @@ def test_empty_canvas_csv_fails(tmp_path):
     bad.write_text("Header1,Header2\n")  # only headers, no data + no metadata rows
     with pytest.raises(SystemExit, match="not enough rows"):
         parse_canvas_csv(bad)
+
+
+def test_staff_with_a_student_role_are_filtered():
+    parsed = parse_canvas_csv(FIX / "grades_minimal.csv")
+    first = next(s for s in parsed["students"]
+                 if s["SIS User ID"].strip() and not s["SIS User ID"].endswith("SA"))
+    sid = first["SIS User ID"].strip().lstrip("0")   # padding must not matter
+    norm = normalize_grades(parsed, exclude_sis={sid})
+    assert first["Student"] not in {g.display_name for g in norm.grades}
+    staff = [f for f in norm.filtered if f.reason == "staff"]
+    assert [f.display_name for f in staff] == [first["Student"]]
