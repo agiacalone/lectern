@@ -198,6 +198,26 @@ current enrollment, emails, and matches Gradescope's preferred identifier.
 either fill the Email column manually or rely on SID matching. UTF-8 is preserved
 for accented names.
 
+### Getting totals back into lectern
+
+Gradescope has no public API for instructors, and a Canvas token does not reach
+it. The supported connection is Gradescope's Canvas tool (LTI 1.3), which many
+campuses install for every course. Link the Gradescope course to its Canvas
+course, then use **Post Grades to Canvas** on the assignment's *Review Grades*
+page. That sends each student's total to the linked Canvas assignment, and
+`reg-canvas grades-export` reads it like any other column
+([canvas-api.md](canvas-api.md)).
+
+> [!NOTE]
+> Only totals cross over. Item analysis with `reg-gradescope-stats` still needs
+> the per-question *Export Evaluations* download.
+
+> [!WARNING]
+> Pick one route per assignment. If Gradescope posts an exam's totals, do not
+> also push that column with `reg-canvas grades-push`, or each will overwrite
+> the other. A student's resubmission also removes their posted grade, so post
+> again after the last resubmission or regrade.
+
 ---
 
 ## 6. Print and distribute
@@ -224,6 +244,7 @@ seek out a same-form neighbor during the exam.
 - [Gradescope: Multi-version Assignments](https://guides.gradescope.com/hc/en-us/articles/22253350665997-Creating-Multi-version-Assignments)
 - [Gradescope: Bubble Sheets](https://guides.gradescope.com/hc/en-us/articles/22246010755853-Creating-a-Bubble-Sheet-Assignment)
 - [Gradescope: AI-assisted grading](https://guides.gradescope.com/hc/en-us/articles/24838908062093-AI-assisted-grading-and-answer-groups)
+- [Gradescope: Using LTI 1.3 with Canvas as an instructor](https://guides.gradescope.com/hc/en-us/articles/23586543164173-Using-Gradescope-LTI-1-3-with-Canvas-as-an-instructor)
 
 ---
 
