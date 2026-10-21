@@ -44,5 +44,6 @@ make_wrapper reg-lab-report            lectern.lab_report
 
 make_wrapper reg-admin-form            lectern.admin_form
 make_wrapper reg-c50                   lectern.c50
+make_wrapper reg-canvas                lectern.canvas
 
 echo "lectern installed. reg-* wrappers in $BIN."

@@ -4,7 +4,7 @@
 
 **The Registrar** — a 100% open-source teaching-operations toolkit for university instructors.
 
-Lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, campus-LMS (Canvas) roster/grade import, and end-of-term archival. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
+Lectern handles the full administrative lifecycle of running courses: term scaffolding, gradebook consolidation, exam build and verification, ISA grading artifact publishing, GitHub Classroom binding, campus-LMS (Canvas) integration, and end-of-term archival. With a Canvas API token, Lectern exports the gradebook, pushes grades back, checks the roster, and posts announcements, discussions, assignments and the syllabus; without one, the same records move through Canvas's CSV export and import. All state lives in plain, version-controllable files. All tools are scriptable CLI commands in the `reg-*` family.
 
 ---
 
@@ -22,7 +22,7 @@ ways: driven by an AI agent (Claude Code skill) *or* run directly by a human via
 
 | Tool | Role | Repo |
 |---|---|---|
-| **[Lectern](https://github.com/agiacalone/lectern)** — the Registrar | Course **administration** — terms, sections, gradebook, exam build/verify, Classroom binding, archival. | `agiacalone/lectern` |
+| **[Lectern](https://github.com/agiacalone/lectern)** — the Registrar | Course **administration** — terms, sections, gradebook, exam build/verify, Classroom binding, Canvas sync, archival. | `agiacalone/lectern` |
 | **[Scriptorium](https://github.com/agiacalone/scriptorium)** — the workshop | Course **content** — lecture notes, Cornell handouts, quizzes, slides, question banks. | `agiacalone/scriptorium` |
 | **[Oracle](https://github.com/agiacalone/oracle)** *(private)* — the secret box | **Grading** — a verify-by-proof oracle service + a sandboxed code-runner (gradebox). | `agiacalone/oracle` *(private — licensed)* |
 
@@ -70,6 +70,7 @@ This is a deliberate design principle, not an accident. Proprietary LMS gradeboo
 | `reg-exam-build` | `exam_build` | Assemble exam PDFs — single-source `.tex` mode or pack-mode `.yaml` manifest (multi-form A/B/C, per-student individualized, Gradescope products). See below. |
 | `reg-exam-verify` | `exam_verify` | Verify a student exam serial against the register. Confirms which form and which student a paper belongs to. |
 | `reg-lms-grades-import` | `lms_grades` | Normalize a Canvas `grades.csv` export to Lectern's canonical format. |
+| `reg-canvas` | `canvas` + `canvas_api` | **Canvas API.** Reads: `whoami`, `courses` (`--bind` links each section to its Canvas course in the class note), `grades-export` (the gradebook in Canvas's own export layout, so `reg-lms-grades-import` and `reg-gradebook export-canvas --template` take it unchanged), `roster-check` (Canvas compared with the registrar roster). Writes, each a **dry run until `--apply`**: `grades-push` (an overlay CSV, changed cells only; a blank never clears a grade), `announce`, `discussion` and `assignment` (both unpublished by default), and `syllabus` (refuses a file without its serial). The token lives in one mode-600 file and is sent to one host. See [docs/canvas-api.md](docs/canvas-api.md). |
 | `reg-lms-roster-import` | `lms_roster` | Normalize a faculty-center enrollment roster (`.xls`/`.xlsx`) to Lectern's canonical format. |
 | `reg-classroom-roster-seed` | `classroom_seed` | Pre-seed a GitHub Classroom roster from a normalized roster CSV, using the 9-digit student ID as the identifier. |
 | `reg-github-bind` | `github_bind` | Bind student GitHub usernames to roster entries — from a Google Form CSV, a GitHub Classroom roster CSV, or org-scrape mode. |
@@ -139,6 +140,8 @@ lectern/
   exam_verify.py        register-based serial verification
   lms_grades.py         Canvas grades CSV normalization
   lms_roster.py         enrollment roster normalization (.xls → .csv)
+  canvas_api.py         Canvas REST client: the only module that reads the token
+  canvas.py             reg-canvas: gradebook export/push, roster check, content posting
   classroom_seed.py     GitHub Classroom roster pre-seeding
   github_bind.py        student-id → GitHub username binding
   isa_publish.py        Drive publishing (rclone/service-account backend)
@@ -174,7 +177,7 @@ See `docs/design/lab-digest.md` and `docs/design/lab-report.md` for the contract
 
 **Vault awareness.** Most commands accept `--vault-root <path>` to locate course notes, class notes, and archive bundles relative to a notes root. If you do not use a notes-based workflow, pass explicit `--vault-root .` or use the modules as a library with fully explicit paths. The vault path is never hard-coded.
 
-**Dependencies.** Python 3.11+. `pyyaml`, `jsonschema`. LaTeX toolchain (`pdflatex`, `pdfunite` or `qpdf`) for exam builds. `rclone` or a service-account credential for ISA publish. *Optional for `reg-exam-verify`:* `pdfplumber` (else falls back to the `pdftotext` CLI). The former `vaultkit` dependency was removed — the one helper used (`slugify`) is vendored into `lectern/_text.py` (the PyPI name `vaultkit` is an unrelated third-party package, so depending on it was a dependency-confusion risk).
+**Dependencies.** Python 3.11+. `pyyaml`, `jsonschema`. The Canvas API client uses only the standard library; it needs a personal Canvas token, and `pandoc` to turn Markdown into Canvas HTML. LaTeX toolchain (`pdflatex`, `pdfunite` or `qpdf`) for exam builds. `rclone` or a service-account credential for ISA publish. *Optional for `reg-exam-verify`:* `pdfplumber` (else falls back to the `pdftotext` CLI). The former `vaultkit` dependency was removed — the one helper used (`slugify`) is vendored into `lectern/_text.py` (the PyPI name `vaultkit` is an unrelated third-party package, so depending on it was a dependency-confusion risk).
 
 ---
 
@@ -205,6 +208,26 @@ Test the install:
 reg-term-create --help
 reg-exam-build --help
 ```
+
+### Canvas API (optional)
+
+Everything above works without Canvas access. To let Lectern talk to Canvas
+directly, store a personal token and link each section to its course:
+
+```bash
+mkdir -p ~/.config/lectern && chmod 700 ~/.config/lectern
+( umask 077; read -rsp "Canvas token: " t; echo; printf '%s\n' "$t" > ~/.config/lectern/canvas-token )
+reg-canvas whoami
+reg-canvas courses --bind --term fa26 --vault-root <V>
+reg-canvas grades-export --term fa26 --vault-root <V> --import
+```
+
+> [!CAUTION]
+> Every `reg-canvas` write is a dry run until you add `--apply`. Read the dry
+> run first: announcements notify students as soon as they post.
+
+The full guide, including token activation and troubleshooting, is
+[docs/canvas-api.md](docs/canvas-api.md).
 
 ### Minimal exam build (single form)
 
@@ -275,7 +298,7 @@ Lectern addresses several standardized-infrastructure concerns directly:
 
 **Autograding integration.** Code and lab autograding is performed by **[Oracle](https://github.com/agiacalone/oracle)** — a verify-by-proof oracle service paired with a sandboxed `gradebox` runner. Lectern *coordinates and records* the results: the archive bundle's `manifest.yaml` tracks template repo commits and lab names alongside exam serials and grade distributions, and ISA-published artifacts (keys, rubrics) live in a structured Drive folder matching the term/section/course hierarchy so graders can always find the authoritative rubric for a given assignment. (MC-bubble and Gradescope exam autograding are Lectern's own — see [`docs/gradescope-workflow.md`](docs/gradescope-workflow.md).)
 
-**Gradebook as data.** `reg-gradebook` produces `gradebook.csv` — a plain CSV that is the canonical, diff-able record of every student's grades. It is never the sole copy: Canvas is the student-facing authority, the archive bundle is the institutional record, and the CSV is the analytical layer that enables DFW rollups, section-to-section comparisons, and grade-appeal lookups from the command line.
+**Gradebook as data.** `reg-gradebook` produces `gradebook.csv` — a plain CSV that is the canonical, diff-able record of every student's grades. It is never the sole copy: Canvas is the student-facing authority (grades reach it through `reg-canvas grades-push`, or a CSV import without a token), the archive bundle is the institutional record, and the CSV is the analytical layer that enables DFW rollups, section-to-section comparisons, and grade-appeal lookups from the command line.
 
 ---
 
@@ -286,6 +309,7 @@ Lectern addresses several standardized-infrastructure concerns directly:
 | [docs/README.md](docs/README.md) | Documentation index |
 | [docs/design/exam-system.md](docs/design/exam-system.md) | Multi-form exam system design: A/B variants, individualized builds, Gradescope products, defensibility |
 | [docs/design/exam-tex-format.md](docs/design/exam-tex-format.md) | House `.tex` format: header block, answer key toggle, per-student serials, color conventions, appeals runbook |
+| [docs/canvas-api.md](docs/canvas-api.md) | `reg-canvas`: token setup, the read and write commands, data scope, and the safety rules |
 | [docs/gradescope-workflow.md](docs/gradescope-workflow.md) | Using Lectern-built exams with Gradescope: region/bubble, A/B Version Sets, roster, identity verification |
 
 ---
