@@ -4,7 +4,8 @@
 
 `reg-canvas` replaces the copy-and-paste steps between your course records and
 Canvas. It exports the gradebook, pushes grades back, checks the roster, and
-posts announcements, discussions, assignments and the syllabus.
+posts announcements, discussions, assignments and the syllabus. It also audits
+the gradebook and grades discussion assignments.
 
 > [!CAUTION]
 > **Every write is a dry run until you add `--apply`.** A dry run shows exactly
@@ -116,6 +117,7 @@ in place of `--term`.
 | `courses` | Lists your courses. `--bind` links them to class notes. |
 | `grades-export` | Writes the gradebook as the CSV Canvas's *Export* button produces. |
 | `roster-check` | Compares Canvas enrolments with the registrar roster. |
+| `audit` | Finds work that was never graded or never posted, and settings that skew the weighted score. |
 
 ### Export the gradebook
 
@@ -161,6 +163,7 @@ All of these are dry runs until you add `--apply`.
 | `discussion` | A discussion topic | Unpublished |
 | `assignment` | An assignment | Unpublished, submission type `none` |
 | `syllabus` | The course syllabus page | Refuses a file without its serial |
+| `discussions apply` | Discussion scores and likes | Dry run; `--post` also posts the grades |
 
 `announce`, `discussion` and `assignment` skip a section that already has an
 item with the same title. `--force` overrides that check.
@@ -229,10 +232,106 @@ The command refuses a file that does not contain the class note's
 serial. If the syllabus was already distributed, a changed version needs a
 `revision-of` row in the register.
 
+### Audit the gradebook
+
+```sh
+reg-canvas audit --term fa26 --vault-root <V> --exclude-sis <staff-id>@326-03
+```
+
+For each section, the audit lists:
+
+- **Group weights**, and how many assignments each group holds. A weighted
+  group with no assignments usually means an exam was filed in the wrong
+  group, so it counts at the wrong weight.
+- **The missing-submission policy.** When it is off, a student who posts
+  nothing gets a blank, not a 0, and Canvas leaves blanks out of the current
+  score.
+- **Each assignment:** past due with students ungraded, submitted but not
+  graded, and graded but hidden.
+- **How many students see a score** that differs from their score with hidden
+  grades included.
+
+It exits with status 1 when it finds something.
+
+> [!TIP]
+> **A hidden 0 is usually not a forgotten grade.** With the missing policy on,
+> Canvas gives a 0 to every student who did not submit by the due date. On an
+> assignment that posts manually, that 0 stays hidden until you post. The
+> audit counts these separately as "missing-work zeros".
+
+### Grade the discussions
+
+Discussions are graded by post count, with a short list for you to judge:
+
+| Credited posts (top-level or replies) | Score |
+|---|---|
+| 2 or more | 5 |
+| 1 | 3 |
+| 0 | 0, from the missing policy |
+
+Every credited post gets a like. No comments are written.
+
+```mermaid
+flowchart LR
+    R["discussions review<br/>reads only"] --> N["Vault note<br/>only the posts to judge"]
+    N -->|"tick deny"| A["discussions apply<br/>dry run"]
+    A -->|"--apply --post"| K[("Canvas")]
+```
+
+```sh
+W=~/tmp/canvas-discussions/fa26-w7
+reg-canvas discussions review --term fa26 --vault-root <V> --week "Week 7" --workdir $W \
+    --exclude-sis <staff-id>@326-03 --full-credit-sis <id>@326-01
+```
+
+`review` writes the vault note
+`classes/semesters/<term>-discussions-<weeks>-grading.md`. The note lists only
+these students, each with a SpeedGrader link:
+
+- students who made one post
+- students with a post under 25 words
+- students with a post that shares 30% or more of its five-word phrases with
+  another student's post
+
+Everyone else has 2 or more posts of normal length and gets 5 without review.
+Each listed post has a **deny** box. Tick it when the post does not earn
+credit, and that student drops one tier.
+
+```sh
+reg-canvas discussions apply --workdir $W --note <that note> --post            # dry run
+reg-canvas discussions apply --workdir $W --note <that note> --post --apply    # send
+rm -rf $W
+```
+
+`--exclude-sis` leaves course staff who hold a student enrolment out of
+grading. `--full-credit-sis` gives a student full credit whatever the count,
+for an agreed arrangement. Both take `SIS` for every section or `SIS@326-03`
+for one.
+
+> [!CAUTION]
+> **`--post` makes every grade on the assignment visible**, including the
+> missing-work zeros. Read the dry run first.
+
+Each listed post shows facts about its writing: length, Flesch-Kincaid grade
+level (the years of schooling the prose reads at), how much its sentence
+lengths vary, whether it is a reply and how many replies it drew, whether it
+names a classmate, links or code, and its phrase overlap with other students.
+The workdir's `METRICS.csv` has the same columns for every post.
+
+> [!IMPORTANT]
+> **A common misconception is that these metrics detect AI writing.** They do
+> not, and no tool does so reliably: detectors have high false-positive rates,
+> above all for students writing in a second language. The metrics tell you
+> which posts to read. A post that names no one, cites nothing and keeps one
+> rhythm is a reason to open it, not a verdict.
+
 ## 7. What lectern reads, and what it never keeps
 
 - **Read:** course structure (assignments, groups, sections), plus names,
-  student IDs and grades for your own sections.
+  student IDs and grades for your own sections. `discussions review` also
+  reads discussion posts, as you would in SpeedGrader, and reduces each to
+  counts and writing metrics in memory. The post text is never written,
+  printed or kept.
 - **Written:** grades, announcements, discussions, assignments and the
   syllabus, for your own courses, and only with `--apply`.
 - **Never kept:** submission content. Scores come from the submissions
@@ -259,4 +358,7 @@ and tell your Canvas administrators the same day.
 | `no canvas.course-id in <note>` | The class note has no `canvas:` block. | `reg-canvas courses --bind --term <t> --vault-root <V>` |
 | `expected one Canvas course, found …` | `reg-canvas courses` lists two courses with the same class number, or none. | Write the `canvas:` block into the class note by hand. |
 | `names assignments this course does not have` | The import file's `(id)` columns come from another section's export. | Export that section again, rebuild the overlay, and push it. |
+| `discussions apply` says "no plan in …" | `ls <workdir>` shows no `plan.json`. | Run `discussions review` with the same `--workdir` first. |
+| `review` refuses to overwrite the note | The note already exists and may hold your ticks. | Finish that round, or pass `--force` to start again. |
+| A like fails with `HTTP 403` | The topic does not allow liking. | Turn on **Allow liking** in the discussion's settings. |
 | An export has fewer columns than Canvas's own | `reg-canvas grades-export --stdout --course-id <id> \| head -1` lists the assignment columns. Unpublished and hidden assignments are left out. | Publish the assignment, or ignore the column if it is not graded yet. |

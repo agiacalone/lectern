@@ -19,6 +19,7 @@ Every skill action maps to a `reg-*` CLI command. An agent performing any Lecter
 | Normalize Canvas grades export | `reg-lms-grades-import` | `lms_grades` |
 | Normalize CSULB enrollment roster | `reg-lms-roster-import` | `lms_roster` |
 | Canvas API: export/push grades, roster check, post announcements, discussions, assignments, syllabus | `reg-canvas` | `canvas` (client: `canvas_api`) |
+| Canvas gradebook audit; grade discussions by post count | `reg-canvas audit`, `reg-canvas discussions` | `canvas_grading` |
 | Pre-seed GitHub Classroom roster | `reg-classroom-roster-seed` | `classroom_seed` |
 | Bind student GitHub IDs to roster entries | `reg-github-bind` | `github_bind` |
 | Publish ISA grading artifacts to Drive | `reg-isa-publish` | `isa_publish` |
@@ -44,7 +45,7 @@ releases. `reg-exam-readinglist` is installed as a standalone `~/bin` wrapper (n
 - All commands accept `--vault-root <path>` to locate vault notes. Pass it explicitly; never rely on a hard-coded default.
 - Prefer `--dry-run` on `reg-term-finalize` before committing; the agent should surface the preview output for review.
 - `reg-term-archive --check` exits 0 on a clean bundle and nonzero on drift — use the exit code as a quality gate.
-- **`reg-canvas` writes are dry runs until `--apply`.** Show the dry run first. An agent never passes `--apply` to a live section (announcements notify students at once; grades are visible once posted) without the instructor's go-ahead for that specific run. Test against the sandbox course with `--course-id`.
+- **`reg-canvas` writes are dry runs until `--apply`.** Show the dry run first. An agent never passes `--apply` to a live section (announcements notify students at once; grades are visible once posted) without the instructor's go-ahead for that specific run. Test against the sandbox course with `--course-id`. The same holds for `reg-canvas discussions apply`: show its dry run, and `--post` only with the go-ahead, since posting reveals every hidden grade on the assignment.
 - **Never read the Canvas token file** (`~/.config/lectern/canvas-token`). The client reads it; nothing else needs to.
 - All state lives in plain files (Markdown · CSV · YAML · LaTeX) — the agent can read and diff these directly.
 
