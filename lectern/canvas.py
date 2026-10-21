@@ -327,7 +327,8 @@ def cmd_grades_export(client: CanvasClient, args) -> int:
         grades = (dest.parent.parent if dest.parent.name == "canvas" else dest.parent) / "grades.csv"
         if args.do_import:
             from lectern import lms_grades
-            lms_grades.main([str(dest), "--out", str(grades)])
+            extra = ["--exclude-sis", *args.exclude_sis] if args.exclude_sis else []
+            lms_grades.main([str(dest), "--out", str(grades), *extra])
         else:
             print(f"  next: reg-lms-grades-import {dest} --out {grades}")
     return 0
@@ -695,6 +696,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="also export inactive and concluded enrolments")
     sp.add_argument("--import", dest="do_import", action="store_true",
                     help="then run reg-lms-grades-import into the archive's grades.csv")
+    sp.add_argument("--exclude-sis", nargs="+", default=[], metavar="SIS_ID",
+                    help="with --import: course staff enrolled as students (filtered as 'staff')")
     sp.set_defaults(func=cmd_grades_export)
 
     sp = sub.add_parser("roster-check", help="diff Canvas enrolments against a roster CSV")

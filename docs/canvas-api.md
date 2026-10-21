@@ -125,7 +125,7 @@ reg-canvas grades-export --term fa26 --vault-root <V> --import
 
 Each section's export goes to
 `classes/<course>/archives/<term>-<section>/canvas/<timestamp>_Grades-CECS_326_Sec01.csv`.
-`--import` then runs `reg-lms-grades-import` into that archive's `grades.csv`.
+`--import` then runs `reg-lms-grades-import` into that archive's `grades.csv`. If course staff, such as a grad assistant, hold a student enrolment, add `--exclude-sis <id> ...` so they are filtered out with reason `staff`.
 Without `--import`, the command prints the import command to run next.
 
 The layout matches Canvas's own export, with two differences:
