@@ -36,6 +36,11 @@ _Comments:_ <student-facing prose, until the next ### / ## / EOF>
 `parse_feedback_note(path) -> [{github_id, student, total, grand, components, comment, graded}]`.
 Tolerant of `__`/blank cells and pre-filled HTML-comment placeholders.
 
+The block `reg-lab-report render` writes is accepted as well (since 2026-10-27):
+a score line wrapped in `*…*` whose `github: [`id`](url)` lead and `[Feedback PR](url)`
+link are skipped as decoration, and a comment taken from the block quote when there
+is no `_Comments:_` marker. The rendered `> _no submission_` quote is not a comment.
+
 ## 3. Surface
 
 ```
