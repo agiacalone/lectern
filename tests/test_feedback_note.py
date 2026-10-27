@@ -107,3 +107,72 @@ def test_head_with_trailing_suffix_parses(tmp_path):
     assert rows["hdent"]["graded"] is True
     assert rows["hdent"]["components"][-1] == {"label": "ACE", "score": 14,
                                                "max": 15, "ec": True}
+
+
+# The block shape `reg-lab-report render` writes (lectern/report_render.py).
+RENDERED = """\
+## Per-student feedback & grades
+
+> [!note] callout under the section heading, not a student block
+
+### bwayne — **51 / 60**
+*github: [`bwayne`](https://example.com/bwayne) · Auto 45/45 · Writeup 6/15 · [Feedback PR](https://example.com/bwayne/pull/1)*
+
+> Your code now builds.
+> Q1 needs the full trace: `x = x + 1` is three steps.
+>
+> Come to office hours.
+
+<!-- internal: forensic notes, never shipped -->
+
+### skyle — **__ / 60**
+*github: [`skyle`](https://example.com/skyle) · Auto 45/45 · Writeup __/15*
+
+> _Comments:_ 
+
+### flawton — **0 / 60**
+*github: `flawton` · Auto 0/45 · Writeup 0/15*
+
+> _no submission_
+
+## Canvas entry sheet
+"""
+
+
+def _rendered(tmp_path):
+    p = tmp_path / "RENDERED.md"
+    p.write_text(RENDERED)
+    return {r["github_id"]: r for r in parse_feedback_note(str(p))}
+
+
+def test_rendered_block_components_and_comment(tmp_path):
+    bw = _rendered(tmp_path)["bwayne"]
+    assert bw["graded"] is True and (bw["total"], bw["grand"]) == (51, 60)
+    assert [(c["label"], c["score"], c["max"]) for c in bw["components"]] == [
+        ("Auto", 45, 45), ("Writeup", 6, 15)]
+    assert bw["comment"] == ("Your code now builds.\n"
+                             "Q1 needs the full trace: `x = x + 1` is three steps.\n\n"
+                             "Come to office hours.")
+    assert "internal" not in bw["comment"]
+
+
+def test_rendered_placeholder_and_non_submission(tmp_path):
+    rows = _rendered(tmp_path)
+    assert rows["skyle"]["graded"] is False and rows["skyle"]["comment"] == ""
+    assert rows["flawton"]["comment"] == ""
+    assert rows["flawton"]["components"][0]["label"] == "Auto"
+
+
+def test_scoreline_decoration_only_skipped_on_rendered_lines():
+    assert _parse_scoreline("*github: [`x`](u) · Auto 1/2 · [Feedback PR](p)*") == [
+        {"label": "Auto", "score": 1, "max": 2, "ec": False}]
+    # Prose with a `·` still is not a score line.
+    assert _parse_scoreline("Nice work · see the notes below") is None
+    assert _parse_scoreline("github: me") is None   # decoration alone carries no scores
+
+
+def test_plain_comment_keeps_its_own_quote(tmp_path):
+    p = tmp_path / "Q.md"
+    p.write_text("### A — **5 / 10**\n`a1` · [repo](u)\nScore 5/10\n"
+                 "_Comments:_ You wrote:\n> it works\nwhich is not a mechanism.\n")
+    assert "> it works" in parse_feedback_note(str(p))[0]["comment"]

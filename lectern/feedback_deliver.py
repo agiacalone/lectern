@@ -17,6 +17,7 @@ All git/gh calls go through injected callbacks (mockable in tests).
 """
 import os
 import subprocess
+import sys
 
 MERGE_MSG = "Merge feedback branch: add FEEDBACK.md (grade + comments)"
 _ADD_MSG = "Add FEEDBACK.md (grade + comments)"
@@ -212,6 +213,14 @@ def main(argv=None):
         from lectern.feedback_note import parse_feedback_note
         rows = [r for r in parse_feedback_note(a.from_note) if r["graded"]]
         render = render_feedback_md_from_note
+        # A graded block the parser read no comment or scores from is almost
+        # always a block shape it does not know; say so before anything ships.
+        for r in rows:
+            missing = [w for w, ok in (("comment", r["comment"]),
+                                       ("score line", r["components"])) if not ok]
+            if missing:
+                print(f"warning: {r['github_id']}: no {' or '.join(missing)} found in "
+                      f"{a.from_note}", file=sys.stderr)
     else:
         with open(a.cohort) as f:
             rows = list(csv.DictReader(f))
